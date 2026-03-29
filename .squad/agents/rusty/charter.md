@@ -33,9 +33,9 @@
 
 ## Model
 
-- **Preferred:** auto
-- **Rationale:** Coordinator selects the best model based on task type
-- **Fallback:** Standard chain
+- **Preferred:** gpt-5.4
+- **Fallback:** claude-sonnet-4.6 → gpt-5.3-codex
+- **Rationale:** Team default set by Vladi — applies to all agents and new hires
 
 ## Collaboration
 

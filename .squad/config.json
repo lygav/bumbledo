@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "defaultModel": "gpt-5.4",
+  "modelFallbackChain": ["gpt-5.4", "claude-sonnet-4.6", "gpt-5.3-codex"],
+  "modelNotes": "User preference set 2026-03-29 by Vladi Lyga"
+}
