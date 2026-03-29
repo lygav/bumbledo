@@ -122,6 +122,16 @@ describe('loadTodos', () => {
     expect(result[0]).not.toHaveProperty('done');
   });
 
+  it('normalizes blocked todos with empty blockers back to active on load', () => {
+    mockStorage.getItem.mockReturnValue(JSON.stringify([
+      { id: '1', text: 'task', status: 'blocked', blockedBy: [] }
+    ]));
+
+    expect(loadTodos(mockStorage)).toEqual([
+      { id: '1', text: 'task', status: 'active' }
+    ]);
+  });
+
   it('uses default storage key when not provided', () => {
     mockStorage.getItem.mockReturnValue('[]');
     loadTodos(mockStorage);

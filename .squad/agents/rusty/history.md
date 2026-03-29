@@ -153,3 +153,13 @@
 **Interaction rules to preserve:**
 - Burndown samples are taken only on first load of a local calendar day; chart data is historical and does not live-update with in-session edits.
 - The chart summary uses monotonic rendered series so completed/total lines never visually move backward, even if users later clear finished tasks from the live list.
+
+### 2026-03-29: Blocker Picker Focusout After Re-render
+
+**What I fixed:**
+- Updated the blocked-task picker `focusout` flow in `src/main.js` to re-check focus against the current row after `render()` replaces the DOM.
+- Switched from a microtask + stale `li` closure to a `setTimeout(0)` that inspects `event.relatedTarget` and the settled `document.activeElement` inside the current task row.
+- Added a model test proving blocked tasks loaded with `blockedBy: []` normalize back to `active`.
+
+**Interaction rule to preserve:**
+- Leaving focus inside the same todo row must never auto-finalize blocked state, even if checkbox changes trigger a full re-render between focus transitions.

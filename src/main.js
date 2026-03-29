@@ -1008,9 +1008,18 @@ if (typeof document !== 'undefined') {
 
           li.appendChild(picker);
 
-          li.addEventListener('focusout', () => {
-            queueMicrotask(() => {
-              if (li.contains(document.activeElement)) {
+          li.addEventListener('focusout', (event) => {
+            const nextFocusTarget = event.relatedTarget;
+
+            window.setTimeout(() => {
+              const currentTaskElement = findTaskElement(todo.id);
+              const settledFocusTarget = document.activeElement;
+              const focusStayedWithinTask = currentTaskElement && (
+                (nextFocusTarget instanceof Node && currentTaskElement.contains(nextFocusTarget))
+                || currentTaskElement.contains(settledFocusTarget)
+              );
+
+              if (focusStayedWithinTask) {
                 return;
               }
 
@@ -1022,7 +1031,7 @@ if (typeof document !== 'undefined') {
               todos = nextTodos;
               saveTodos(todos);
               render();
-            });
+            }, 0);
           });
         }
 
