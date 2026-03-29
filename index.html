@@ -23,8 +23,24 @@
     }
 
     .container {
-      max-width: 600px;
+      max-width: 960px;
       margin: 0 auto;
+    }
+
+    .app-shell {
+      display: grid;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .app-sidebar {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
     }
 
     header {
@@ -420,7 +436,7 @@
     }
 
     #burndown-section {
-      margin: 1rem 0 1.5rem;
+      margin: 0;
       padding: 1rem;
       background: #fbfcfe;
       border: 1px solid #e3e8ef;
@@ -593,7 +609,7 @@
     }
 
     .footer-actions {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.75rem;
@@ -601,6 +617,9 @@
     }
 
     #clear-finished-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 0.5rem 1.25rem;
       font-size: 0.875rem;
       font-family: inherit;
@@ -631,6 +650,9 @@
     }
 
     #shortcuts-help-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 0.5rem 0.85rem;
       font-size: 0.875rem;
       font-family: inherit;
@@ -1203,6 +1225,25 @@
         min-height: 120px;
       }
     }
+
+    @media (min-width: 768px) {
+      .app-shell {
+        grid-template-columns: minmax(0, 1fr) 300px;
+      }
+
+      .app-sidebar footer {
+        text-align: left;
+      }
+
+      .app-sidebar .footer-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .app-sidebar .footer-actions button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1211,94 +1252,98 @@
       <h1>Todos</h1>
     </header>
 
-    <main>
-      <form class="input-row" id="add-form" aria-label="Add a new todo">
-        <label for="todo-input">New todo</label>
-        <input
-          type="text"
-          id="todo-input"
-          placeholder="What needs to be done?"
-          autocomplete="off"
+    <div class="app-shell">
+      <main>
+        <form class="input-row" id="add-form" aria-label="Add a new todo">
+          <label for="todo-input">New todo</label>
+          <input
+            type="text"
+            id="todo-input"
+            placeholder="What needs to be done?"
+            autocomplete="off"
+          >
+          <button type="submit" id="add-btn">Add</button>
+        </form>
+
+        <div
+          id="unblocked-notification"
+          class="todo-notification"
+          role="status"
+          aria-atomic="true"
+          hidden
         >
-        <button type="submit" id="add-btn">Add</button>
-      </form>
-
-      <div
-        id="unblocked-notification"
-        class="todo-notification"
-        role="status"
-        aria-atomic="true"
-        hidden
-      >
-        <span class="todo-notification-message">
-          <span id="unblocked-notification-message"></span>
-          <span id="unblocked-notification-detail" class="visually-hidden"></span>
-        </span>
-        <button
-          type="button"
-          id="unblocked-notification-dismiss"
-          class="todo-notification-dismiss"
-          aria-label="Dismiss task alert"
-        >
-          ×
-        </button>
-      </div>
-
-      <div class="list-toolbar">
-        <button type="button" id="actionable-filter-toggle" aria-pressed="false">Actionable</button>
-        <div class="list-toolbar-copy">
-          <p id="actionable-summary" role="status">0 of 0 tasks are actionable</p>
-        </div>
-      </div>
-
-      <p id="empty-state" role="status">No todos yet. Add one above!</p>
-
-      <ul id="todo-list" aria-label="Todo list" tabindex="-1"></ul>
-
-      <section id="burndown-section" aria-labelledby="burndown-title">
-        <div class="burndown-header">
-          <div class="burndown-title-group">
-            <h2 id="burndown-title">Burndown</h2>
-            <p class="burndown-helper">Completed versus total tasks over the last 30 days</p>
-          </div>
-          <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
+          <span class="todo-notification-message">
+            <span id="unblocked-notification-message"></span>
+            <span id="unblocked-notification-detail" class="visually-hidden"></span>
+          </span>
+          <button
+            type="button"
+            id="unblocked-notification-dismiss"
+            class="todo-notification-dismiss"
+            aria-label="Dismiss task alert"
+          >
+            ×
+          </button>
         </div>
 
-        <p id="burndown-collapsed-summary" role="status">0 done · 0 remaining · First sample today</p>
-
-        <div id="burndown-panel" hidden>
-          <div class="burndown-summary">
-            <p id="burndown-summary-headline">0 of 0 done (0%)</p>
-            <p id="burndown-summary-detail">0 remaining</p>
-          </div>
-
-          <div class="burndown-legend" aria-hidden="true">
-            <span class="burndown-legend-item">
-              <span class="burndown-legend-swatch is-completed"></span>
-              Completed
-            </span>
-            <span class="burndown-legend-item">
-              <span class="burndown-legend-swatch is-total"></span>
-              Total
-            </span>
-          </div>
-
-          <p id="burndown-empty-state" role="status" hidden>Not enough data yet. Come back in a few days!</p>
-
-          <div id="burndown-chart" hidden>
-            <svg id="burndown-chart-svg"></svg>
-            <div id="burndown-tooltip" class="burndown-tooltip" hidden></div>
+        <div class="list-toolbar">
+          <button type="button" id="actionable-filter-toggle" aria-pressed="false">Actionable</button>
+          <div class="list-toolbar-copy">
+            <p id="actionable-summary" role="status">0 of 0 tasks are actionable</p>
           </div>
         </div>
-      </section>
-    </main>
 
-    <footer>
-      <div class="footer-actions">
-        <button type="button" id="clear-finished-btn" disabled>Clear finished</button>
-        <button type="button" id="shortcuts-help-btn" aria-haspopup="dialog" aria-controls="shortcuts-help-modal">⌨️ Shortcuts</button>
-      </div>
-    </footer>
+        <p id="empty-state" role="status">No todos yet. Add one above!</p>
+
+        <ul id="todo-list" aria-label="Todo list" tabindex="-1"></ul>
+      </main>
+
+      <aside class="app-sidebar" aria-label="Task tools">
+        <section id="burndown-section" aria-labelledby="burndown-title">
+          <div class="burndown-header">
+            <div class="burndown-title-group">
+              <h2 id="burndown-title">Burndown</h2>
+              <p class="burndown-helper">Completed versus total tasks over the last 30 days</p>
+            </div>
+            <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
+          </div>
+
+          <p id="burndown-collapsed-summary" role="status">0 done · 0 remaining · First sample today</p>
+
+          <div id="burndown-panel" hidden>
+            <div class="burndown-summary">
+              <p id="burndown-summary-headline">0 of 0 done (0%)</p>
+              <p id="burndown-summary-detail">0 remaining</p>
+            </div>
+
+            <div class="burndown-legend" aria-hidden="true">
+              <span class="burndown-legend-item">
+                <span class="burndown-legend-swatch is-completed"></span>
+                Completed
+              </span>
+              <span class="burndown-legend-item">
+                <span class="burndown-legend-swatch is-total"></span>
+                Total
+              </span>
+            </div>
+
+            <p id="burndown-empty-state" role="status" hidden>Not enough data yet. Come back in a few days!</p>
+
+            <div id="burndown-chart" hidden>
+              <svg id="burndown-chart-svg"></svg>
+              <div id="burndown-tooltip" class="burndown-tooltip" hidden></div>
+            </div>
+          </div>
+        </section>
+
+        <footer>
+          <div class="footer-actions">
+            <button type="button" id="clear-finished-btn" disabled>Clear finished</button>
+            <button type="button" id="shortcuts-help-btn" aria-haspopup="dialog" aria-controls="shortcuts-help-modal">⌨️ Shortcuts</button>
+          </div>
+        </footer>
+      </aside>
+    </div>
 
     <section id="dependency-graph-section" aria-labelledby="dependency-graph-title">
       <div class="dependency-graph-header">
