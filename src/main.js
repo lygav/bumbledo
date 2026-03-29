@@ -5,6 +5,8 @@ import {
   cleanupBlockedBy,
   clearFinished,
   deleteTodo,
+  getActionableCount,
+  getActionableTodos,
   hasDependencies,
   loadTodos,
   saveTodos,
@@ -18,8 +20,26 @@ import {
 // - Owns: #dag-toggle, #dag-summary, #dag-empty-state, #dependency-graph-section
 // - dag/view.js owns only SVG rendering inside #dependency-graph container
 
+const ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
+
 function isMobileViewport() {
   return window.matchMedia('(max-width: 479px)').matches;
+}
+
+function loadActionableFilterPreference() {
+  try {
+    return localStorage.getItem(ACTIONABLE_FILTER_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveActionableFilterPreference(isActive) {
+  try {
+    localStorage.setItem(ACTIONABLE_FILTER_STORAGE_KEY, String(isActive));
+  } catch {
+    // Ignore storage write failures so the UI stays usable.
+  }
 }
 
 // DOM initialization - runs on load
@@ -28,6 +48,8 @@ if (typeof document !== 'undefined') {
     const todoList = document.getElementById('todo-list');
     const todoInput = document.getElementById('todo-input');
     const addForm = document.getElementById('add-form');
+    const actionableFilterToggle = document.getElementById('actionable-filter-toggle');
+    const actionableSummary = document.getElementById('actionable-summary');
     const emptyState = document.getElementById('empty-state');
     const clearFinishedBtn = document.getElementById('clear-finished-btn');
     const dagSection = document.getElementById('dependency-graph-section');
@@ -38,6 +60,7 @@ if (typeof document !== 'undefined') {
 
     let todos = loadTodos();
     let selectedTaskId = null;
+    let filterActive = loadActionableFilterPreference();
     let dagExpanded = !isMobileViewport() && hasDependencies(todos);
     let dagToggleTouched = false;
     let flashTimeoutId = null;
@@ -142,18 +165,69 @@ if (typeof document !== 'undefined') {
       }
     }
 
+    function reorderVisibleTodos(draggedId, targetId, insertAfter) {
+      if (filterActive) {
+        const visibleTodos = getActionableTodos(todos);
+        const draggedIndex = visibleTodos.findIndex(todo => todo.id === draggedId);
+        if (draggedIndex === -1) return todos;
+
+        const reorderedVisible = [...visibleTodos];
+        const [movedTodo] = reorderedVisible.splice(draggedIndex, 1);
+        let targetIndex = reorderedVisible.findIndex(todo => todo.id === targetId);
+
+        if (!movedTodo || targetIndex === -1) return todos;
+        if (insertAfter) targetIndex += 1;
+
+        reorderedVisible.splice(targetIndex, 0, movedTodo);
+
+        let visibleIndex = 0;
+        return todos.map(todo => {
+          if (todo.status !== 'active') {
+            return todo;
+          }
+
+          const replacement = reorderedVisible[visibleIndex];
+          visibleIndex += 1;
+          return replacement ?? todo;
+        });
+      }
+
+      const reorderedTodos = [...todos];
+      const fromIndex = reorderedTodos.findIndex(todo => todo.id === draggedId);
+      if (fromIndex === -1) return todos;
+
+      const [movedTodo] = reorderedTodos.splice(fromIndex, 1);
+      let toIndex = reorderedTodos.findIndex(todo => todo.id === targetId);
+
+      if (!movedTodo || toIndex === -1) return todos;
+      if (insertAfter) toIndex += 1;
+
+      reorderedTodos.splice(toIndex, 0, movedTodo);
+      return reorderedTodos;
+    }
+
     function render() {
       if (!todos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
       }
 
+      const { actionable, total } = getActionableCount(todos);
+      const visibleTodos = filterActive ? getActionableTodos(todos) : todos;
+      const showActionableEmptyState = filterActive && total > 0 && actionable === 0;
+
       todoList.innerHTML = '';
 
       const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
       clearFinishedBtn.disabled = !hasFinished;
-      emptyState.hidden = todos.length > 0;
+      actionableFilterToggle.classList.toggle('is-active', filterActive);
+      actionableFilterToggle.setAttribute('aria-pressed', String(filterActive));
+      actionableSummary.textContent = `${actionable} of ${total} tasks are actionable`;
+      emptyState.hidden = total > 0 ? !showActionableEmptyState : false;
+      emptyState.textContent = total === 0
+        ? 'No todos yet. Add one above!'
+        : 'Nothing actionable right now. All your tasks are either done or waiting on something.';
 
-      todos.forEach(todo => {
+      visibleTodos.forEach(todo => {
         const li = document.createElement('li');
         li.draggable = true;
         li.dataset.id = todo.id;
@@ -327,6 +401,12 @@ if (typeof document !== 'undefined') {
       todoInput.focus();
     });
 
+    actionableFilterToggle.addEventListener('click', () => {
+      filterActive = !filterActive;
+      saveActionableFilterPreference(filterActive);
+      render();
+    });
+
     clearFinishedBtn.addEventListener('click', () => {
       todos = clearFinished(todos);
       if (!todos.some(todo => todo.id === selectedTaskId)) {
@@ -396,19 +476,13 @@ if (typeof document !== 'undefined') {
       const targetLi = e.target.closest('li[data-id]');
       if (!targetLi || !draggedId) return;
 
-      const fromIndex = todos.findIndex(t => t.id === draggedId);
       const targetId = targetLi.dataset.id;
       if (draggedId === targetId) return;
 
       const rect = targetLi.getBoundingClientRect();
       const insertAfter = e.clientY >= rect.top + rect.height / 2;
 
-      const [moved] = todos.splice(fromIndex, 1);
-
-      let toIndex = todos.findIndex(t => t.id === targetId);
-      if (insertAfter) toIndex += 1;
-
-      todos.splice(toIndex, 0, moved);
+      todos = reorderVisibleTodos(draggedId, targetId, insertAfter);
       saveTodos(todos);
       render();
     });

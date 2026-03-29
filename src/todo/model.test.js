@@ -10,6 +10,8 @@ import {
   cleanupBlockedBy,
   deleteTodo,
   clearFinished,
+  getActionableCount,
+  getActionableTodos,
   updateTodoText
 } from './model.js';
 
@@ -521,6 +523,121 @@ describe('clearFinished', () => {
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('4');
+  });
+});
+
+describe('getActionableTodos', () => {
+  it('returns only active tasks', () => {
+    const todos = [
+      { id: '1', text: 'active task', status: 'active' },
+      { id: '2', text: 'done task', status: 'done' },
+      { id: '3', text: 'cancelled task', status: 'cancelled' },
+      { id: '4', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const result = getActionableTodos(todos);
+    expect(result).toEqual([{ id: '1', text: 'active task', status: 'active' }]);
+  });
+
+  it('returns empty array when no active tasks exist', () => {
+    const todos = [
+      { id: '1', text: 'done task', status: 'done' },
+      { id: '2', text: 'cancelled task', status: 'cancelled' },
+      { id: '3', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const result = getActionableTodos(todos);
+    expect(result).toEqual([]);
+  });
+
+  it('returns all tasks when all are active', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'active' },
+      { id: '3', text: 'task3', status: 'active' }
+    ];
+    const result = getActionableTodos(todos);
+    expect(result).toEqual(todos);
+  });
+
+  it('returns the two active tasks from a mixed-status list', () => {
+    const todos = [
+      { id: '1', text: 'active one', status: 'active' },
+      { id: '2', text: 'done task', status: 'done' },
+      { id: '3', text: 'active two', status: 'active' },
+      { id: '4', text: 'cancelled task', status: 'cancelled' },
+      { id: '5', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const result = getActionableTodos(todos);
+    expect(result).toEqual([
+      { id: '1', text: 'active one', status: 'active' },
+      { id: '3', text: 'active two', status: 'active' }
+    ]);
+  });
+
+  it('returns empty array for empty input', () => {
+    const result = getActionableTodos([]);
+    expect(result).toEqual([]);
+  });
+
+  it('includes a newly added active task in the results', () => {
+    const todos = [{ id: '1', text: 'existing done', status: 'done' }];
+    const updated = addTodo(todos, 'new actionable task');
+    const result = getActionableTodos(updated);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      text: 'new actionable task',
+      status: 'active'
+    });
+  });
+
+  it('includes a task after it auto-unblocks back to active', () => {
+    const todos = [
+      { id: '1', text: 'blocker', status: 'active' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const updated = cleanupBlockedBy(todos, '1');
+    const result = getActionableTodos(updated);
+    expect(result).toEqual([
+      { id: '1', text: 'blocker', status: 'active' },
+      { id: '2', text: 'blocked task', status: 'active' }
+    ]);
+  });
+});
+
+describe('getActionableCount', () => {
+  it('returns correct actionable and total counts for a mixed list', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' },
+      { id: '3', text: 'task3', status: 'active' },
+      { id: '4', text: 'task4', status: 'cancelled' },
+      { id: '5', text: 'task5', status: 'active' }
+    ];
+    const result = getActionableCount(todos);
+    expect(result).toEqual({ actionable: 3, total: 5 });
+  });
+
+  it('returns matching actionable and total counts when all tasks are active', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'active' }
+    ];
+    const result = getActionableCount(todos);
+    expect(result).toEqual({ actionable: 2, total: 2 });
+  });
+
+  it('returns zero actionable when no tasks are active', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'done' },
+      { id: '2', text: 'task2', status: 'cancelled' },
+      { id: '3', text: 'task3', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const result = getActionableCount(todos);
+    expect(result).toEqual({ actionable: 0, total: 3 });
+  });
+
+  it('returns zero counts for an empty list', () => {
+    const result = getActionableCount([]);
+    expect(result).toEqual({ actionable: 0, total: 0 });
   });
 });
 

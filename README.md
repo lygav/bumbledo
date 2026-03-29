@@ -13,6 +13,7 @@ A lightweight, zero-friction browser-based todo app built with vanilla JavaScrip
 - **📝 Quick task capture** — Type and press Enter to add a new todo instantly
 - **🎯 Four-state tracking** — Mark tasks as Active, Done, Cancelled, or Blocked
 - **🔗 Dependency tracking** — Flag blocked tasks and specify what's holding them up
+- **✅ Actionable Now filter** — Focus on only the tasks you can work on right now
 - **📊 Dependency graph** — Visualize task dependencies with an interactive DAG
 - **🎚️ Drag-to-reorder** — Grab any task and drag it to your preferred position
 - **📋 Clear clutter** — Remove all completed and cancelled tasks with one click
@@ -71,6 +72,7 @@ npm test:watch
 - **Change status:** Click the status dropdown (Active, Done, Cancelled, Blocked)
 - **Block tasks:** Mark as Blocked and check which tasks are blocking it
 - **Reorder:** Drag the ⋮ handle to move tasks up or down
+- **Focus:** Toggle "Actionable" to hide done, cancelled, and blocked tasks
 - **Visualize:** Click "Dependencies" to see task blocking relationships in a graph
 - **Clean up:** Click "Clear finished" to remove Done and Cancelled tasks
 
