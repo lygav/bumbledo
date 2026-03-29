@@ -124,7 +124,3 @@ export function clearFinished(todos) {
 export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
-
-export function isMobileViewport() {
-  return window.matchMedia('(max-width: 479px)').matches;
-}

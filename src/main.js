@@ -6,7 +6,6 @@ import {
   clearFinished,
   deleteTodo,
   hasDependencies,
-  isMobileViewport,
   loadTodos,
   saveTodos,
   setStatus,
@@ -17,6 +16,10 @@ import {
 // - Owns: todos state, persistence, selectedTaskId, section visibility
 // - Owns: #dag-toggle, #dag-summary, #dag-empty-state, #dependency-graph-section
 // - dag/view.js owns only SVG rendering inside #dependency-graph container
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 479px)').matches;
+}
 
 // DOM initialization - runs on load
 if (typeof document !== 'undefined') {
