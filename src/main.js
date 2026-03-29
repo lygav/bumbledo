@@ -21,7 +21,6 @@ import {
 // DOM initialization - runs on load
 if (typeof document !== 'undefined') {
   (function init() {
-    const STORAGE_KEY = 'todos';
     const todoList = document.getElementById('todo-list');
     const todoInput = document.getElementById('todo-input');
     const addForm = document.getElementById('add-form');
@@ -158,7 +157,7 @@ if (typeof document !== 'undefined') {
           if (select.value === 'done' || select.value === 'cancelled') {
             todos = cleanupBlockedBy(todos, todo.id);
           }
-          saveTodos(todos, defaultStorage, STORAGE_KEY);
+          saveTodos(todos);
           render();
         });
 
@@ -176,7 +175,7 @@ if (typeof document !== 'undefined') {
           if (selectedTaskId === todo.id) {
             selectedTaskId = null;
           }
-          saveTodos(todos, defaultStorage, STORAGE_KEY);
+          saveTodos(todos);
           render();
         });
 
@@ -229,7 +228,7 @@ if (typeof document !== 'undefined') {
               cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
               cb.addEventListener('change', () => {
                 todos = toggleBlocker(todos, todo.id, t.id);
-                saveTodos(todos, defaultStorage, STORAGE_KEY);
+                saveTodos(todos);
                 render();
               });
 
@@ -266,7 +265,7 @@ if (typeof document !== 'undefined') {
     addForm.addEventListener('submit', e => {
       e.preventDefault();
       todos = addTodo(todos, todoInput.value);
-      saveTodos(todos, defaultStorage, STORAGE_KEY);
+      saveTodos(todos);
       render();
       todoInput.value = '';
       todoInput.focus();
@@ -277,7 +276,7 @@ if (typeof document !== 'undefined') {
       if (!todos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
       }
-      saveTodos(todos, defaultStorage, STORAGE_KEY);
+      saveTodos(todos);
       render();
     });
 
@@ -354,7 +353,7 @@ if (typeof document !== 'undefined') {
       if (insertAfter) toIndex += 1;
 
       todos.splice(toIndex, 0, moved);
-      saveTodos(todos, defaultStorage, STORAGE_KEY);
+      saveTodos(todos);
       render();
     });
 
