@@ -685,6 +685,30 @@ describe('detectUnblockedTodos', () => {
     ]);
     expect(model.detectUnblockedTodos(before, after)).toEqual([]);
   });
+
+  it('detects separate unblock events across consecutive snapshots', () => {
+    const before = [
+      { id: 'a', text: 'A', status: 'active' },
+      { id: 'b', text: 'B', status: 'blocked', blockedBy: ['a'] },
+      { id: 'c', text: 'C', status: 'active' },
+      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] }
+    ];
+    const afterCompletingA = [
+      { id: 'a', text: 'A', status: 'done' },
+      { id: 'b', text: 'B', status: 'active' },
+      { id: 'c', text: 'C', status: 'active' },
+      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] }
+    ];
+    const afterCompletingC = [
+      { id: 'a', text: 'A', status: 'done' },
+      { id: 'b', text: 'B', status: 'active' },
+      { id: 'c', text: 'C', status: 'done' },
+      { id: 'd', text: 'D', status: 'active' }
+    ];
+
+    expect(model.detectUnblockedTodos(before, afterCompletingA)).toEqual(['b']);
+    expect(model.detectUnblockedTodos(afterCompletingA, afterCompletingC)).toEqual(['d']);
+  });
 });
 
 describe('deleteTodo', () => {

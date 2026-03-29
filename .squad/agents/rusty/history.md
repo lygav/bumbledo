@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: Unblocked Notification Reset + Hidden Attribute Pitfall
+
+**What I fixed:**
+- Restored real hide/show behavior for the unblock alert by adding an explicit `#unblocked-notification[hidden] { display: none; }` rule; the component class was otherwise overriding the browser's default hidden styling.
+- Reset the alert between unblock events in `src/main.js` with a cancelled/restarted animation-frame reveal so follow-up unblock events replace the old message and restart the 5-second auto-dismiss timer cleanly.
+- Added a consecutive-snapshots regression test in `src/todo/model.test.js` to lock in the A→B then C→D unblock detection flow from issue #12.
+
+**Interaction rules to preserve:**
+- Any component styled with `display: flex` still needs an explicit `[hidden]` rule if we rely on the `hidden` attribute to hide it.
+- Re-showing the unblock alert should always cancel any pending timeout/frame from the previous alert so the close button and auto-dismiss stay reliable across rapid successive unblock events.
+
 ### 2026-03-29: JavaScript Extraction for Testability
 
 **What I did:**

@@ -201,6 +201,7 @@ if (typeof document !== 'undefined') {
     let helpModalOpen = false;
     let helpModalReturnFocusEl = null;
     let unblockedNotificationTimeoutId = null;
+    let unblockedNotificationFrameId = null;
 
     const unblockedHighlightExpiresAt = new Map();
     const unblockedHighlightTimeoutIds = new Map();
@@ -240,8 +241,16 @@ if (typeof document !== 'undefined') {
       }
     }
 
+    function clearUnblockedNotificationFrame() {
+      if (unblockedNotificationFrameId !== null) {
+        window.cancelAnimationFrame(unblockedNotificationFrameId);
+        unblockedNotificationFrameId = null;
+      }
+    }
+
     function hideUnblockedNotification() {
       clearUnblockedNotificationTimeout();
+      clearUnblockedNotificationFrame();
       unblockedNotification.hidden = true;
     }
 
@@ -296,15 +305,26 @@ if (typeof document !== 'undefined') {
 
       const taskCount = taskNames.length;
       const taskLabel = taskCount === 1 ? 'task' : 'tasks';
+      const subject =
+        taskCount === 1
+          ? `${taskCount} ${taskLabel}: ${taskNames[0]}`
+          : `${taskCount} ${taskLabel}: ${taskNames.join(', ')}`;
+      const scrollTarget = taskCount === 1 ? 'it' : 'them';
 
-      unblockedNotificationMessage.textContent = `You've unblocked ${taskCount} ${taskLabel}. Scroll down to find them.`;
-      unblockedNotificationDetail.textContent = `Alert: You've unblocked ${taskCount} ${taskLabel}. ${taskNames.join(', ')}.`;
-      unblockedNotification.hidden = false;
+      hideUnblockedNotification();
+      unblockedNotificationMessage.textContent = '';
+      unblockedNotificationDetail.textContent = '';
 
-      clearUnblockedNotificationTimeout();
-      unblockedNotificationTimeoutId = window.setTimeout(() => {
-        hideUnblockedNotification();
-      }, 5000);
+      unblockedNotificationFrameId = window.requestAnimationFrame(() => {
+        unblockedNotificationFrameId = null;
+        unblockedNotificationMessage.textContent = `You've unblocked ${subject}. Scroll down to find ${scrollTarget}.`;
+        unblockedNotificationDetail.textContent = `Alert: You've unblocked ${taskCount} ${taskLabel}. ${taskNames.join(', ')}.`;
+        unblockedNotification.hidden = false;
+        clearUnblockedNotificationTimeout();
+        unblockedNotificationTimeoutId = window.setTimeout(() => {
+          hideUnblockedNotification();
+        }, 5000);
+      });
     }
 
     function surfaceUnblockedTodos(todosBefore, todosAfter) {
