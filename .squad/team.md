@@ -16,6 +16,7 @@
 | Rusty | Frontend Dev | `.squad/agents/rusty/charter.md` | ✅ Active |
 | Livingston | UX Engineer | `.squad/agents/livingston/charter.md` | ✅ Active |
 | Linus | Tester | `.squad/agents/linus/charter.md` | ✅ Active |
+| Saul | Principal Frontend Dev | `.squad/agents/saul/charter.md` | ✅ Active |
 | Scribe | Session Logger | `.squad/agents/scribe/charter.md` | 📋 Silent |
 | Ralph | Work Monitor | `.squad/agents/ralph/charter.md` | 🔄 Monitor |
 

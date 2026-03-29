@@ -18,3 +18,5 @@
 | HTML, CSS, JavaScript | Rusty | — |
 | Drag-drop, interactions | Livingston | — |
 | Tests, quality, edge cases | Linus | — |
+| Frontend code review, quality gate | Saul | Danny |
+| Frontend standards, mentoring | Saul | — |

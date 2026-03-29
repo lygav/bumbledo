@@ -10,6 +10,28 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: Project Structure Recommendation
+
+**Recommendation:** Move app code under a light `src/` tree, keep `index.html` at the project root for Vite, and prefer co-located tests next to the modules they verify.
+
+**What I learned:**
+- The current flat root was acceptable for the first cut, but it is already mixing runtime code, tests, build config, and product docs in one place.
+- This app now has at least three real concerns: app/bootstrap orchestration, todo/domain logic, and DAG/graph rendering/derivation.
+- For Vite, the least-friction structure is to keep `index.html` in the root and point it at `/src/main.js`; no custom `root` change is required.
+- Co-located tests are the best fit here because each module stays physically close to its verification without introducing a large separate test tree.
+- CSS should stay embedded for now per earlier architecture guidance; if extracted later, start with one shared stylesheet, not a multi-file CSS architecture.
+
+### 2026-03-29: Dual-control Review of DAG UI State
+
+**Verdict:** Continue with the current architecture, but tighten the boundary instead of broadening it.
+
+**What I learned:**
+- The repeated bug was caused by a broken ownership rule, not by an unsalvageable overall design.
+- `app.js` is the right owner for application state, selection, and section-level visibility.
+- `dag.js` is the right owner for rendering inside the graph container plus graph-local interaction state (hover, focus, pan, reset).
+- The main remaining smell is not empty-state ownership anymore; it is that `app.js` still imports `buildDependencyGraph()` from `dag.js`, so graph derivation and graph rendering are coupled at the module boundary.
+- For this app size, the architecture is still proportional. The next step is boundary cleanup, not a framework or state-management rewrite.
+
 ### 2026-03-29: Embedded DAG Architecture
 
 **Decision:** Keep `todos` as the single source of truth and derive a graph view in a separate `dag.js` module.

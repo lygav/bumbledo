@@ -434,3 +434,922 @@ Tests written for all exported functions:
 - Ready for deployment with confidence
 - Team can extend tests as new features are added
 - Foundation for future CI/CD integration
+### 2026-03-29T12:02:00Z: DAG view is read-only
+**By:** Vladi Lyga (via Copilot)
+**What:** The DAG dependency view is read-only. No drag-to-create dependencies, no graph editing. It is purely a navigation and visualization surface.
+**Why:** User directive — confirmed during design review.
+### 2026-03-29T12:18:00Z: Break work into tasks with progress updates
+**By:** Vladi Lyga (via Copilot)
+**What:** For larger features, break work into discrete sub-tasks and provide constant progress updates during the build. Don't let agents run for 10+ minutes with no visibility. Show what step they're on, what's done, what's next.
+**Why:** User directive — the DAG implementation ran ~13 minutes with no intermediate status. That's too opaque.
+# ADR: Embedded Task Dependency DAG Architecture
+
+**Status:** Proposed  
+**Author:** Danny  
+**Date:** 2026-03-29
+
+## Context
+
+The todo app already stores dependency truth in each todo's optional `blockedBy: string[]` field. We need an embedded dependency visualization below the task list that stays proportional to a small vanilla JS app, does not introduce framework complexity, and remains maintainable by a small team.
+
+Existing decisions we must preserve:
+
+- The flat `todos` array remains the single source of truth.
+- `blockedBy` defines blocker relationships and is already persisted.
+- Circular dependencies are currently allowed in the data model, even if they are undesirable.
+- The app uses plain HTML/CSS/JS ES modules with Vite and no framework runtime.
+
+## Decision
+
+Build the dependency graph as a **small vanilla JS module (`dag.js`) that derives graph data from the existing `todos` array, uses `dagre` for layout, and renders with native SVG**.
+
+This is closest in spirit to the **dagre + d3** option, but we should **avoid bringing in D3 for rendering** unless a later requirement truly needs D3's data-join model. The hard problem here is layout, not DOM manipulation.
+
+## Why this option
+
+### Recommended choice: dagre layout + native SVG rendering
+
+**Why it fits this app**
+
+- **Right amount of abstraction:** dagre solves layered DAG layout, which is the only genuinely tricky part.
+- **Vanilla-friendly:** no React integration layer, no component model required.
+- **Small surface area:** SVG nodes and paths are straightforward to create/update with DOM APIs already used in `app.js`.
+- **Maintainable for a small team:** layout is delegated to a proven library; rendering stays readable and app-specific.
+- **Good enough interactivity:** click, hover, highlight, pan, and reset-view are easy with SVG.
+
+**Trade-off**
+
+- Adds a layout dependency that the team must learn.
+- We accept a little more integration code than a fully self-contained graph widget.
+
+### Rejected alternatives
+
+| Option | Strength | Why not choose it here |
+|---|---|---|
+| **D3.js** | Maximum rendering control | Too much API surface for a small app. We would still need to own layout strategy and event architecture. |
+| **dagre + d3** | Proven pairing | Good option, but D3 is more machinery than we need. Keep dagre, skip D3 unless complexity grows. |
+| **Cytoscape.js** | Full graph toolkit, built-in interactions | Heavy for an embedded secondary view. Brings a graph-app mental model to a todo app. |
+| **ELK.js** | Powerful layout engine | Best for complex diagrams, not this scope. Higher configuration and bundle cost than justified. |
+| **Mermaid.js** | Fast declarative diagrams | Great for static documentation, weak fit for app-state-driven interaction and bidirectional selection. |
+| **Canvas/custom** | High performance at scale | Harder accessibility, text rendering, and per-node DOM semantics. Overkill below ~100 tasks. |
+| **Pure SVG, no library** | Smallest bundle, simplest dependency story | Layout becomes bespoke and fragile. The long-term maintenance cost is higher than the saved kilobytes. |
+
+## Architecture
+
+### Module split
+
+Add a new module:
+
+```text
+index.html   # add graph host section below the task list
+app.js       # owns todo state, list render, graph updates, selection state
+dag.js       # graph derivation, cycle detection, dagre layout, SVG rendering
+app.test.js  # unit tests for graph derivation helpers
+```
+
+### DOM placement
+
+Insert a new section **immediately below `#todo-list`** and before the footer button to satisfy the requirement that the DAG appear below the task list.
+
+Recommended structure:
+
+```html
+<section id="dependency-graph-section" aria-labelledby="dependency-graph-title">
+  <div class="dependency-graph-header">
+    <h2 id="dependency-graph-title">Dependencies</h2>
+    <div class="dependency-graph-actions"></div>
+  </div>
+  <div id="dependency-graph" aria-label="Task dependency graph"></div>
+</section>
+```
+
+### Width strategy
+
+The list can stay constrained, but the graph should visually span the page width.
+
+Recommendation:
+
+- Keep the existing `.container` for the list and form.
+- Style the graph section with a **viewport breakout** so it can exceed the 600px list width while still being positioned below it.
+- Example intent: `width: min(1200px, calc(100vw - 2rem))`.
+
+**Trade-off:** breakout CSS is slightly more complex than staying inside the narrow container, but it satisfies the "full width" requirement without redesigning the whole app shell.
+
+## Data flow
+
+### Source of truth
+
+The graph should **not** own any data. The `todos` array remains the only source of truth.
+
+### Derived graph model
+
+`dag.js` should expose a pure helper:
+
+```js
+buildDependencyGraph(todos) => {
+  nodes: [{ id, label, status, orderIndex }],
+  edges: [{ id, from, to, kind }],
+  hasDependencies,
+  cycleEdges,
+  stats
+}
+```
+
+Mapping rules:
+
+- **Node** = each todo `{ id, text, status }`
+- **Edge** = each blocker reference in `blockedBy`
+  - if todo B has `blockedBy: ['A']`, create edge `A -> B`
+- `orderIndex` = current list order, used as a stable tie-breaker in layout
+
+This keeps rendering code decoupled from the raw todo shape while preserving one-way data flow:
+
+```text
+todos -> buildDependencyGraph(todos) -> layoutGraph(graph) -> renderSvg(layout)
+```
+
+### Why derived structure is better than direct rendering from `todos`
+
+- Separates app state from visualization concerns.
+- Makes cycle detection and layout testable without the DOM.
+- Keeps future graph-specific metadata out of persisted todo objects.
+
+## Interaction model
+
+Keep v1 intentionally modest. The DAG is a **navigation and comprehension surface**, not a second editor.
+
+### Support in v1
+
+- **Status color on nodes** using the same semantics as the list:
+  - active = neutral
+  - blocked = orange/warm background
+  - done = muted gray/strikethrough
+  - cancelled = muted red
+- **Click node -> focus matching task row**
+  - scroll into view
+  - apply temporary highlight to the `<li>`
+  - keep the clicked node selected
+- **Hover/focus node -> lightweight tooltip**
+  - full task text
+  - status
+  - blocker / blocked counts if useful
+- **Highlight immediate neighborhood**
+  - incoming/outgoing edges and connected nodes brighten
+- **Pan + reset view**
+  - enable only when content exceeds the viewport
+  - include a visible "Reset view" control
+
+### Explicitly not in v1
+
+- **No drag-to-create dependencies**
+  - duplicates the existing blocker picker
+  - much higher complexity in plain JS
+  - poor touch ergonomics
+- **No free-form graph editing**
+- **No force-directed animation**
+- **No advanced zoom controls unless real usage proves necessary**
+
+**Trade-off:** we give up graph-editing novelty in exchange for a smaller, more reliable feature that matches the app's simplicity.
+
+## Integration approach
+
+### Public API
+
+`dag.js` should expose a small imperative interface:
+
+```js
+export function createDagView({ container, onSelectTask }) {
+  return {
+    update({ todos, selectedTaskId }),
+    destroy()
+  };
+}
+```
+
+### Ownership
+
+`app.js` remains the orchestrator:
+
+- owns `todos`
+- owns `selectedTaskId`
+- calls `render()` for the list
+- calls `dagView.update({ todos, selectedTaskId })` after each state change
+
+### Event flow
+
+```text
+user changes todos in list
+-> app.js mutates todos
+-> saveTodos(todos)
+-> render list
+-> dagView.update({ todos, selectedTaskId })
+
+user clicks node in graph
+-> dag.js calls onSelectTask(id)
+-> app.js sets selectedTaskId
+-> app.js highlights/scolls list row
+-> app.js re-renders graph with selected state
+```
+
+### Why not custom DOM events
+
+Direct callbacks are simpler, easier to test, and consistent with the app's current single-module style. A pub/sub layer would be architecture theater at this scale.
+
+## Layout strategy
+
+Use **dagre** to compute a left-to-right layered layout:
+
+- direction: `LR`
+- rank separation sized for readable arrows and labels
+- node ordering stabilized by current list order
+- SVG rendering with rounded-rect nodes and curved arrow paths
+
+This matches the domain model naturally:
+
+```text
+blocker -> blocked
+```
+
+The list remains primary; the graph is the dependency map.
+
+## Empty and edge states
+
+### No dependencies
+
+Show a compact empty card:
+
+- message: **No task dependencies yet**
+- helper copy: **Blocked tasks will appear here when they depend on other tasks.**
+
+Do not hide the entire section; hiding makes the feature feel inconsistent.
+
+### One task / trivial graph
+
+Render a single node without arrows. This confirms the feature works even before dependencies exist.
+
+### Large graph (~100 tasks)
+
+Behavior should shift from "always fit everything perfectly" to "provide a readable viewport":
+
+- fixed-height viewport around `280-360px`
+- auto-fit on first render
+- pan when overflow exists
+- clamp label width with ellipsis
+- optionally render only dependency-connected nodes in the default view and provide a toggle for "show isolated tasks" if density becomes a real usability problem
+
+**Trade-off:** we preserve performance and readability, but the overview becomes less complete at a glance on very large datasets.
+
+### Circular references
+
+Because cycles are currently allowed, the graph layer must detect them and fail gracefully.
+
+Recommended behavior:
+
+1. Detect cycles in `buildDependencyGraph()`.
+2. Store the problematic edges in `cycleEdges`.
+3. Remove those edges **for layout purposes only** so dagre can still place nodes.
+4. Render cycle edges as **red dashed arrows** and show a small warning:
+   - **"Dependency cycle detected. Layout is approximate until the cycle is removed."**
+
+**Why this approach**
+
+- The graph does not crash.
+- Users still see the bad relationship.
+- We avoid silently pretending the data is a valid DAG.
+
+**Trade-off:** the visual layout is no longer mathematically pure when the data is invalid, but the app remains usable and honest.
+
+## Testing guidance
+
+Add tests for pure helpers, not SVG mechanics:
+
+- `buildDependencyGraph()` maps `blockedBy` to edges correctly
+- cycle detection identifies simple and multi-node cycles
+- isolated tasks still become nodes
+- list order is preserved as layout metadata
+
+Avoid DOM-heavy snapshot tests for SVG in v1.
+
+## Consequences
+
+### Positive
+
+- Preserves the current architecture: one source of truth, simple modules, no framework.
+- Keeps the feature interactive without introducing a graph framework that dominates the app.
+- Provides a credible path from tiny graphs to moderately large ones.
+
+### Negative
+
+- Adds a new dependency and a rendering subsystem.
+- Requires explicit cycle handling because the data model does not prevent invalid DAGs.
+- Full-width breakout styling adds some CSS complexity.
+
+## Recommendation summary
+
+Choose **dagre-backed SVG rendering in a dedicated `dag.js` module**.
+
+That is the best trade-off for this project:
+
+- smaller and simpler than Cytoscape/ELK
+- more maintainable than hand-rolled layout
+- more interactive and app-native than Mermaid
+- more proportional to the product than turning the DAG into a full editor
+# Danny Review: Dual Control of DAG UI State
+
+**Status:** Review  
+**Author:** Danny  
+**Date:** 2026-03-29
+
+## Bottom line
+
+**VERDICT: CONTINUE**
+
+The architecture is fundamentally sound for this app. The two bugs were not evidence that the whole design is wrong; they were evidence that one ownership boundary was violated twice.
+
+The flat `todos` array is still the right source of truth. `app.js` is still the right orchestrator. `dag.js` is still the right place for layout and SVG rendering. The real lesson is simpler: **never let both modules control the same DOM element or the same visibility rule.**
+
+That said, there is one boundary smell still left in the code: `app.js` imports `buildDependencyGraph()` from `dag.js` to drive section state and summary text, while `dag.js` also rebuilds the graph internally during `update()`. That is not a crisis, but it is the main remaining coupling point.
+
+## 1. Ownership boundaries
+
+## What is clear
+
+Today the ownership split is mostly sensible:
+
+- **`app.js` owns**
+  - `todos`
+  - `selectedTaskId`
+  - `dagExpanded`
+  - `dagToggleTouched`
+  - task-list rendering
+  - persistence
+  - section-level visibility and copy:
+    - `#dependency-graph`
+    - `#dag-summary`
+    - `#dag-empty-state`
+    - `#dag-toggle`
+
+- **`dag.js` owns**
+  - deriving layout coordinates from graph data
+  - rendering SVG internals
+  - graph-local UI state:
+    - hover
+    - focus
+    - pan/transform
+    - reset button visibility
+    - cycle warning visibility
+    - tooltip visibility/content
+
+That is the right shape.
+
+## What was wrong
+
+The bug happened because `#dag-empty-state` had **shared ownership**:
+
+- `app.js` treated it as section-level UI state
+- `dag.js` also treated it as view-local state
+
+That is exactly the class of bug that repeats, because both modules can be “correct” locally and still be wrong together.
+
+## Remaining dual-control risks
+
+The biggest direct dual-control bug is patched, but a few risks remain:
+
+1. **Graph container lifecycle is split across modules**
+   - `app.js` controls `dagContainer.hidden`
+   - `dag.js` controls `container.innerHTML`, warning, reset button, tooltip, and SVG contents
+   - This is acceptable **only if** the rule stays: app owns container visibility, dag owns container contents
+
+2. **Selection is app-owned, but dag has temporary highlight state**
+   - This is okay because hover/focus are local ephemeral states, while selected task is canonical in `app.js`
+   - The rule is sound, but it should stay explicit
+
+3. **Graph-derived UI decisions live outside the graph view**
+   - `app.js` computes dependency existence and stats itself
+   - `dag.js` computes the same graph again
+   - This is not dual DOM control, but it is split responsibility over the same derived model
+
+So: ownership is mostly clear now, but not yet perfectly clean.
+
+## 2. API surface
+
+Current API:
+
+```js
+createDagView({ container, onSelectTask, emptyStateElement })
+```
+
+`update({ todos, selectedTaskId })`
+
+## What is good
+
+- `container` is appropriate
+- `onSelectTask` is appropriate
+- `update({ todos, selectedTaskId })` is appropriate for an imperative child view
+
+## What is wrong
+
+`emptyStateElement` should not be part of this API anymore.
+
+Even if dag.js no longer uses it meaningfully, the parameter itself communicates the wrong contract: it implies the DAG view may participate in outer-section empty-state management. That is how teams reintroduce bugs later.
+
+## Recommendation
+
+The clean API should be:
+
+```js
+createDagView({ container, onSelectTask })
+```
+
+and:
+
+```js
+update({ todos, selectedTaskId })
+```
+
+That says exactly what the DAG owns: rendering inside its container, based on app-owned state.
+
+## Does dag.js receive too much or too little?
+
+- It currently receives **slightly too much implied responsibility** because of `emptyStateElement`
+- It receives **enough actual data** for rendering
+- It does **not** need ownership of section visibility, empty state, or summary text
+
+So the answer is: **it should own less surface, not more**.
+
+## 3. Data flow
+
+Intended flow:
+
+```text
+todos -> buildDependencyGraph -> layout -> render
+```
+
+That is mostly true.
+
+## What is actually happening
+
+There are two flows:
+
+1. **App orchestration flow**
+   - `app.js` mutates `todos`
+   - `app.js` computes dependency state via `buildDependencyGraph(todos)`
+   - `app.js` decides whether graph section is visible/collapsed/empty
+   - `app.js` calls `dagView.update(...)`
+
+2. **DAG rendering flow**
+   - `dagView.update(...)`
+   - `dag.js` calls `buildDependencyGraph(todos)` again
+   - `dag.js` lays out and renders
+
+So the system is still effectively one-way in terms of truth ownership, but it is **double-derived**, not purely one-pass.
+
+## Are there feedback loops?
+
+There is one controlled callback loop:
+
+```text
+dag node click -> onSelectTask(id) -> app.js updates selectedTaskId -> app.js calls dagView.update(...)
+```
+
+That is fine. It is not a problematic feedback loop because:
+
+- the DAG does not mutate `todos`
+- the DAG does not mutate section visibility
+- the app remains the authority
+
+So the answer is: **one-way enough in practice**, with one acceptable UI callback loop and one unnecessary duplicate derivation.
+
+## 4. Coupling
+
+Coupling is **moderate**, not severe.
+
+## Where it is nicely decoupled
+
+- `app.js` talks to the DAG through a small imperative view object
+- DAG interaction sends a simple callback upward
+- The list editor and graph renderer are separate modules
+
+## Where coupling is tighter than it should be
+
+`app.js` imports `buildDependencyGraph()` from `dag.js`.
+
+That means `app.js` is not only using the DAG as a view; it also depends on DAG-specific derivation logic for:
+
+- `hasDependencies`
+- graph stats
+- section summary text
+- expansion/collapse decisions
+
+This makes DAG rendering less swappable than it looks.
+
+If you replaced the DAG implementation, you would probably also need to preserve or move `buildDependencyGraph()` because `app.js` already depends on it. That is the real architectural coupling point.
+
+## Can you swap out the DAG implementation without touching app.js?
+
+**Not cleanly, not today.**
+
+You could swap the SVG renderer while preserving the same exported helpers, but that is not true independence. `app.js` is coupled to graph-model derivation, not just to a rendering interface.
+
+For a small app this is acceptable. It is not fatal. But it is real coupling.
+
+## 5. Scale risk
+
+For the current app size, this architecture will hold.
+
+The bigger scale risk is not `dag.js`. It is that `app.js` is becoming the owner of:
+
+- domain state
+- persistence
+- list rendering
+- selection orchestration
+- viewport heuristics
+- section visibility rules
+- graph summary logic
+- graph expand/collapse policy
+
+That is manageable now, but as more sections appear, **the risk is not “two modules both own one DOM node” so much as “the orchestrator becomes a policy dump.”**
+
+If more UI sections are added, this app will need stricter rules like:
+
+- parent module owns section visibility and composition
+- child modules own only internal rendering and local interaction state
+- derived view-model logic should live in one place, not half in parent and half in child
+
+If those rules are followed, the architecture should scale modestly. If not, yes, you will keep reproducing dual-control bugs.
+
+## My honest read
+
+This is **not** a sign that the app needs a large redesign.
+
+It **is** a sign that the team needs to treat module boundaries as contracts, not conveniences.
+
+The empty-state bug was sloppy boundary discipline, not proof the architecture is rotten.
+
+## Recommended next move
+
+Because the verdict is **CONTINUE**, I am not proposing a big refactor. I am proposing one cleanup pass to finish the boundary:
+
+### Minimal cleanup to do now
+
+1. **Remove `emptyStateElement` from `createDagView()` entirely**
+   - file: `dag.js`
+   - file: `app.js`
+   - reason: remove the shared-ownership affordance from the API itself
+
+2. **Document the ownership rule in code comments or decision log**
+   - `app.js` owns section visibility and summary/empty-state copy
+   - `dag.js` owns rendering inside `#dependency-graph`
+   - reason: prevent regression by future contributors
+
+3. **Optionally separate graph derivation from graph rendering**
+   - either move `buildDependencyGraph()` into a neutral helper module
+   - or make `dagView.update()` return derived metadata if the parent needs it
+   - reason: remove the current “both layers derive the same graph” coupling
+
+That third item is a cleanup, not an emergency.
+
+## Final verdict
+
+**CONTINUE**
+
+The current architecture is still the right one for this app:
+
+- `todos` as source of truth
+- `app.js` as orchestrator
+- `dag.js` as derived visualization
+
+The bugs were implementation mistakes caused by shared ownership of one DOM element. That is fixable with boundary discipline.
+
+The remaining architectural risk is **coupling through duplicated graph derivation**, not a broken overall design. Clean that seam, and this should remain maintainable without a rewrite.
+# Livingston — Embedded DAG UX Recommendations
+
+## Goal
+
+Add a lightweight dependency view that helps users understand blocked work without competing with the todo list. The list stays primary; the DAG is a secondary inspection and navigation surface.
+
+## 1) Layout & positioning
+
+### Placement
+
+- Place the DAG **immediately below the existing footer area**, after the **"Clear finished"** button.
+- Wrap it in its own section with a small top margin (`16-20px`) so it reads as a separate tool, not part of the list item stack.
+- Use a section header row:
+  - Title: **Dependencies**
+  - Secondary helper text: **How tasks block each other**
+  - Right-aligned toggle: **Show graph / Hide graph**
+
+### Default visibility
+
+- **Desktop / tablet:** expanded by default **only if at least one dependency exists**.
+- **Mobile:** collapsed by default, even when dependencies exist.
+- If there are no blocked relationships, keep the section present but show a compact empty state instead of opening a big canvas.
+
+### Container sizing
+
+- Use a **fixed-height viewport with internal pan/scroll**, not an infinitely growing graph.
+- Recommended heights:
+  - **Min:** `220px`
+  - **Comfortable default:** `280px`
+  - **Max on larger screens:** `360px`
+- Reasoning: enough room for 2-4 layers of nodes without pushing the task list off-screen.
+
+### Width behavior
+
+- The DAG section should span the same full card width as the app container.
+- Inside that section, the graph viewport should use the **full available width**.
+- On wide screens, keep the graph roomy but visually contained with a white card and subtle border so it still matches the app.
+- On narrow screens, allow horizontal panning inside the viewport rather than shrinking nodes until they become illegible.
+
+### Recommended structure
+
+- Footer button
+- `Dependencies` section header
+- Optional legend row
+- Graph viewport card
+- Optional hint text on mobile: **Drag to explore**
+
+## 2) Visual design
+
+### Overall graph style
+
+- Implement with **SVG** rather than Canvas:
+  - easier text rendering
+  - easier focus states and accessibility
+  - easier per-node/per-edge highlighting
+- The graph sits on a **white card** with:
+  - `border: 1px solid #e0e0e0`
+  - `border-radius: 8px`
+  - very subtle inset/background contrast against the page gray
+
+### Node appearance
+
+- Use **rounded rectangles**, visually echoing todo list cards.
+- Node size:
+  - height around `40-44px`
+  - width around `140-180px`
+- Internal layout:
+  - single-line task label
+  - optional tiny status chip or left accent strip
+- Text:
+  - single line with ellipsis
+  - keep labels to roughly `20-24` visible characters before truncation
+  - full text shown on hover/focus tooltip
+
+### Status mapping
+
+Match existing list semantics closely:
+
+- **Active**
+  - white fill
+  - `1px` light gray border
+  - normal text color `#1a1a1a`
+- **Done**
+  - white fill
+  - gray border
+  - label rendered at `opacity: 0.6`
+  - strikethrough label
+- **Cancelled**
+  - white fill
+  - muted red border or accent
+  - label at `opacity: 0.5`
+  - red strikethrough text using the same family as list styling (`#c0392b`)
+- **Blocked**
+  - warm off-white fill, aligned to `#fffbf0`
+  - orange left accent or edge strip using `#e67e22`
+  - slightly stronger outline than active nodes so blocked items are easy to scan
+
+### Selected / highlighted state
+
+- When selected from either surface:
+  - blue outline/glow using `#4a90d9`
+  - connected edges also turn blue
+  - matching task row gets the same blue ring treatment
+
+### Edge appearance
+
+- Directed edges should be **left-to-right** where possible, from blocker -> blocked task.
+- Use **soft curved paths** (gentle horizontal bezier curves), not rigid elbows, to keep the graph feeling lighter.
+- Stroke:
+  - default: `1.5px`, medium gray
+  - arrowhead: small filled triangle
+- Highlighted edge:
+  - accent blue
+  - `2px` stroke
+
+### Relationship distinction
+
+- **Active blocker -> blocked task**
+  - edge remains medium gray or blue on highlight
+  - destination blocked node carries the orange blocked styling
+- **Done/cancelled task that used to block something**
+  - because the app auto-cleans blockers, these relationships should generally disappear immediately
+  - if transitions are animated, briefly fade the outgoing edge to light gray before removal so the change feels understandable
+- Avoid persistent "historical" edges. The graph should reflect **current truth only**.
+
+### Empty state
+
+When no dependencies exist:
+
+- Show a compact card around `120-140px` tall with:
+  - a small simple icon or three dots connected by a faint line
+  - text: **No task dependencies yet**
+  - helper copy: **Blocked tasks will appear here once you link them to other tasks.**
+- Keep it calm and minimal; no illustration-heavy empty state.
+
+## 3) Interaction patterns
+
+### Click / tap on a node
+
+- Primary action: **scroll the corresponding task into view in the list**
+- Then:
+  - apply a temporary highlight pulse to the list row
+  - keep the node selected in the graph
+- This makes the DAG a navigation layer, not a second editor.
+
+### Hover / focus behavior
+
+- On hover or keyboard focus:
+  - show tooltip with full task text and status
+  - highlight the node's incoming and outgoing edges
+  - lightly dim unrelated nodes/edges only if the graph is moderately dense
+- For small graphs (most likely in this app), avoid aggressive dimming; just highlight the neighborhood.
+
+### Creating dependencies in the DAG
+
+- **Do not create dependencies by dragging between nodes in v1.**
+- Reasons:
+  - high implementation cost in vanilla JS/SVG
+  - easy to misfire on touch
+  - duplicates the existing blocked-by picker, which is clearer and already aligned with the data model
+- Keep dependency editing in the list UI.
+- If future enhancement is needed, prefer a deliberate **"Add dependency" mode** over always-on drag linking.
+
+### Pan / zoom
+
+- **Pan:** yes, if the graph exceeds the viewport.
+  - desktop: click-drag blank space to pan
+  - touch: one-finger drag to pan
+- **Zoom:** minimal support only.
+  - desktop: +/- buttons or `Ctrl/Cmd + wheel`
+  - touch: optional pinch zoom, but only if easy to implement cleanly
+- For this small app, do not overbuild. A better default is:
+  - auto-fit graph on render
+  - small **Reset view** control
+  - modest zoom range (e.g. `80%-140%`)
+
+### Keyboard accessibility
+
+- Every node should be tabbable.
+- On focus:
+  - visible blue focus ring
+  - tooltip/info mirrored in accessible text
+- Keyboard actions:
+  - `Enter` / `Space`: select node and scroll to task
+  - arrow keys: optional movement to nearest node in that direction if practical; if not, tab order is acceptable for v1
+- The show/hide control must be a real `<button>` with `aria-expanded`.
+- The graph region should have an accessible name, e.g. `aria-label="Task dependency graph"`.
+
+## 4) Sync with task list
+
+### Data changes
+
+When a task is added, removed, or its status changes:
+
+- Recompute the graph from the todo array immediately after the list re-renders.
+- Animate lightly:
+  - new node: fade + slight upward ease-in
+  - removed node/edge: fade out
+  - changed node status: color transition `150-200ms`
+- Avoid force-directed motion or large relayout animations; they will feel noisy in a small productivity tool.
+
+### Reordering in the list
+
+- Drag-reordering the list **should not change graph structure**, because order is not semantic for dependencies.
+- However, if the app currently uses list order as a stable input for vertical node ordering, it is fine for the DAG layout to reshuffle slightly after reorder.
+- Recommendation: preserve node ordering by current list order where possible, because that helps users mentally map the graph back to the list.
+
+### Bidirectional highlighting
+
+- **Click task row -> highlight node**
+  - if a task is clicked/focused in the list, briefly reveal and emphasize its node in the graph
+  - if the graph is collapsed, do not auto-expand on every row click; that would be noisy
+- **Click node -> highlight task row**
+  - scroll row into view
+  - apply temporary blue highlight
+- Keep only one selected task/node pair at a time.
+
+## 5) Responsive behavior
+
+### Mobile
+
+- The DAG is still useful, but only as a secondary, on-demand view.
+- On phones:
+  - collapse by default
+  - keep viewport height near `220px`
+  - support horizontal and vertical panning
+  - simplify labels sooner (more aggressive truncation)
+  - show a tiny hint: **Tap a node to jump to the task**
+
+### Minimum useful width
+
+- Below roughly **360px viewport width**, the DAG becomes inspection-only rather than overview-friendly.
+- Below that threshold:
+  - keep it collapsed by default
+  - open into a fixed-height pannable viewport
+  - do not try to fit the whole graph at once
+- The DAG becomes meaningfully comfortable around **480px+**.
+
+## Practical recommendation for v1
+
+If the team wants the best effort-to-value ratio in vanilla JS + SVG:
+
+1. Add a **collapsible Dependencies section below the footer**
+2. Render an **SVG graph in a fixed-height white card**
+3. Use **rounded rectangle nodes** that mirror todo cards
+4. Support **selection, tooltip, bidirectional highlighting, and panning**
+5. Skip dependency creation, advanced zoom gestures, and complex animations for now
+
+This keeps the DAG useful, visually coherent with the app, and realistic to build without turning a small todo app into a graph editor.
+# Rusty — DAG Implementation Notes
+
+**Status:** Proposed  
+**Author:** Rusty  
+**Date:** 2026-03-29
+
+## Summary
+
+Implemented the embedded dependency graph as a dedicated `dag.js` module using `dagre` for layout and native SVG for rendering.
+
+## Key implementation choices
+
+- Kept `todos` as the only source of truth and derived graph nodes/edges from `blockedBy` on every update.
+- Added DFS-based cycle detection inside `buildDependencyGraph(todos)` and removed cycle edges from the dagre layout input so the layout engine keeps working.
+- Rendered cycle edges separately as dashed red arrows with a warning banner so bad data remains visible without breaking the view.
+- Kept the graph read-only. Node activation only navigates back to the matching list row and applies selection/highlight state.
+- Synced list-row selection and graph-node selection through `selectedTaskId` owned by `app.js`.
+- Used a breakout-width section below the footer so the graph can breathe without redesigning the existing 600px list layout.
+- Defaulted the graph to collapsed on mobile and to expanded on larger screens only when real dependency edges exist.
+
+## Consequences
+
+- The graph stays proportional to the rest of the app and does not introduce a heavier graph-editing interaction model.
+- Cycle handling is explicit and resilient, but the layout is only approximate while cyclic data exists.
+- The new `dag.js` module is reusable for further DAG-only tests without coupling graph logic to DOM rendering.
+# Saul Restructure Review
+
+## Verdict: REJECT
+
+The split is directionally better: imports resolve, `index.html` points at `/src/main.js`, `vite.config.js` is valid for the new layout, ownership comments are present, and the old flat files (`app.js`, `dag.js`, `graph.js`, `app.test.js`, `dag.test.js`) are no longer sitting at the repo root.
+
+`npm test` and `npm run build` both pass, but this cannot ship yet. There are three blocking frontend issues:
+
+1. **`src/main.js:161,179,232,269,280,357` — runtime crash on every mutating action**  
+   `saveTodos(todos, defaultStorage, STORAGE_KEY)` is called repeatedly, but `defaultStorage` is neither defined in `main.js` nor imported from `src/todo/model.js`. In the browser this throws `ReferenceError: defaultStorage is not defined` the first time the user changes status, deletes, adds, clears, or reorders a task.  
+   **Fix owner:** Rusty (or another implementation agent, not reviewer).  
+   **Fix:** either call `saveTodos(todos, undefined, STORAGE_KEY)` / `saveTodos(todos)` and rely on the model default, or explicitly export/import a storage adapter from the correct layer.
+
+2. **`src/todo/model.js:128-130` — model boundary violation**  
+   `isMobileViewport()` reaches into `window.matchMedia`. That makes the todo model impure and violates the requested boundary for this file (“pure todo logic, no DOM references”). Viewport detection belongs in `main.js` or in a small UI/environment utility module, not in the domain model.  
+   **Fix owner:** Rusty (or another implementation agent, not reviewer).  
+   **Fix:** move viewport/media-query logic out of `src/todo/model.js`; keep this module purely about todo data, storage, and mutations.
+
+3. **`src/dag/view.js:152-156` with `src/dag/view.js:337-343` — broken accessibility contract**  
+   The SVG is marked `aria-hidden="true"`, but its child nodes are focusable interactive controls (`tabindex="0"`, `role="button"`, keyboard handlers). That hides the graph from assistive tech while still leaving keyboard stops in place — a bad accessibility regression.  
+   **Fix owner:** Rusty (or another implementation agent, not reviewer).  
+   **Fix:** either make the graph truly decorative/non-interactive, or remove `aria-hidden`, give the graphic an accessible name/description, and keep the node controls exposed properly.
+
+## Notes
+
+- `src/dag/graph.js` is clean and neutral; good boundary there.
+- `src/todo/model.test.js` and `src/dag/graph.test.js` are thorough, but the current suite did not protect against the `main.js` runtime regression, so one light integration/UI-path test would pay for itself.
+- CSS in `index.html` is generally clean enough for this app and the script path is correct.
+
+Do the three fixes above, then send it back for another review pass.
+# Saul Restructure Re-review
+
+## Verdict: APPROVE
+
+Livingston closed the three blockers I raised.
+
+1. **`src/main.js` — `defaultStorage` crash is gone**
+   - Verified there are no `defaultStorage` references left in `main.js`.
+   - All persistence calls now use `saveTodos(todos)` and rely on the model defaults, so the previous `ReferenceError` path is gone.
+
+2. **`src/todo/model.js` — viewport logic moved out**
+   - `isMobileViewport()` now lives in `src/main.js`.
+   - `model.js` no longer reaches into `window`, `document`, or `matchMedia`.
+   - The file is back to todo data/storage concerns and mutation helpers. The only browser-facing piece left is the existing `localStorage` adapter, which is still injectable for tests and not a new boundary problem from this restructure.
+
+3. **`src/dag/view.js` — accessibility contract repaired**
+   - The SVG no longer uses `aria-hidden`.
+   - It now exposes `role="img"` with `aria-label="Task dependency graph"`.
+   - Interactive nodes remain keyboard reachable with `tabindex="0"` / `role="button"` and per-node labels, which is the correct direction for an interactive graphic.
+
+## Quick pass for regressions
+
+- I did not find any new blocker introduced by these fixes.
+- `npm test` passes (`88` tests).
+- `npm run build` passes.
+
+This is in shape to ship.
