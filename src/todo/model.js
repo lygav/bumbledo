@@ -366,6 +366,32 @@ export function hasActiveBlockers(todos, todoId) {
   return blockerIds.some(blockerId => keepsTodoBlocked(blockerId));
 }
 
+export function getActiveBlockerCount(todos, todoId) {
+  const todo = todos.find(item => item.id === todoId);
+  const blockerIds = Array.isArray(todo?.blockedBy)
+    ? todo.blockedBy.filter(blockerId => blockerId !== todoId)
+    : [];
+
+  if (!todo || blockerIds.length === 0) {
+    return 0;
+  }
+
+  const todosById = new Map(todos.map(item => [item.id, item]));
+
+  return blockerIds.reduce((count, blockerId) => {
+    const blocker = todosById.get(blockerId);
+    if (!blocker) {
+      return count;
+    }
+
+    if (blocker.status === 'active' || blocker.status === 'blocked') {
+      return count + 1;
+    }
+
+    return count;
+  }, 0);
+}
+
 export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
