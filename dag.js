@@ -1,6 +1,11 @@
 import dagre from 'dagre';
 import { buildDependencyGraph } from './graph.js';
 
+// OWNERSHIP: dag.js owns SVG rendering inside its container.
+// - Receives: todos + selectedTaskId from app.js via update()
+// - Owns: SVG nodes/edges, tooltips, pan/zoom, hover/focus state
+// - Does NOT own: section visibility, empty state, summary text, toggle
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const NODE_WIDTH = 168;
 const NODE_HEIGHT = 44;

@@ -1,6 +1,11 @@
 import { createDagView } from './dag.js';
 import { buildDependencyGraph } from './graph.js';
 
+// OWNERSHIP: app.js is the orchestrator.
+// - Owns: todos state, persistence, selectedTaskId, section visibility
+// - Owns: #dag-toggle, #dag-summary, #dag-empty-state, #dependency-graph-section
+// - dag.js owns only SVG rendering inside #dependency-graph container
+
 // Storage interface - injectable for testing
 const defaultStorage = {
   getItem: (key) => localStorage.getItem(key),

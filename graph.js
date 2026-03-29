@@ -1,3 +1,6 @@
+// Graph derivation — neutral utility, not owned by app.js or dag.js.
+// Both modules import from here to avoid duplicate derivation.
+
 function detectCycleEdgeIds(nodes, edges) {
   const nodeOrder = new Map(nodes.map((node) => [node.id, node.orderIndex]));
   const adjacency = new Map(nodes.map((node) => [node.id, []]));

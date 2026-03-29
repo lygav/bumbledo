@@ -91,3 +91,15 @@
 - Cycle edges are removed from dagre layout input but still rendered as dashed red arrows so invalid dependency data stays visible.
 - The graph section lives below the footer and uses a viewport breakout width while preserving the original narrow task list layout.
 - On mobile, the graph defaults to collapsed; when there are no dependency edges, the section stays present with a compact empty state instead of an empty canvas.
+
+### 2026-03-29: DAG Ownership Boundary Cleanup
+
+**What I changed:**
+- Removed the obsolete `emptyStateElement` parameter from `createDagView()` so dag.js no longer advertises control over section-level empty state.
+- Extracted `buildDependencyGraph()` and its cycle-detection helper into a neutral `graph.js` module shared by both app.js and dag.js.
+- Added explicit ownership comments to app.js, dag.js, and graph.js to document section-vs-renderer responsibilities.
+
+**Boundary rules to preserve:**
+- `app.js` owns todos state, persistence, selection orchestration, and DAG section visibility/copy.
+- `dag.js` owns only SVG rendering and graph-local interaction state inside the DAG container.
+- Shared graph derivation belongs in `graph.js`, not in either orchestration or rendering code.
