@@ -28,3 +28,4 @@
 - Keyboard selection has to be reconciled against the current filtered view after shortcut-driven status changes, and modal focus return should be handled as explicit state instead of incidental browser behavior.
 
 - For browser-only behaviors without JSDOM, extract the timing/state orchestration into a small controller module and keep main.js as DOM wiring. That gives reviewable tests for timer resets, message updates, and dismiss cleanup without overhauling the test environment.
+- Blocked-task completion has to be guarded in the UI layer, not just cleanup logic: users can reach terminal statuses from the select before upstream blockers are resolved, so surface the active blocker names in the notification and keep the select pinned to `blocked`.

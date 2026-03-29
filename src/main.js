@@ -6,9 +6,11 @@ import {
   cleanupBlockedBy,
   clearFinished,
   detectUnblockedTodos,
+  finalizeBlockedStatus,
   deleteTodo,
   getActionableCount,
   getActionableTodos,
+  hasActiveBlockers,
   hasDependencies,
   loadBurndownData,
   loadTodos,
@@ -260,6 +262,35 @@ if (typeof document !== 'undefined') {
 
     function dismissUnblockedNotification({ clearHighlights = false } = {}) {
       notificationController.dismiss({ clearHighlights });
+    }
+
+    function getActiveBlockerNames(todoId) {
+      const todo = todos.find(item => item.id === todoId);
+      if (!todo || !Array.isArray(todo.blockedBy) || todo.blockedBy.length === 0) {
+        return [];
+      }
+
+      const todosById = new Map(todos.map(item => [item.id, item]));
+      return todo.blockedBy
+        .map(blockerId => todosById.get(blockerId))
+        .filter(blocker => blocker && (blocker.status === 'active' || blocker.status === 'blocked'))
+        .map(blocker => blocker.text);
+    }
+
+    function showBlockedCompletionNotification(todoId) {
+      const blockerNames = getActiveBlockerNames(todoId);
+      if (blockerNames.length === 0) {
+        return;
+      }
+
+      unblockedNotificationMessage.textContent = `Can't complete this task — it's blocked by: ${blockerNames.join(', ')}`;
+      unblockedNotificationDetail.textContent = `Alert: Can't complete this task because it depends on ${blockerNames.join(', ')}.`;
+      unblockedNotification.hidden = false;
+
+      clearUnblockedNotificationTimeout();
+      unblockedNotificationTimeoutId = window.setTimeout(() => {
+        hideUnblockedNotification();
+      }, 5000);
     }
 
     function surfaceUnblockedTodos(todosBefore, todosAfter) {
@@ -795,10 +826,26 @@ if (typeof document !== 'undefined') {
         });
         select.style.color = todo.status === 'active' ? '#999' : '#1a1a1a';
         select.addEventListener('change', () => {
+          const nextStatus = select.value;
+          const currentTodo = todos.find(item => item.id === todo.id);
+          if (!currentTodo) return;
+
+          const isBlockedCompletionAttempt = currentTodo.status === 'blocked'
+            && (nextStatus === 'done' || nextStatus === 'cancelled')
+            && Array.isArray(currentTodo.blockedBy)
+            && currentTodo.blockedBy.length > 0
+            && hasActiveBlockers(todos, currentTodo.id);
+
+          if (isBlockedCompletionAttempt) {
+            select.value = currentTodo.status;
+            showBlockedCompletionNotification(currentTodo.id);
+            return;
+          }
+
           const todosBefore = todos;
-          todos = setStatus(todos, todo.id, select.value);
-          if (select.value === 'done' || select.value === 'cancelled') {
-            todos = cleanupBlockedBy(todos, todo.id);
+          todos = setStatus(todos, currentTodo.id, nextStatus);
+          if (nextStatus === 'done' || nextStatus === 'cancelled') {
+            todos = cleanupBlockedBy(todos, currentTodo.id);
             surfaceUnblockedTodos(todosBefore, todos);
           }
           saveTodos(todos);
@@ -913,6 +960,23 @@ if (typeof document !== 'undefined') {
           }
 
           li.appendChild(picker);
+
+          li.addEventListener('focusout', () => {
+            queueMicrotask(() => {
+              if (li.contains(document.activeElement)) {
+                return;
+              }
+
+              const nextTodos = finalizeBlockedStatus(todos, todo.id);
+              if (nextTodos === todos) {
+                return;
+              }
+
+              todos = nextTodos;
+              saveTodos(todos);
+              render();
+            });
+          });
         }
 
         li.addEventListener('click', () => {
