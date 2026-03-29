@@ -5,6 +5,7 @@ import {
   cleanupBlockedBy,
   clearFinished,
   detectUnblockedTodos,
+  finalizeBlockedStatus,
   deleteTodo,
   getActionableCount,
   getActionableTodos,
@@ -1006,6 +1007,23 @@ if (typeof document !== 'undefined') {
           }
 
           li.appendChild(picker);
+
+          li.addEventListener('focusout', () => {
+            queueMicrotask(() => {
+              if (li.contains(document.activeElement)) {
+                return;
+              }
+
+              const nextTodos = finalizeBlockedStatus(todos, todo.id);
+              if (nextTodos === todos) {
+                return;
+              }
+
+              todos = nextTodos;
+              saveTodos(todos);
+              render();
+            });
+          });
         }
 
         li.addEventListener('click', () => {

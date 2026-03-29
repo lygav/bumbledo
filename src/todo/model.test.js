@@ -13,6 +13,7 @@ import {
   cleanupBlockedBy,
   deleteTodo,
   clearFinished,
+  finalizeBlockedStatus,
   getActionableCount,
   getActionableTodos,
   hasActiveBlockers,
@@ -57,10 +58,10 @@ describe('migrateTodos', () => {
     expect(result[0]).toEqual({ id: '1', text: 'task', status: 'active' });
   });
 
-  it('adds blockedBy:[] for blocked items without it', () => {
+  it('reverts blocked items without blockers back to active', () => {
     const todos = [{ id: '1', text: 'task', status: 'blocked' }];
     const result = migrateTodos(todos);
-    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'blocked', blockedBy: [] });
+    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'active' });
   });
 
   it('passes through already-correct items unchanged', () => {
@@ -167,6 +168,14 @@ describe('saveTodos', () => {
     
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0]).not.toHaveProperty('blockedBy');
+  });
+
+  it('saves blocked items without blockers as active', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: [] }];
+    saveTodos(todos, mockStorage);
+
+    const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
+    expect(saved[0]).toEqual({ id: '1', text: 'task', status: 'active' });
   });
 
   it('only saves id, text, status, and blockedBy fields', () => {
@@ -578,7 +587,10 @@ describe('cleanupBlockedBy', () => {
       { id: '2', text: 'task2', status: 'active' }
     ];
     const result = cleanupBlockedBy(todos, '3');
-    expect(result).toEqual(todos);
+    expect(result).toEqual([
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'active' }
+    ]);
   });
 
   it('leaves non-blocked todos unchanged', () => {
@@ -600,6 +612,22 @@ describe('cleanupBlockedBy', () => {
     const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
     const result = cleanupBlockedBy(todos, '2');
     expect(result).not.toBe(todos);
+  });
+});
+
+describe('finalizeBlockedStatus', () => {
+  it('reverts blocked todos without blockers back to active', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: [] }];
+    const result = finalizeBlockedStatus(todos, '1');
+
+    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'active' });
+  });
+
+  it('keeps blocked todos with blockers unchanged', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const result = finalizeBlockedStatus(todos, '1');
+
+    expect(result).toBe(todos);
   });
 });
 
@@ -963,6 +991,19 @@ describe('getActionableTodos', () => {
       { id: '2', text: 'blocked task', status: 'active' }
     ]);
   });
+
+  it('keeps blocked todos without blockers visible until they auto-revert', () => {
+    const todos = [
+      { id: '1', text: 'active task', status: 'active' },
+      { id: '2', text: 'needs blockers', status: 'blocked', blockedBy: [] },
+      { id: '3', text: 'actually blocked', status: 'blocked', blockedBy: ['1'] }
+    ];
+
+    expect(getActionableTodos(todos)).toEqual([
+      { id: '1', text: 'active task', status: 'active' },
+      { id: '2', text: 'needs blockers', status: 'blocked', blockedBy: [] }
+    ]);
+  });
 });
 
 describe('getActionableCount', () => {
@@ -995,6 +1036,15 @@ describe('getActionableCount', () => {
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 0, total: 3 });
+  });
+
+  it('counts blocked todos without blockers as actionable while the picker is open', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'blocked', blockedBy: [] }
+    ];
+
+    expect(getActionableCount(todos)).toEqual({ actionable: 2, total: 2 });
   });
 
   it('returns zero counts for an empty list', () => {

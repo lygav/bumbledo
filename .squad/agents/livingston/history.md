@@ -11,3 +11,4 @@
 <!-- Append learnings below -->
 - 2026-03-29: Recommended the embedded DAG as a collapsible, full-width section placed directly below the "Clear finished" footer control, with mobile-first collapse behavior and SVG-based interaction patterns that keep the task list as the primary surface.
 - 2026-03-29: The clear-finished flow already removes blocker references inside `clearFinished`, so the UX fix for missed Smart Blocked Alerts was to snapshot todos before the click, then call `surfaceUnblockedTodos` after clearing and before re-rendering.
+- 2026-03-29: For the blocked-status picker, tasks with `status: "blocked"` but no blockers should stay actionable while the picker is open, then auto-revert to `active` on blur so Actionable Now never hides a task that is effectively ready.

@@ -97,6 +97,19 @@ export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function hasBlockers(todo) {
+  return Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0;
+}
+
+function normalizeBlockedTodo(todo) {
+  if (todo.status !== 'blocked' || hasBlockers(todo)) {
+    return todo;
+  }
+
+  const { blockedBy, ...rest } = todo;
+  return { ...rest, status: 'active' };
+}
+
 export function migrateTodos(list) {
   return list.map(t => {
     if ('done' in t && !('status' in t)) {
@@ -106,8 +119,13 @@ export function migrateTodos(list) {
     if (!('status' in t)) {
       return { ...t, status: 'active' };
     }
-    if (t.status === 'blocked' && !Array.isArray(t.blockedBy)) {
-      return { ...t, blockedBy: [] };
+    if (t.status === 'blocked') {
+      const blockedTodo = {
+        ...t,
+        blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy : []
+      };
+
+      return normalizeBlockedTodo(blockedTodo);
     }
     return t;
   });
@@ -125,10 +143,13 @@ export function loadTodos(storage = defaultStorage, storageKey = 'todos') {
 
 export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 'todos') {
   const clean = todosToSave.map(t => {
-    const obj = { id: t.id, text: t.text, status: t.status };
-    if (t.status === 'blocked' && Array.isArray(t.blockedBy) && t.blockedBy.length > 0) {
-      obj.blockedBy = t.blockedBy;
+    const normalized = normalizeBlockedTodo(t);
+    const obj = { id: normalized.id, text: normalized.text, status: normalized.status };
+
+    if (normalized.status === 'blocked' && hasBlockers(normalized)) {
+      obj.blockedBy = normalized.blockedBy;
     }
+
     return obj;
   });
   storage.setItem(storageKey, JSON.stringify(clean));
@@ -255,7 +276,11 @@ export function toggleBlocker(todos, todoId, blockerId) {
 
 export function cleanupBlockedBy(todos, removedId) {
   return todos.map(t => {
-    if (t.status !== 'blocked' || !Array.isArray(t.blockedBy)) return t;
+    if (t.status !== 'blocked') return t;
+
+    if (!Array.isArray(t.blockedBy)) {
+      return normalizeBlockedTodo(t);
+    }
 
     const filteredBlockers = t.blockedBy.filter(id => id !== removedId);
 
@@ -307,15 +332,32 @@ export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
 
+export function finalizeBlockedStatus(todos, id) {
+  let changed = false;
+
+  const updatedTodos = todos.map(todo => {
+    if (todo.id !== id) return todo;
+
+    const normalized = normalizeBlockedTodo(todo);
+    if (normalized !== todo) {
+      changed = true;
+    }
+
+    return normalized;
+  });
+
+  return changed ? updatedTodos : todos;
+}
+
 export function getActionableCount(todos) {
   return {
-    actionable: todos.filter(todo => todo.status === 'active').length,
+    actionable: todos.filter(todo => todo.status === 'active' || (todo.status === 'blocked' && !hasBlockers(todo))).length,
     total: todos.length
   };
 }
 
 export function getActionableTodos(todos) {
-  return todos.filter(todo => todo.status === 'active');
+  return todos.filter(todo => todo.status === 'active' || (todo.status === 'blocked' && !hasBlockers(todo)));
 }
 
 export function updateTodoText(todos, id, newText) {
