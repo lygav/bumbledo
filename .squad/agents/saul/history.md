@@ -26,3 +26,4 @@
 ## Learnings
 - Restructure review: the grouped `src/` layout is a good direction, but pure-unit coverage still let a browser-only runtime bug (`defaultStorage` in `main.js`) and an SVG accessibility regression through. Keep viewport logic out of domain modules, and never combine `aria-hidden` with keyboard-focusable descendants.
 - Keyboard selection has to be reconciled against the current filtered view after shortcut-driven status changes, and modal focus return should be handled as explicit state instead of incidental browser behavior.
+- Blocked-task completion has to be guarded in the UI layer, not just cleanup logic: users can reach terminal statuses from the select before upstream blockers are resolved, so surface the active blocker names in the notification and keep the select pinned to `blocked`.

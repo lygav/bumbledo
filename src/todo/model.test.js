@@ -15,6 +15,7 @@ import {
   clearFinished,
   getActionableCount,
   getActionableTodos,
+  hasActiveBlockers,
   updateTodoText
 } from './model.js';
 
@@ -351,6 +352,45 @@ describe('setStatus', () => {
     const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
     const result = setStatus(todos, '1', 'blocked');
     expect(result[0].blockedBy).toEqual(['2']);
+  });
+});
+
+describe('hasActiveBlockers', () => {
+  it('returns true when a blocker is still active', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'upstream task', status: 'active' }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(true);
+  });
+
+  it('returns true when a blocker is itself blocked', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'upstream task', status: 'blocked', blockedBy: ['3'] },
+      { id: '3', text: 'another task', status: 'active' }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(true);
+  });
+
+  it('returns false when blockers are already finished', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3'] },
+      { id: '2', text: 'done task', status: 'done' },
+      { id: '3', text: 'cancelled task', status: 'cancelled' }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(false);
+  });
+
+  it('returns false when blockers were deleted or missing', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(false);
   });
 });
 

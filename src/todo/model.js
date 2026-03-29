@@ -290,6 +290,19 @@ export function clearFinished(todos) {
   return filtered;
 }
 
+export function hasActiveBlockers(todos, todoId) {
+  const todo = todos.find(item => item.id === todoId);
+  if (!todo || !Array.isArray(todo.blockedBy) || todo.blockedBy.length === 0) {
+    return false;
+  }
+
+  const todosById = new Map(todos.map(item => [item.id, item]));
+  return todo.blockedBy.some(blockerId => {
+    const blocker = todosById.get(blockerId);
+    return blocker && (blocker.status === 'active' || blocker.status === 'blocked');
+  });
+}
+
 export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
