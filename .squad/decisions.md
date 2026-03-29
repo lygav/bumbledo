@@ -1353,3 +1353,128 @@ Livingston closed the three blockers I raised.
 - `npm run build` passes.
 
 This is in shape to ship.
+
+---
+
+## README Style & Tone Decision
+
+**Status:** Proposed for team review  
+**Author:** Basher (Technical Writer)  
+**Date:** 2026-03-29
+
+### Summary
+
+The README.md for bumbledo uses a playful, conversational tone that matches the project's brand while remaining professional and practical. This document codifies the style choices for consistency in future documentation.
+
+### Style Choices
+
+#### 1. **Emoji Usage**
+
+- **Section headers only** — One emoji per major section (Features, Getting Started, etc.)
+- **Minimal in body text** — Emoji in tables/lists only when they add meaning
+- **Rationale:** Makes scanning easier without feeling gimmicky; respects the playful "bumbledo" brand name
+
+#### 2. **Tone**
+
+- **Conversational, not technical** — "Just open it and start organizing" vs. "Initialize the application environment"
+- **Action-focused** — Features describe what users *do*, not implementation details
+- **Honest** — Known Limitations section explicitly lists trade-offs
+- **Friendly** — "Made with ❤️" footer, playful tips & tricks section
+
+#### 3. **Organization**
+
+- **Progressive disclosure** — Quick start first, then how-to guides, then deep tech
+- **Multiple entry points** — "Try It Now" (easiest), "Development Setup" (developers), "How It Works" (curious users)
+- **Scannable** — Lots of headers, short paragraphs, tables for options
+
+#### 4. **Examples**
+
+- **JSON data format** — Shows actual localStorage structure (helpful for developers)
+- **Bash code blocks** — Dev commands clearly labeled with comments
+- **Tables for states/options** — Better than prose for reference
+
+#### 5. **Link Targets**
+
+- Link to PRD.md for "full feature scope"
+- GitHub URL for issues/PRs
+- Author GitHub profile in footer
+
+### Decisions for Future Documentation
+
+1. **Changelog.md** — Same conversational tone, but more technical (mentions impl details)
+2. **API docs** — JSDoc comments in source code; link from README to specific modules
+3. **Architecture docs** — Can be more technical; assume reader is developer
+4. **In-app empty states** — Match README friendliness; "No todos yet. Add one above!"
+
+### Rationale
+
+Bumbledo is a *user-first* project. People download it to *use* it, not to study its code. The README should meet them where they are:
+- Non-technical user? → "Just open index.html"
+- Developer? → "npm install && npm run dev"
+- Curious about dependencies? → "See Dependencies graph"
+
+A playful, action-focused tone builds trust and makes the app feel approachable.
+
+### Acceptance Criteria
+
+✅ README.md deployed and live  
+✅ Tone consistent throughout  
+✅ Multiple entry points for different user types  
+✅ Emoji used sparingly (not overdone)  
+✅ Known limitations listed (transparency)  
+
+**Next steps:** Danny reviews for accuracy; Rusty/Saul sign off if UI copy needed adjustment.
+
+---
+
+## README Simplification Decision
+
+**Status:** Accepted  
+**Author:** Basher (Technical Writer)  
+**Date:** 2026-03-29  
+**Requested by:** Vladi Lyga
+
+### Summary
+
+Simplified README.md for a self-explanatory app. Removed redundant explanations, eliminated state-coloring documentation, and reduced from ~235 to 129 lines (~45% reduction).
+
+### Changes Made
+
+1. **Removed state coloring table** — Users learn states from UI, not docs
+2. **Collapsed "How It Works"** — Replaced multi-subsection breakdown with 6-bullet "Quick Start"
+3. **Removed Project Structure** — Internal architecture can be explored in code
+4. **Condensed Data Persistence** — Collapsed 25 lines → 1 sentence explaining localStorage trade-off
+5. **Merged Accessibility + Browser Support** — Combined into single 3-line section
+6. **Trimmed Tips & Tricks** — Kept only essential keyboard + offline hints
+7. **Cleaned up Known Limitations** — One-liner instead of bulleted list
+
+### Rationale
+
+- **User feedback:** App is simple and mostly self-explanatory
+- **Brand match:** Light, scannable, fun matches "bumbledo" tone
+- **Principle:** Let UI teach; docs support, don't repeat
+- **Priority:** Essential sections preserved (features, getting started, tech stack, license)
+
+### What Stayed
+
+- Project name & tagline
+- Features list (brief, user-focused)
+- Getting Started (try now + dev setup)
+- Tech Stack table
+- License
+- Contributing & author credit
+
+### Impact
+
+- Readers now get value faster
+- README is memorable (fits on screen)
+- Less burden on docs to explain obvious UI
+- Brand voice is lighter and more playful
+
+### Acceptance Criteria
+
+✅ README.md updated and validated  
+✅ Reduction target achieved (~45%)  
+✅ State-coloring section removed  
+✅ Essential content preserved  
+✅ Brand tone maintained

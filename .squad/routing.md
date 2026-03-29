@@ -20,3 +20,6 @@
 | Tests, quality, edge cases | Linus | — |
 | Frontend code review, quality gate | Saul | Danny |
 | Frontend standards, mentoring | Saul | — |
+| Documentation, README, guides | Basher | — |
+| Release notes, changelogs | Basher | Danny |
+| In-app copy, help text | Basher | Rusty |
