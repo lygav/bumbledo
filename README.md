@@ -2,6 +2,8 @@
 
 **A tiny todo app that buzzes through your tasks**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![GitHub stars](https://img.shields.io/github/stars/lygav/bumbledo.svg)](https://github.com/lygav/bumbledo/stargazers) [![GitHub last commit](https://img.shields.io/github/last-commit/lygav/bumbledo.svg)](https://github.com/lygav/bumbledo/commits)
+
 A lightweight, zero-friction browser-based todo app built with vanilla JavaScript. No backend, no framework, no sign-up. Just open it and start organizing your work—your tasks persist instantly in your browser's localStorage.
 
 ---
