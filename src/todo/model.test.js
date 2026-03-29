@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as model from './model.js';
 import {
   generateId,
   migrateTodos,
   loadTodos,
+  loadBurndownData,
   saveTodos,
+  saveBurndownData,
   addTodo,
   setStatus,
   toggleBlocker,
@@ -172,6 +174,75 @@ describe('saveTodos', () => {
     
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0]).toEqual({ id: '1', text: 'task', status: 'done' });
+  });
+});
+
+describe('burndown helpers', () => {
+  let mockStorage;
+
+  beforeEach(() => {
+    mockStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn()
+    };
+  });
+
+  describe('loadBurndownData', () => {
+    it('loads burndown samples from storage', () => {
+      mockStorage.getItem.mockReturnValue(JSON.stringify([
+        { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 6 }
+      ]));
+
+      expect(loadBurndownData(mockStorage)).toEqual([
+        { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 6 }
+      ]);
+      expect(mockStorage.getItem).toHaveBeenCalledWith('todos_burndown');
+    });
+
+    it('returns empty array for invalid burndown JSON', () => {
+      mockStorage.getItem.mockReturnValue('{not valid');
+      expect(loadBurndownData(mockStorage)).toEqual([]);
+    });
+
+    it('drops invalid samples and keeps valid stored totals', () => {
+      mockStorage.getItem.mockReturnValue(JSON.stringify([
+        { date: 'bad-date', done: 2, cancelled: 0, active: 1, total: 3 },
+        { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 1 }
+      ]));
+
+      expect(loadBurndownData(mockStorage)).toEqual([
+        { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 1 }
+      ]);
+    });
+  });
+
+  describe('saveBurndownData', () => {
+    it('saves pruned burndown samples', () => {
+      const samples = [
+        { date: '2026-02-26', done: 1, cancelled: 0, active: 1, total: 2 },
+        { date: '2026-03-01', done: 2, cancelled: 0, active: 1, total: 3 },
+        { date: '2026-03-29', done: 3, cancelled: 1, active: 1, total: 5 }
+      ];
+
+      const result = saveBurndownData(samples, mockStorage, 'todos_burndown', new Date(2026, 2, 29, 8, 0));
+
+      expect(result).toEqual([
+        { date: '2026-03-01', done: 2, cancelled: 0, active: 1, total: 3 },
+        { date: '2026-03-29', done: 3, cancelled: 1, active: 1, total: 5 }
+      ]);
+      expect(mockStorage.setItem).toHaveBeenCalledWith('todos_burndown', JSON.stringify(result));
+    });
+
+    it('keeps only the latest sample for a duplicate date', () => {
+      const result = saveBurndownData([
+        { date: '2026-03-29', done: 1, cancelled: 0, active: 2, total: 3 },
+        { date: '2026-03-29', done: 2, cancelled: 0, active: 2, total: 4 }
+      ], mockStorage, 'todos_burndown', new Date(2026, 2, 29, 8, 0));
+
+      expect(result).toEqual([
+        { date: '2026-03-29', done: 2, cancelled: 0, active: 2, total: 4 }
+      ]);
+    });
   });
 });
 
@@ -990,5 +1061,202 @@ describe('updateTodoText', () => {
     const todos = [{ id: '1', text: 'task', status: 'active' }];
     const result = updateTodoText(todos, '1', 'new text');
     expect(result[0].id).toBe('1');
+  });
+});
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function createStableNow() {
+  const anchor = new Date(2026, 1, 15, 12, 0, 0, 0);
+  const offsetHours = anchor.getTimezoneOffset() / 60;
+  const minHour = Math.ceil(Math.max(0, -offsetHours));
+  const maxHour = Math.floor(Math.min(23, 23 - offsetHours));
+  const safeHour = Math.floor((minHour + maxHour) / 2);
+  return new Date(2026, 1, 15, safeHour, 0, 0, 0);
+}
+
+function shiftDays(date, deltaDays) {
+  const shifted = new Date(date);
+  shifted.setDate(shifted.getDate() + deltaDays);
+  return shifted;
+}
+
+describe('takeBurndownSample', () => {
+  const stableNow = createStableNow();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(stableNow);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns counts for mixed statuses with blocked included as active', () => {
+    const todos = [
+      { id: '1', text: 'done one', status: 'done' },
+      { id: '2', text: 'done two', status: 'done' },
+      { id: '3', text: 'cancelled task', status: 'cancelled' },
+      { id: '4', text: 'active one', status: 'active' },
+      { id: '5', text: 'active two', status: 'active' },
+      { id: '6', text: 'active three', status: 'active' },
+      { id: '7', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+
+    expect(model.takeBurndownSample(todos)).toEqual({
+      date: formatDate(stableNow),
+      done: 2,
+      cancelled: 1,
+      active: 4,
+      total: 7
+    });
+  });
+
+  it('returns zero done and cancelled when all todos are active', () => {
+    const todos = [
+      { id: '1', text: 'task one', status: 'active' },
+      { id: '2', text: 'task two', status: 'active' },
+      { id: '3', text: 'task three', status: 'active' }
+    ];
+
+    expect(model.takeBurndownSample(todos)).toEqual({
+      date: formatDate(stableNow),
+      done: 0,
+      cancelled: 0,
+      active: 3,
+      total: 3
+    });
+  });
+
+  it('returns zero active when all todos are done', () => {
+    const todos = [
+      { id: '1', text: 'task one', status: 'done' },
+      { id: '2', text: 'task two', status: 'done' },
+      { id: '3', text: 'task three', status: 'done' }
+    ];
+
+    expect(model.takeBurndownSample(todos)).toEqual({
+      date: formatDate(stableNow),
+      done: 3,
+      cancelled: 0,
+      active: 0,
+      total: 3
+    });
+  });
+
+  it('returns zero counts for an empty todo list', () => {
+    expect(model.takeBurndownSample([])).toEqual({
+      date: formatDate(stableNow),
+      done: 0,
+      cancelled: 0,
+      active: 0,
+      total: 0
+    });
+  });
+
+  it('returns today as a YYYY-MM-DD date string', () => {
+    const result = model.takeBurndownSample([]);
+    expect(result.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(result.date).toBe(formatDate(stableNow));
+  });
+});
+
+describe('shouldSampleToday', () => {
+  const stableNow = createStableNow();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(stableNow);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns true when no samples exist', () => {
+    expect(model.shouldSampleToday([])).toBe(true);
+  });
+
+  it('returns false when today already has a sample', () => {
+    const data = [
+      { date: formatDate(stableNow), done: 2, cancelled: 1, active: 3, total: 6 }
+    ];
+
+    expect(model.shouldSampleToday(data)).toBe(false);
+  });
+
+  it('returns true when only yesterday has a sample', () => {
+    const data = [
+      { date: formatDate(shiftDays(stableNow, -1)), done: 2, cancelled: 1, active: 3, total: 6 }
+    ];
+
+    expect(model.shouldSampleToday(data)).toBe(true);
+  });
+
+  it('returns true when multiple samples exist but none are from today', () => {
+    const data = [
+      { date: formatDate(shiftDays(stableNow, -2)), done: 1, cancelled: 0, active: 4, total: 5 },
+      { date: formatDate(shiftDays(stableNow, -7)), done: 3, cancelled: 1, active: 2, total: 6 },
+      { date: formatDate(shiftDays(stableNow, -30)), done: 4, cancelled: 1, active: 1, total: 6 }
+    ];
+
+    expect(model.shouldSampleToday(data)).toBe(true);
+  });
+});
+
+describe('pruneBurndownData', () => {
+  const stableNow = createStableNow();
+
+  const makeSample = (daysAgo, overrides = {}) => ({
+    date: formatDate(shiftDays(stableNow, -daysAgo)),
+    done: 1,
+    cancelled: 0,
+    active: 2,
+    total: 3,
+    ...overrides
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(stableNow);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps all entries that are within the last 30 days', () => {
+    const data = [makeSample(0), makeSample(5), makeSample(30)];
+    expect(model.pruneBurndownData(data)).toEqual(data);
+  });
+
+  it('removes only entries older than 30 days', () => {
+    const withinWindow = makeSample(0, { done: 3 });
+    const boundary = makeSample(30, { done: 4 });
+    const oldOne = makeSample(31, { done: 5 });
+    const oldTwo = makeSample(45, { done: 6 });
+    const data = [oldTwo, withinWindow, oldOne, boundary];
+
+    expect(model.pruneBurndownData(data)).toEqual([withinWindow, boundary]);
+  });
+
+  it('returns an empty array when all entries are older than 30 days', () => {
+    const data = [makeSample(31), makeSample(60)];
+    expect(model.pruneBurndownData(data)).toEqual([]);
+  });
+
+  it('returns an empty array for empty input', () => {
+    expect(model.pruneBurndownData([])).toEqual([]);
+  });
+
+  it('keeps an entry that is exactly 30 days old', () => {
+    const boundaryEntry = makeSample(30, { done: 9, total: 12 });
+    expect(model.pruneBurndownData([boundaryEntry])).toEqual([boundaryEntry]);
   });
 });

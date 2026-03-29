@@ -142,3 +142,14 @@
 **Interaction rules to preserve:**
 - Unblock highlights live only in memory, expire after 3 seconds, and are cleared immediately by clicking the row or dismissing the alert.
 - The alert auto-hides after 5 seconds, announces task names for screen readers, and does not change persisted todo data.
+
+### 2026-03-29: Burndown View
+
+**What I implemented:**
+- Added burndown sampling helpers in `src/todo/model.js` for daily snapshots stored in `todos_burndown` with retention pruning and same-day duplicate protection.
+- Added a collapsible Progress section inside `index.html` with responsive summary, legend, empty state, SVG chart shell, and hover tooltip styling.
+- Wired `src/main.js` to sample once on load, render cumulative completed-vs-total lines, and keep the chart hidden until the user expands it.
+
+**Interaction rules to preserve:**
+- Burndown samples are taken only on first load of a local calendar day; chart data is historical and does not live-update with in-session edits.
+- The chart summary uses monotonic rendered series so completed/total lines never visually move backward, even if users later clear finished tasks from the live list.

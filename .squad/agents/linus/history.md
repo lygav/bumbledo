@@ -8,6 +8,23 @@
 
 ## Learnings
 
+### 2026-03-29: Burndown view data-layer contract tests
+
+**What I delivered:**
+- Added 14 model-layer unit tests in `src/todo/model.test.js` for the planned burndown helpers `takeBurndownSample()`, `shouldSampleToday()`, and `pruneBurndownData()`
+- Kept the tests at the pure-function level and called the pending helpers through the `model` namespace so the suite still loads cleanly during TDD
+- Added stable date fixtures with fake timers so day-based assertions stay deterministic across statuses, sampling checks, and 30-day pruning behavior
+
+**Coverage focus:**
+- Snapshot counting for mixed statuses, all-active, all-done, empty input, and date formatting
+- Daily sampling rules for empty history, existing same-day sample, yesterday-only data, and multi-entry history without today's sample
+- Retention logic for within-window data, selective pruning of >30-day entries, empty input, and the exact 30-day boundary
+
+**Execution outcome:**
+- Baseline before changes: full Vitest suite was green (`139` tests passing)
+- After adding the burndown contract tests: `14` expected red tests fail because the three burndown helpers are not yet implemented/exported from `src/todo/model.js`
+- This gives Rusty a precise TDD target for the burndown data layer without coupling coverage to storage or UI behavior
+
 ### 2026-03-29: clearFinished unblock-detection regression coverage
 
 **What I delivered:**
