@@ -10,6 +10,16 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: Blocker Picker Label Activation + DAG Status Parity
+
+**What I changed:**
+- Fixed the blocked-task picker so clicking blocker text toggles the checkbox again by giving each checkbox a stable `id`, wiring the label with `htmlFor`, and stopping picker clicks from bubbling into the row selection handler.
+- Updated DAG node palettes so `done` tasks use the same green highlight language as the list, and `cancelled` tasks now get their own tinted red treatment instead of looking like faded default nodes.
+
+**Interaction rules to preserve:**
+- Nested interactive controls inside a clickable task row should stop event bubbling when the row click would otherwise steal or neutralize the control’s default behavior.
+- Status styling should stay consistent between the task list and the dependency graph so users can recognize done/cancelled states in either view without relearning the color system.
+
 ### 2026-03-29: Done State Highlight Refresh
 
 **What I changed:**

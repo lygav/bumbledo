@@ -87,22 +87,22 @@ function getStatusPalette(status) {
 
   if (status === 'done') {
     return {
-      fill: '#ffffff',
-      border: '#c8c8c8',
-      accent: null,
-      text: '#1a1a1a',
-      opacity: '0.6',
-      strike: '#999999'
+      fill: 'rgba(76, 175, 80, 0.08)',
+      border: '#4caf50',
+      accent: '#4caf50',
+      text: '#5f6f62',
+      opacity: '1',
+      strike: 'rgba(95, 111, 98, 0.7)'
     };
   }
 
   if (status === 'cancelled') {
     return {
-      fill: '#ffffff',
+      fill: 'rgba(192, 57, 43, 0.08)',
       border: '#d7a8a3',
-      accent: null,
+      accent: '#c0392b',
       text: '#c0392b',
-      opacity: '0.5',
+      opacity: '0.8',
       strike: '#c0392b'
     };
   }
