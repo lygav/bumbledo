@@ -9,7 +9,8 @@ import {
   loadTodos,
   saveTodos,
   setStatus,
-  toggleBlocker
+  toggleBlocker,
+  updateTodoText
 } from './todo/model.js';
 
 // OWNERSHIP: main.js is the orchestrator.
@@ -40,6 +41,7 @@ if (typeof document !== 'undefined') {
     let dagExpanded = !isMobileViewport() && hasDependencies(todos);
     let dagToggleTouched = false;
     let flashTimeoutId = null;
+    let editingId = null;
 
     const dagView = createDagView({
       container: dagContainer,
@@ -86,6 +88,31 @@ if (typeof document !== 'undefined') {
       if (shouldFlash) {
         flashTaskRow(taskElement);
       }
+    }
+
+    function enterEditMode(id) {
+      editingId = id;
+      render();
+      const input = document.querySelector(`li[data-id="${id}"] .edit-input`);
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }
+
+    function saveEdit(newText) {
+      if (!editingId) return;
+      const trimmed = newText.trim();
+      if (!trimmed) return; // Reject empty: keep input focused
+      todos = updateTodoText(todos, editingId, newText);
+      saveTodos(todos);
+      editingId = null;
+      render();
+    }
+
+    function cancelEdit() {
+      editingId = null;
+      render();
     }
 
     function syncDagState() {
@@ -182,9 +209,35 @@ if (typeof document !== 'undefined') {
           render();
         });
 
-        li.append(handle, select, text, deleteBtn);
+        if (editingId === todo.id) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'edit-input';
+          input.value = todo.text;
+          input.setAttribute('aria-label', `Edit "${todo.text}"`);
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              saveEdit(input.value);
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              cancelEdit();
+            }
+          });
+          input.addEventListener('blur', () => {
+            if (editingId === todo.id) {
+              saveEdit(input.value);
+            }
+          });
+          li.append(handle, select, input, deleteBtn);
+        } else {
+          text.addEventListener('dblclick', () => {
+            enterEditMode(todo.id);
+          });
+          li.append(handle, select, text, deleteBtn);
+        }
 
-        if (todo.status === 'blocked') {
+        if (todo.status === 'blocked' && editingId !== todo.id) {
           if (Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
             const blockerNames = todo.blockedBy
               .map(bid => {

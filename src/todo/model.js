@@ -124,3 +124,13 @@ export function clearFinished(todos) {
 export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
+
+export function updateTodoText(todos, id, newText) {
+  const trimmed = newText.trim();
+  if (!trimmed) return todos;
+
+  return todos.map(todo => {
+    if (todo.id !== id) return todo;
+    return { ...todo, text: trimmed };
+  });
+}
