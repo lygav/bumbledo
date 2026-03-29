@@ -80,3 +80,61 @@
 - TickTick: Dense UI, great for project managers, alienates casual users
 - Things 3: $50–$200 one-time; iCloud sync (opaque); macOS-only
 - Obsidian/Notion: Not todo systems; users mistake them for task trackers
+
+### Session: Burndown PRD Metric Fix (2025-07-18)
+
+**What happened:** Vladi caught a critical flaw in the burndown chart PRD. The original metric — "number of active tasks per day" — is a net metric that conflates scope changes with progress. If a user completes 10 tasks but adds 20, the chart goes UP, hiding real work done.
+
+**The fix:** Replaced single "active count" line with a dual-line chart: **cumulative completed** (done + cancelled) vs. **cumulative total** (all tasks ever created). Completed line always goes up (shows output). Total line always goes up (shows scope). Gap = remaining work.
+
+**Key learning:** When designing progress metrics for tools where scope isn't fixed, never use net metrics (remaining = total - done). They punish users who are good at identifying new work. Instead, separate *output* (what you did) from *input* (what came in). Cumulative metrics are motivational because they only go up.
+
+**Also learned:** Data snapshots should capture all state counts (done, cancelled, active, total), not just one derived number. Richer snapshots enable future features (e.g., done vs. cancelled breakdown) without schema migration.
+
+### Session: Persona Revision — Personal Productivity Pivot (2025-07-18)
+
+**What happened:** Vladi clarified that bumbledo's product space is **personal productivity** — not developer tools, not project management, not team collaboration. Revised all four personas to reflect this. Previously, personas were developer-centric (solo dev, privacy planner, freelancer, OSS maintainer). Now they represent a broader audience managing personal lives.
+
+**Revised personas (saved to `docs/personas.md`):**
+1. **Marco** — Side-Project Juggler (technical, personal coding/learning projects)
+2. **Priya** — Life Planner (non-technical, home improvement/family events/finance)
+3. **Jake** — Student Planner (non-technical, coursework/grad apps/campus life)
+4. **Lin** — Creative Project Maker (non-technical, illustration pipeline/Etsy shop/courses)
+
+**Key design decisions:**
+- 3 of 4 personas are non-technical — personal productivity tools serve everyone, not just developers
+- Every persona has a concrete dependency scenario from real life (not work): course prerequisites, home renovation sequences, creative production pipelines, side-project task chains
+- Local-first and zero-friction remain universal needs — they matter even more in personal contexts where people reject "work tools" for personal use
+- Kept Marco as the one technical persona since developers are still a valid personal productivity user — but reframed from "solo dev doing work" to "person managing side projects in limited free time"
+
+**Key learning:** When pivoting product positioning, personas must change *who the people are*, not just *what words describe them*. A developer managing Jira tickets is a different person than a developer managing weekend side projects — same human, different mindset, different needs, different competition. The personal productivity lens forces you to think about evenings, weekends, and life complexity — not sprints and standups.
+
+### Session: Personal Life Organization as Primary Use Case (2025-07-19)
+
+**What happened:** Vladi clarified that bumbledo is **mainly for personal life organization**, not just side projects. Side projects and learning goals are still valid but secondary. The primary framing is: "I use bumbledo to organize my life."
+
+**Changes made to `docs/personas.md`:**
+- Reframed product space from "personal productivity" to "personal life organization"
+- Promoted Priya to persona #1 ("Household Organizer") — expanded with grocery planning, home maintenance, moving house, tax season, birthday party scenarios
+- Replaced Lin with Daniel ("Wellness & Routine Tracker") — covers fitness programs, medical appointment chains, morning/evening routines, family logistics
+- Expanded Jake with domestic scenarios (apartment chores, meal prep, move-out) alongside academics
+- Moved Marco to persona #4, reframed as "Side-Project Hobbyist" — now leads with kitchen renovation, car maintenance, and camping trips; side projects are secondary
+- Added "Key scenarios" sections with concrete dependency DAG examples grounded in real personal life situations (grocery→cook→prep, doctor→blood work→results→follow-up, etc.)
+- Updated summary table and cross-cutting themes to lead with "Life organization first"
+
+**Key learning:** The distinction between "personal productivity" and "personal life organization" matters. "Productivity" still sounds like work optimization. "Life organization" immediately evokes groceries, doctor appointments, family events, and daily routines — the stuff that fills most people's actual days. When dependency examples come from household management and health rather than code deploys, the product feels universally relevant, not niche-technical. Every persona should be someone who'd say "I use this to run my life," not "I use this to ship my side project."
+
+### Session: Actionable Now PRD (2025-07-19)
+
+**What happened:** Wrote PRD-actionable-now.md — a filtered view showing only unblocked, active tasks. This was the #1 gap identified in the persona review: every persona's primary moment of use is "I open bumbledo and want to know what I can do right now." Priya with morning coffee, Daniel on Sunday evening, Jake between classes, Marco on Saturday morning — all the same question, different life contexts.
+
+**Key design decisions:**
+- Filter, not a page — toggle between "all" and "actionable" views inline. A separate page breaks the mental model of "one list."
+- Filter logic is dead simple: `status === "active"`. No complex blocker-walking needed because ADR-001's auto-unblock already transitions tasks to active when all blockers complete. The filter just reads the current state.
+- Count summary ("N of M tasks are actionable") gives context even when not filtering — users always know how much of their list is available vs. waiting.
+- localStorage persistence for the toggle preference — users who prefer the filtered view shouldn't have to re-enable it every session.
+- Explicitly scoped interactions with every existing feature (drag-drop, clear finished, DAG, burndown, shortcuts, smart alerts) to prevent spec gaps during implementation.
+
+**Key learning:** The simplest features often require the most careful spec work around *interactions with existing features*. The filter itself is trivial (hide items by status). But drag-and-drop in filtered mode, empty state disambiguation, and DAG independence all need explicit decisions upfront or they become implementation ambiguities. When a feature touches the list view, it touches *everything*. Spec the edges, not just the happy path.
+
+**Also learned:** When a feature opportunity emerges from persona analysis ("every persona wants X"), that's a strong signal but also a trap — the temptation is to over-design for all four personas at once. Keeping Actionable Now as a simple toggle (not a smart dashboard or context-aware filter) respects the lightweight principle. The personas validate the *need*; the non-goals protect the *scope*.
