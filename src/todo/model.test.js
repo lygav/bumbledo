@@ -492,6 +492,130 @@ describe('cleanupBlockedBy', () => {
   });
 });
 
+describe('detectUnblockedTodos', () => {
+  it('returns the ID when one todo changes from blocked to active', () => {
+    const before = [
+      { id: '1', text: 'blocker', status: 'done' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const after = [
+      { id: '1', text: 'blocker', status: 'done' },
+      { id: '2', text: 'blocked task', status: 'active' }
+    ];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual(['2']);
+  });
+
+  it('returns both IDs when multiple todos change from blocked to active', () => {
+    const before = [
+      { id: '1', text: 'done blocker', status: 'done' },
+      { id: '2', text: 'first blocked task', status: 'blocked', blockedBy: ['1'] },
+      { id: '3', text: 'second blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const after = [
+      { id: '1', text: 'done blocker', status: 'done' },
+      { id: '2', text: 'first blocked task', status: 'active' },
+      { id: '3', text: 'second blocked task', status: 'active' }
+    ];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual(['2', '3']);
+  });
+
+  it('returns an empty array when statuses are unchanged', () => {
+    const before = [
+      { id: '1', text: 'active task', status: 'active' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const after = [
+      { id: '1', text: 'active task', status: 'active' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('does not include todos that stay active', () => {
+    const before = [{ id: '1', text: 'task', status: 'active' }];
+    const after = [{ id: '1', text: 'task', status: 'active' }];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('does not include todos that stay blocked', () => {
+    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const after = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('does not include todos that change from blocked to done', () => {
+    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const after = [{ id: '1', text: 'task', status: 'done' }];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('returns an empty array for empty before and after snapshots', () => {
+    const result = model.detectUnblockedTodos([], []);
+    expect(result).toEqual([]);
+  });
+
+  it('does not include todos that are deleted between snapshots', () => {
+    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const after = [];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('does not include newly added active todos', () => {
+    const before = [];
+    const after = [{ id: '1', text: 'new task', status: 'active' }];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual([]);
+  });
+
+  it('detects unblock transitions even when blockedBy was populated before cleanup', () => {
+    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const after = [{ id: '1', text: 'task', status: 'active' }];
+    const result = model.detectUnblockedTodos(before, after);
+    expect(result).toEqual(['1']);
+  });
+
+  it('catches unblocks caused by clearFinished', () => {
+    const before = [
+      { id: 'a', text: 'done blocker', status: 'done' },
+      { id: 'b', text: 'blocked task', status: 'blocked', blockedBy: ['a'] },
+      { id: 'c', text: 'active task', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, 'a');
+
+    expect(after).toEqual([
+      { id: 'b', text: 'blocked task', status: 'active' },
+      { id: 'c', text: 'active task', status: 'active' }
+    ]);
+    expect(model.detectUnblockedTodos(before, after)).toEqual(['b']);
+  });
+
+  it('returns empty when clearFinished removes done todos that were not blockers', () => {
+    const before = [
+      { id: 'a', text: 'done task', status: 'done' },
+      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
+      { id: 'c', text: 'active blocker', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, 'a');
+
+    expect(after).toEqual([
+      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
+      { id: 'c', text: 'active blocker', status: 'active' }
+    ]);
+    expect(model.detectUnblockedTodos(before, after)).toEqual([]);
+  });
+});
+
 describe('deleteTodo', () => {
   it('removes the todo from the array', () => {
     const todos = [
@@ -602,6 +726,22 @@ describe('clearFinished', () => {
     const result = clearFinished(todos);
     expect(result[0].status).toBe('active');
     expect(result[0].blockedBy).toBeUndefined();
+  });
+
+  it('removes done blockers from blockedBy during clearFinished flow', () => {
+    const before = [
+      { id: '1', text: 'done blocker', status: 'done' },
+      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['1', '3'] },
+      { id: '3', text: 'active blocker', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, '1');
+
+    expect(after).toEqual([
+      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['3'] },
+      { id: '3', text: 'active blocker', status: 'active' }
+    ]);
   });
 
   it('handles empty array', () => {

@@ -8,6 +8,40 @@
 
 ## Learnings
 
+### 2026-03-29: clearFinished unblock-detection regression coverage
+
+**What I delivered:**
+- Added 3 model-layer tests in `src/todo/model.test.js` to cover unblock detection during the `clearFinished` flow
+- Exercised the sequence `clearFinished(...) -> cleanupBlockedBy(...) -> detectUnblockedTodos(before, after)` so the contract is pinned at the pure-function level
+- Added both the positive unblock case and the negative case where finished items were removed but no blocker relationship changed
+
+**Coverage focus:**
+- A done blocker being cleared and causing a blocked todo to auto-transition back to `active`
+- Cleanup of lingering blocker IDs after removing a finished blocker from the list
+- No false-positive unblock detection when cleared finished todos were not referenced as blockers
+
+**Execution outcome:**
+- Baseline before changes: full Vitest suite was green (`136` tests passing)
+- After adding the new regression coverage: full Vitest suite stayed green (`139` tests passing)
+- This closes the test gap Danny flagged around silent unblocks during `clearFinished`
+
+### 2026-03-29: Smart blocked alerts model contract tests
+
+**What I delivered:**
+- Added 10 unit tests in `src/todo/model.test.js` for the planned `detectUnblockedTodos(before, after)` helper
+- Covered the unblock-detection contract only, with no DOM, notification, or highlight assertions
+- Matched the existing Vitest pattern by calling the pending helper through the `model` namespace so the suite stays loadable during TDD
+
+**Coverage focus:**
+- Positive detection for single and multiple `blocked -> active` transitions
+- Negative coverage for unchanged statuses, `active -> active`, `blocked -> blocked`, and `blocked -> done`
+- Edge handling for empty snapshots, deleted todos, newly added todos, and blocked items whose `blockedBy` was populated before cleanup
+
+**Execution outcome:**
+- Baseline before changes: existing suite was green (`126` tests passing)
+- After adding tests: `10` expected red tests fail because `detectUnblockedTodos` is not implemented/exported in `model.js`
+- This gives Rusty a precise TDD target for unblock detection without coupling tests to UI behavior
+
 ### 2026-03-29: Keyboard shortcuts model-layer contract tests
 
 **What I delivered:**

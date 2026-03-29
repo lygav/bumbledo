@@ -10,6 +10,16 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: PR #11 Smart Blocked Alerts Review
+
+**Verdict:** Reject pending integration coverage fix.
+
+**What I learned:**
+- `detectUnblockedTodos(before, after)` is the right shape for this feature: a small pure helper that only reports blocked → active transitions and stays decoupled from DOM concerns.
+- The Smart Blocked Alerts wiring is mostly sound in direct status-change and delete flows, but `clearFinished()` is an important third unblock path and `main.js` does not surface alerts after that bulk cleanup. Users can therefore unblock tasks without seeing the notification or gold highlight.
+- The notification bar markup is directionally correct (`role="status"`, dismiss button, hidden descriptive detail), and the highlight state is transient in memory rather than persisted, which matches the PRD well.
+- The 10 new tests validate the helper itself, but they are not sufficient for the feature as a whole because they miss the bulk-clear integration path where the real regression currently lives.
+
 ### 2026-03-29: PR #6 Keyboard Shortcuts Review
 
 **Verdict:** Reject pending integration cleanup.
