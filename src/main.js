@@ -1,5 +1,6 @@
 import { createDagView } from './dag/view.js';
 import { buildDependencyGraph } from './dag/graph.js';
+import { createNotificationController } from './todo/notification.js';
 import {
   addTodo,
   cleanupBlockedBy,
