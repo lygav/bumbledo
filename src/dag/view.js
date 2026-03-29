@@ -152,7 +152,8 @@ export function createDagView({ container, onSelectTask }) {
   const svg = createSvgElement('svg', {
     class: 'dag-svg',
     viewBox: '0 0 800 280',
-    'aria-hidden': 'true'
+    role: 'img',
+    'aria-label': 'Task dependency graph'
   });
 
   const defs = createSvgElement('defs');
