@@ -9,7 +9,7 @@ import { buildDependencyGraph } from './graph.js';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const NODE_WIDTH = 168;
 const NODE_HEIGHT = 44;
-const LABEL_LIMIT = 24;
+const LABEL_LIMIT = 18;
 const MAX_FIT_SCALE = 1.25;
 const MIN_FIT_SCALE = 0.75;
 
@@ -167,6 +167,9 @@ export function createDagView({ container, onSelectTask }) {
     <marker id="dag-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#d64541"></path>
     </marker>
+    <clipPath id="dag-node-clip">
+      <rect x="0" y="0" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="8" ry="8" />
+    </clipPath>
   `;
 
   const surface = createSvgElement('g', { class: 'dag-surface' });
@@ -381,6 +384,9 @@ export function createDagView({ container, onSelectTask }) {
         group.appendChild(accent);
       }
 
+      const textClip = createSvgElement('g', {
+        'clip-path': 'url(#dag-node-clip)'
+      });
       const text = createSvgElement('text', {
         class: 'dag-node-label',
         x: palette.accent ? 18 : 14,
@@ -389,7 +395,8 @@ export function createDagView({ container, onSelectTask }) {
         'fill-opacity': palette.opacity
       });
       text.textContent = truncateLabel(node.label);
-      group.appendChild(text);
+      textClip.appendChild(text);
+      group.appendChild(textClip);
 
       if (palette.strike) {
         const strike = createSvgElement('line', {
