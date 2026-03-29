@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDependencyGraph } from './dag.js';
+import { buildDependencyGraph } from './graph.js';
 
 describe('buildDependencyGraph — Node mapping', () => {
   it('returns no nodes, no edges, and hasDependencies false for an empty array', () => {

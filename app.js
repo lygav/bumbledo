@@ -1,4 +1,5 @@
-import { buildDependencyGraph, createDagView } from './dag.js';
+import { createDagView } from './dag.js';
+import { buildDependencyGraph } from './graph.js';
 
 // Storage interface - injectable for testing
 const defaultStorage = {
