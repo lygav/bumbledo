@@ -200,11 +200,6 @@ if (typeof document !== 'undefined') {
     let editingId = null;
     let helpModalOpen = false;
     let helpModalReturnFocusEl = null;
-    let unblockedNotificationTimeoutId = null;
-    let unblockedNotificationFrameId = null;
-
-    const unblockedHighlightExpiresAt = new Map();
-    const unblockedHighlightTimeoutIds = new Map();
 
     const prefersMacKeys = isMacPlatform();
 
@@ -230,101 +225,40 @@ if (typeof document !== 'undefined') {
 
     saveTodos(todos);
 
+    const notificationController = createNotificationController({
+      onStateChange: () => {
+        applyNotificationState();
+        syncVisibleUnblockedHighlights();
+      }
+    });
+
     function getVisibleTodos() {
       return filterActive ? getActionableTodos(todos) : todos;
     }
 
-    function clearUnblockedNotificationTimeout() {
-      if (unblockedNotificationTimeoutId !== null) {
-        window.clearTimeout(unblockedNotificationTimeoutId);
-        unblockedNotificationTimeoutId = null;
-      }
+    function applyNotificationState() {
+      const notificationState = notificationController.getState();
+      unblockedNotification.hidden = !notificationState.visible;
+      unblockedNotificationMessage.textContent = notificationState.message;
+      unblockedNotificationDetail.textContent = notificationState.detail;
     }
 
-    function clearUnblockedNotificationFrame() {
-      if (unblockedNotificationFrameId !== null) {
-        window.cancelAnimationFrame(unblockedNotificationFrameId);
-        unblockedNotificationFrameId = null;
-      }
-    }
+    function syncVisibleUnblockedHighlights() {
+      [...todoList.querySelectorAll('li[data-id]')].forEach((taskElement) => {
+        const remainingMs = notificationController.getHighlightRemainingMs(taskElement.dataset.id);
+        if (remainingMs !== null && remainingMs > 0) {
+          taskElement.classList.add('task-row-unblocked');
+          taskElement.style.setProperty('--unblocked-delay', `${remainingMs - 3000}ms`);
+          return;
+        }
 
-    function hideUnblockedNotification() {
-      clearUnblockedNotificationTimeout();
-      clearUnblockedNotificationFrame();
-      unblockedNotification.hidden = true;
-    }
-
-    function clearUnblockedHighlight(id) {
-      const timeoutId = unblockedHighlightTimeoutIds.get(id);
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-        unblockedHighlightTimeoutIds.delete(id);
-      }
-
-      unblockedHighlightExpiresAt.delete(id);
-
-      const taskElement = findTaskElement(id);
-      if (taskElement) {
         taskElement.classList.remove('task-row-unblocked');
         taskElement.style.removeProperty('--unblocked-delay');
-      }
-    }
-
-    function clearAllUnblockedHighlights() {
-      [...unblockedHighlightExpiresAt.keys()].forEach(id => clearUnblockedHighlight(id));
+      });
     }
 
     function dismissUnblockedNotification({ clearHighlights = false } = {}) {
-      hideUnblockedNotification();
-      if (clearHighlights) {
-        clearAllUnblockedHighlights();
-      }
-    }
-
-    function scheduleUnblockedHighlight(id) {
-      clearUnblockedHighlight(id);
-
-      const durationMs = 3000;
-      unblockedHighlightExpiresAt.set(id, Date.now() + durationMs);
-      const timeoutId = window.setTimeout(() => {
-        clearUnblockedHighlight(id);
-      }, durationMs);
-
-      unblockedHighlightTimeoutIds.set(id, timeoutId);
-    }
-
-    function showUnblockedNotification(unblockedIds) {
-      const taskNames = unblockedIds
-        .map(id => todos.find(todo => todo.id === id)?.text)
-        .filter(Boolean);
-
-      if (taskNames.length === 0) {
-        dismissUnblockedNotification({ clearHighlights: true });
-        return;
-      }
-
-      const taskCount = taskNames.length;
-      const taskLabel = taskCount === 1 ? 'task' : 'tasks';
-      const subject =
-        taskCount === 1
-          ? `${taskCount} ${taskLabel}: ${taskNames[0]}`
-          : `${taskCount} ${taskLabel}: ${taskNames.join(', ')}`;
-      const scrollTarget = taskCount === 1 ? 'it' : 'them';
-
-      hideUnblockedNotification();
-      unblockedNotificationMessage.textContent = '';
-      unblockedNotificationDetail.textContent = '';
-
-      unblockedNotificationFrameId = window.requestAnimationFrame(() => {
-        unblockedNotificationFrameId = null;
-        unblockedNotificationMessage.textContent = `You've unblocked ${subject}. Scroll down to find ${scrollTarget}.`;
-        unblockedNotificationDetail.textContent = `Alert: You've unblocked ${taskCount} ${taskLabel}. ${taskNames.join(', ')}.`;
-        unblockedNotification.hidden = false;
-        clearUnblockedNotificationTimeout();
-        unblockedNotificationTimeoutId = window.setTimeout(() => {
-          hideUnblockedNotification();
-        }, 5000);
-      });
+      notificationController.dismiss({ clearHighlights });
     }
 
     function surfaceUnblockedTodos(todosBefore, todosAfter) {
@@ -333,8 +267,11 @@ if (typeof document !== 'undefined') {
         return;
       }
 
-      unblockedIds.forEach(id => scheduleUnblockedHighlight(id));
-      showUnblockedNotification(unblockedIds);
+      notificationController.showUnblocked(
+        unblockedIds
+          .map(id => ({ id, name: todosAfter.find(todo => todo.id === id)?.text }))
+          .filter(item => item.name)
+      );
     }
 
     function findTaskElement(id) {
@@ -828,15 +765,10 @@ if (typeof document !== 'undefined') {
         if (todo.status !== 'active') li.classList.add('status-' + todo.status);
         if (todo.id === selectedTaskId) li.classList.add('task-row-selected');
 
-        const unblockedExpiresAt = unblockedHighlightExpiresAt.get(todo.id);
-        if (typeof unblockedExpiresAt === 'number') {
-          const remainingMs = unblockedExpiresAt - Date.now();
-          if (remainingMs > 0) {
-            li.classList.add('task-row-unblocked');
-            li.style.setProperty('--unblocked-delay', `${remainingMs - 3000}ms`);
-          } else {
-            clearUnblockedHighlight(todo.id);
-          }
+        const remainingMs = notificationController.getHighlightRemainingMs(todo.id);
+        if (remainingMs !== null && remainingMs > 0) {
+          li.classList.add('task-row-unblocked');
+          li.style.setProperty('--unblocked-delay', `${remainingMs - 3000}ms`);
         }
 
         const handle = document.createElement('span');
@@ -983,8 +915,9 @@ if (typeof document !== 'undefined') {
         }
 
         li.addEventListener('click', () => {
-          if (unblockedHighlightExpiresAt.has(todo.id)) {
-            clearUnblockedHighlight(todo.id);
+          const remainingMs = notificationController.getHighlightRemainingMs(todo.id);
+          if (remainingMs !== null && remainingMs > 0) {
+            notificationController.clearHighlight(todo.id);
           }
           selectTask(todo.id);
         });
@@ -999,6 +932,7 @@ if (typeof document !== 'undefined') {
       syncTaskRowSelection();
       syncBurndownState();
       syncDagState();
+      applyNotificationState();
     }
 
     addForm.addEventListener('submit', e => {
