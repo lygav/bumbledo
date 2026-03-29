@@ -9,7 +9,8 @@ import {
   toggleBlocker,
   cleanupBlockedBy,
   deleteTodo,
-  clearFinished
+  clearFinished,
+  updateTodoText
 } from './model.js';
 
 describe('generateId', () => {
@@ -520,5 +521,106 @@ describe('clearFinished', () => {
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('4');
+  });
+});
+
+describe('updateTodoText', () => {
+  it('updates the text of an existing todo', () => {
+    const todos = [
+      { id: '1', text: 'Buy milk', status: 'active' },
+      { id: '2', text: 'Walk dog', status: 'done' }
+    ];
+    const result = updateTodoText(todos, '1', 'Buy oat milk');
+    expect(result[0].text).toBe('Buy oat milk');
+  });
+
+  it('returns a NEW array (immutability)', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, '1', 'updated task');
+    expect(result).not.toBe(todos);
+  });
+
+  it('does not mutate the original todo object', () => {
+    const original = { id: '1', text: 'task', status: 'active' };
+    const todos = [original];
+    updateTodoText(todos, '1', 'updated task');
+    expect(original.text).toBe('task');
+  });
+
+  it('persists updated text through saveTodos/loadTodos round-trip', () => {
+    const mockStorage = { getItem: vi.fn(), setItem: vi.fn() };
+    const todos = [{ id: '1', text: 'old text', status: 'active' }];
+    const updated = updateTodoText(todos, '1', 'new text');
+
+    saveTodos(updated, mockStorage, 'testKey');
+    mockStorage.getItem.mockReturnValue(mockStorage.setItem.mock.calls[0][1]);
+    const loaded = loadTodos(mockStorage, 'testKey');
+
+    expect(loaded[0].text).toBe('new text');
+  });
+
+  it('returns todos unchanged for empty text', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, '1', '');
+    expect(result).toEqual(todos);
+  });
+
+  it('returns todos unchanged for whitespace-only text', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, '1', '   \n\t  ');
+    expect(result).toEqual(todos);
+  });
+
+  it('is a no-op when the todo id does not exist', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, 'nonexistent', 'new text');
+    expect(result).toEqual(todos);
+  });
+
+  it('does not change the todo status', () => {
+    const todos = [{ id: '1', text: 'task', status: 'done' }];
+    const result = updateTodoText(todos, '1', 'updated task');
+    expect(result[0].status).toBe('done');
+  });
+
+  it('does not change blockedBy on a blocked todo', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const result = updateTodoText(todos, '1', 'updated task');
+    expect(result[0].status).toBe('blocked');
+    expect(result[0].blockedBy).toEqual(['2', '3']);
+  });
+
+  it('preserves position of the updated todo in the array', () => {
+    const todos = [
+      { id: '1', text: 'first', status: 'active' },
+      { id: '2', text: 'second', status: 'active' },
+      { id: '3', text: 'third', status: 'active' }
+    ];
+    const result = updateTodoText(todos, '2', 'edited second');
+    expect(result[0].id).toBe('1');
+    expect(result[1].id).toBe('2');
+    expect(result[1].text).toBe('edited second');
+    expect(result[2].id).toBe('3');
+  });
+
+  it('leaves other todos unchanged', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' }
+    ];
+    const result = updateTodoText(todos, '1', 'updated');
+    expect(result[1]).toEqual(todos[1]);
+  });
+
+  it('trims leading and trailing whitespace from new text', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, '1', '  trimmed text  ');
+    expect(result[0].text).toBe('trimmed text');
+  });
+
+  it('preserves the todo id after update', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = updateTodoText(todos, '1', 'new text');
+    expect(result[0].id).toBe('1');
   });
 });
