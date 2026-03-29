@@ -118,233 +118,235 @@ export function clearFinished(todos) {
 }
 
 // DOM initialization - runs on load
-(function init() {
-  const STORAGE_KEY = 'todos';
-  const todoList = document.getElementById('todo-list');
-  const todoInput = document.getElementById('todo-input');
-  const addForm = document.getElementById('add-form');
-  const emptyState = document.getElementById('empty-state');
-  const clearFinishedBtn = document.getElementById('clear-finished-btn');
+if (typeof document !== 'undefined') {
+  (function init() {
+    const STORAGE_KEY = 'todos';
+    const todoList = document.getElementById('todo-list');
+    const todoInput = document.getElementById('todo-input');
+    const addForm = document.getElementById('add-form');
+    const emptyState = document.getElementById('empty-state');
+    const clearFinishedBtn = document.getElementById('clear-finished-btn');
 
-  let todos = loadTodos();
-  saveTodos(todos); // persist migrated format
+    let todos = loadTodos();
+    saveTodos(todos); // persist migrated format
 
-  function render() {
-    todoList.innerHTML = '';
+    function render() {
+      todoList.innerHTML = '';
 
-    const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
-    clearFinishedBtn.disabled = !hasFinished;
-    emptyState.hidden = todos.length > 0;
+      const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
+      clearFinishedBtn.disabled = !hasFinished;
+      emptyState.hidden = todos.length > 0;
 
-    todos.forEach(todo => {
-      const li = document.createElement('li');
-      li.draggable = true;
-      li.dataset.id = todo.id;
-      if (todo.status !== 'active') li.classList.add('status-' + todo.status);
+      todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.draggable = true;
+        li.dataset.id = todo.id;
+        if (todo.status !== 'active') li.classList.add('status-' + todo.status);
 
-      const handle = document.createElement('span');
-      handle.className = 'drag-handle';
-      handle.setAttribute('aria-hidden', 'true');
-      handle.textContent = '⠿';
+        const handle = document.createElement('span');
+        handle.className = 'drag-handle';
+        handle.setAttribute('aria-hidden', 'true');
+        handle.textContent = '⠿';
 
-      const select = document.createElement('select');
-      select.className = 'todo-status';
-      select.setAttribute('aria-label', `Status for "${todo.text}"`);
-      const statusOptions = [
-        { value: 'active', label: '— None —' },
-        { value: 'done', label: 'Done' },
-        { value: 'cancelled', label: 'Cancelled' },
-        { value: 'blocked', label: 'Blocked' }
-      ];
-      statusOptions.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.value;
-        opt.textContent = s.label;
-        if (s.value === todo.status) opt.selected = true;
-        select.appendChild(opt);
-      });
-      if (todo.status === 'active') {
-        select.style.color = '#999';
-      } else {
-        select.style.color = '#1a1a1a';
-      }
-      select.addEventListener('change', () => {
-        todos = setStatus(todos, todo.id, select.value);
-        if (select.value === 'done' || select.value === 'cancelled') {
-          todos = cleanupBlockedBy(todos, todo.id);
-        }
-        saveTodos(todos);
-        render();
-      });
-
-      const text = document.createElement('span');
-      text.className = 'todo-text';
-      text.textContent = todo.text;
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.className = 'delete-btn';
-      deleteBtn.setAttribute('aria-label', `Delete "${todo.text}"`);
-      deleteBtn.textContent = '×';
-      deleteBtn.addEventListener('click', () => {
-        todos = deleteTodo(todos, todo.id);
-        saveTodos(todos);
-        render();
-      });
-
-      li.append(handle, select, text, deleteBtn);
-
-      if (todo.status === 'blocked') {
-        if (Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
-          const blockerNames = todo.blockedBy
-            .map(bid => {
-              const blocker = todos.find(t => t.id === bid);
-              if (!blocker) return null;
-              return blocker.text.length > 30 ? blocker.text.slice(0, 30) + '…' : blocker.text;
-            })
-            .filter(Boolean);
-
-          if (blockerNames.length > 0) {
-            let displayText;
-            if (blockerNames.length <= 3) {
-              displayText = 'Blocked by: ' + blockerNames.join(', ');
-            } else {
-              displayText = 'Blocked by: ' + blockerNames.slice(0, 2).join(', ') + ' + ' + (blockerNames.length - 2) + ' more';
-            }
-            const subtitle = document.createElement('div');
-            subtitle.className = 'blocked-by-text';
-            subtitle.textContent = displayText;
-            li.appendChild(subtitle);
-          }
-        }
-
-        const picker = document.createElement('div');
-        picker.className = 'blocker-picker';
-
-        const pickerTitle = document.createElement('div');
-        pickerTitle.className = 'blocker-picker-title';
-        pickerTitle.textContent = 'Blocked by:';
-        picker.appendChild(pickerTitle);
-
-        const eligible = todos.filter(t => t.id !== todo.id && (t.status === 'active' || t.status === 'blocked'));
-
-        if (eligible.length === 0) {
-          const msg = document.createElement('div');
-          msg.className = 'no-blockers-msg';
-          msg.textContent = 'No other tasks to select.';
-          picker.appendChild(msg);
+        const select = document.createElement('select');
+        select.className = 'todo-status';
+        select.setAttribute('aria-label', `Status for "${todo.text}"`);
+        const statusOptions = [
+          { value: 'active', label: '— None —' },
+          { value: 'done', label: 'Done' },
+          { value: 'cancelled', label: 'Cancelled' },
+          { value: 'blocked', label: 'Blocked' }
+        ];
+        statusOptions.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.value;
+          opt.textContent = s.label;
+          if (s.value === todo.status) opt.selected = true;
+          select.appendChild(opt);
+        });
+        if (todo.status === 'active') {
+          select.style.color = '#999';
         } else {
-          eligible.forEach(t => {
-            const label = document.createElement('label');
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
-            cb.addEventListener('change', () => {
-              todos = toggleBlocker(todos, todo.id, t.id);
-              saveTodos(todos);
-              render();
+          select.style.color = '#1a1a1a';
+        }
+        select.addEventListener('change', () => {
+          todos = setStatus(todos, todo.id, select.value);
+          if (select.value === 'done' || select.value === 'cancelled') {
+            todos = cleanupBlockedBy(todos, todo.id);
+          }
+          saveTodos(todos);
+          render();
+        });
+
+        const text = document.createElement('span');
+        text.className = 'todo-text';
+        text.textContent = todo.text;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.setAttribute('aria-label', `Delete "${todo.text}"`);
+        deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', () => {
+          todos = deleteTodo(todos, todo.id);
+          saveTodos(todos);
+          render();
+        });
+
+        li.append(handle, select, text, deleteBtn);
+
+        if (todo.status === 'blocked') {
+          if (Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
+            const blockerNames = todo.blockedBy
+              .map(bid => {
+                const blocker = todos.find(t => t.id === bid);
+                if (!blocker) return null;
+                return blocker.text.length > 30 ? blocker.text.slice(0, 30) + '…' : blocker.text;
+              })
+              .filter(Boolean);
+
+            if (blockerNames.length > 0) {
+              let displayText;
+              if (blockerNames.length <= 3) {
+                displayText = 'Blocked by: ' + blockerNames.join(', ');
+              } else {
+                displayText = 'Blocked by: ' + blockerNames.slice(0, 2).join(', ') + ' + ' + (blockerNames.length - 2) + ' more';
+              }
+              const subtitle = document.createElement('div');
+              subtitle.className = 'blocked-by-text';
+              subtitle.textContent = displayText;
+              li.appendChild(subtitle);
+            }
+          }
+
+          const picker = document.createElement('div');
+          picker.className = 'blocker-picker';
+
+          const pickerTitle = document.createElement('div');
+          pickerTitle.className = 'blocker-picker-title';
+          pickerTitle.textContent = 'Blocked by:';
+          picker.appendChild(pickerTitle);
+
+          const eligible = todos.filter(t => t.id !== todo.id && (t.status === 'active' || t.status === 'blocked'));
+
+          if (eligible.length === 0) {
+            const msg = document.createElement('div');
+            msg.className = 'no-blockers-msg';
+            msg.textContent = 'No other tasks to select.';
+            picker.appendChild(msg);
+          } else {
+            eligible.forEach(t => {
+              const label = document.createElement('label');
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
+              cb.addEventListener('change', () => {
+                todos = toggleBlocker(todos, todo.id, t.id);
+                saveTodos(todos);
+                render();
+              });
+
+              const labelText = document.createElement('span');
+              const truncated = t.text.length > 40 ? t.text.slice(0, 40) + '…' : t.text;
+              labelText.textContent = truncated;
+
+              label.append(cb, labelText);
+              picker.appendChild(label);
             });
+          }
 
-            const labelText = document.createElement('span');
-            const truncated = t.text.length > 40 ? t.text.slice(0, 40) + '…' : t.text;
-            labelText.textContent = truncated;
-
-            label.append(cb, labelText);
-            picker.appendChild(label);
-          });
+          li.appendChild(picker);
         }
 
-        li.appendChild(picker);
+        todoList.appendChild(li);
+      });
+    }
+
+    addForm.addEventListener('submit', e => {
+      e.preventDefault();
+      todos = addTodo(todos, todoInput.value);
+      saveTodos(todos);
+      render();
+      todoInput.value = '';
+      todoInput.focus();
+    });
+
+    clearFinishedBtn.addEventListener('click', () => {
+      todos = clearFinished(todos);
+      saveTodos(todos);
+      render();
+    });
+
+    /* --- Drag-and-drop reordering --- */
+    let draggedId = null;
+
+    todoList.addEventListener('dragstart', e => {
+      const li = e.target.closest('li[data-id]');
+      if (!li) return;
+      draggedId = li.dataset.id;
+      li.classList.add('dragging');
+      document.body.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedId);
+    });
+
+    todoList.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+
+      const li = e.target.closest('li[data-id]');
+      if (!li || li.dataset.id === draggedId) return;
+
+      todoList.querySelectorAll('.drag-over-above, .drag-over-below').forEach(el => {
+        el.classList.remove('drag-over-above', 'drag-over-below');
+      });
+
+      const rect = li.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        li.classList.add('drag-over-above');
+      } else {
+        li.classList.add('drag-over-below');
       }
-
-      todoList.appendChild(li);
-    });
-  }
-
-  addForm.addEventListener('submit', e => {
-    e.preventDefault();
-    todos = addTodo(todos, todoInput.value);
-    saveTodos(todos);
-    render();
-    todoInput.value = '';
-    todoInput.focus();
-  });
-
-  clearFinishedBtn.addEventListener('click', () => {
-    todos = clearFinished(todos);
-    saveTodos(todos);
-    render();
-  });
-
-  /* --- Drag-and-drop reordering --- */
-  let draggedId = null;
-
-  todoList.addEventListener('dragstart', e => {
-    const li = e.target.closest('li[data-id]');
-    if (!li) return;
-    draggedId = li.dataset.id;
-    li.classList.add('dragging');
-    document.body.classList.add('is-dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', draggedId);
-  });
-
-  todoList.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-
-    const li = e.target.closest('li[data-id]');
-    if (!li || li.dataset.id === draggedId) return;
-
-    todoList.querySelectorAll('.drag-over-above, .drag-over-below').forEach(el => {
-      el.classList.remove('drag-over-above', 'drag-over-below');
     });
 
-    const rect = li.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    if (e.clientY < midY) {
-      li.classList.add('drag-over-above');
-    } else {
-      li.classList.add('drag-over-below');
-    }
-  });
-
-  todoList.addEventListener('dragleave', e => {
-    const li = e.target.closest('li[data-id]');
-    if (li && !li.contains(e.relatedTarget)) {
-      li.classList.remove('drag-over-above', 'drag-over-below');
-    }
-  });
-
-  todoList.addEventListener('drop', e => {
-    e.preventDefault();
-    const targetLi = e.target.closest('li[data-id]');
-    if (!targetLi || !draggedId) return;
-
-    const fromIndex = todos.findIndex(t => t.id === draggedId);
-    const targetId = targetLi.dataset.id;
-    if (draggedId === targetId) return;
-
-    const rect = targetLi.getBoundingClientRect();
-    const insertAfter = e.clientY >= rect.top + rect.height / 2;
-
-    const [moved] = todos.splice(fromIndex, 1);
-
-    let toIndex = todos.findIndex(t => t.id === targetId);
-    if (insertAfter) toIndex += 1;
-
-    todos.splice(toIndex, 0, moved);
-    saveTodos(todos);
-    render();
-  });
-
-  todoList.addEventListener('dragend', () => {
-    draggedId = null;
-    document.body.classList.remove('is-dragging');
-    todoList.querySelectorAll('.dragging, .drag-over-above, .drag-over-below').forEach(el => {
-      el.classList.remove('dragging', 'drag-over-above', 'drag-over-below');
+    todoList.addEventListener('dragleave', e => {
+      const li = e.target.closest('li[data-id]');
+      if (li && !li.contains(e.relatedTarget)) {
+        li.classList.remove('drag-over-above', 'drag-over-below');
+      }
     });
-  });
 
-  render();
-})();
+    todoList.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetLi = e.target.closest('li[data-id]');
+      if (!targetLi || !draggedId) return;
+
+      const fromIndex = todos.findIndex(t => t.id === draggedId);
+      const targetId = targetLi.dataset.id;
+      if (draggedId === targetId) return;
+
+      const rect = targetLi.getBoundingClientRect();
+      const insertAfter = e.clientY >= rect.top + rect.height / 2;
+
+      const [moved] = todos.splice(fromIndex, 1);
+
+      let toIndex = todos.findIndex(t => t.id === targetId);
+      if (insertAfter) toIndex += 1;
+
+      todos.splice(toIndex, 0, moved);
+      saveTodos(todos);
+      render();
+    });
+
+    todoList.addEventListener('dragend', () => {
+      draggedId = null;
+      document.body.classList.remove('is-dragging');
+      todoList.querySelectorAll('.dragging, .drag-over-above, .drag-over-below').forEach(el => {
+        el.classList.remove('dragging', 'drag-over-above', 'drag-over-below');
+      });
+    });
+
+    render();
+  })();
+}
