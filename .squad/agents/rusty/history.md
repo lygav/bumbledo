@@ -10,6 +10,15 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: Done State Highlight Refresh
+
+**What I changed:**
+- Reworked `.status-done` styling in `index.html` to use a light green tint and a green left border instead of lowering row opacity.
+- Kept the strike-through treatment, but shifted the done text to a softer green-gray and added a small leading checkmark for faster scanning.
+
+**Styling rule to preserve:**
+- For positive-completion states, prefer explicit accents (tint, border, icon) over reduced opacity so finished rows still feel visible and intentional next to blocked/cancelled states.
+
 ### 2026-03-29: Unblocked Notification Reset + Hidden Attribute Pitfall
 
 **What I fixed:**
