@@ -1642,3 +1642,178 @@ All three work with the existing dependency DAG, respect the localStorage-only c
 **Why:** User request — captured for team memory
 
 **Status:** Active
+
+### 2026-03-29T17:54:23Z: User directive — Product space
+**By:** Vladi Lyga (via Copilot)
+**What:** Our product space is personal productivity
+**Why:** User request — captured for team memory. Tess and all agents should frame features, personas, and competitive analysis within the personal productivity space.
+
+
+# Danny — PR #5 Review: Actionable Now
+
+**Date:** 2026-03-29  
+**Status:** Approved
+
+## Decision
+
+Approve PR #5. The implementation fits the current app architecture, keeps the filter as derived UI state instead of polluting the todo model, and preserves the established single-source-of-truth rule around the full `todos` array.
+
+## Why
+
+- `getActionableTodos()` and `getActionableCount()` are correctly placed in `src/todo/model.js` as pure derivation helpers.
+- `src/main.js` integrates the filter into the render pipeline without changing ownership boundaries: main remains the orchestrator, the model remains pure, and the DAG continues to read the full list.
+- Filtered drag-and-drop uses the right projection strategy: reorder the visible active subset, then write that sequence back into the active positions of the full list so hidden tasks retain their original placement.
+- The PRD edge cases are covered in behavior: auto-unblocked tasks reappear, status changes remove tasks from the filtered view immediately, and the empty state distinguishes “no todos” from “no actionable todos”.
+
+## Trade-offs
+
+- Render now performs two lightweight scans of the todo list (`getActionableCount()` and `getActionableTodos()`). That is acceptable for the current scale and keeps the code easy to read.
+- The biggest remaining risk area is filtered drag-and-drop verification. The implementation looks correct, but there is no direct automated test around the index remapping in `main.js`.
+
+## Follow-up (non-blocking)
+
+- Add a focused integration test around filtered drag-and-drop remapping if the team touches this area again.
+
+
+# Danny — PR #6 Review Notes
+
+**Date:** 2026-03-29  
+**Status:** Proposed
+
+## Decision
+
+Keyboard shortcut state must stay aligned with what is visible and focusable in the UI. If a shortcut changes a selected task so it disappears from the current filtered view, the app must either move selection to the next visible task or clear selection; it must not keep an off-screen `selectedTaskId`.
+
+Global shortcuts must also respect editable surfaces before acting, unless a shortcut is explicitly designed to be global. A document-level listener is acceptable here, but only if input fields, inline edit controls, selects, and contenteditable regions are consistently guarded.
+
+## Why
+
+The current PR introduces a split contract: the render layer treats hidden items as unselected, but the keyboard handler can immediately restore selection to an invisible todo after toggling status under the Actionable filter. That makes Enter/Delete act on an item the user can no longer see, which is a real UX and correctness bug.
+
+The PR also adds tested model helpers for cycling and navigation, but the runtime does not use them. The trade-off is clear: isolated pure helpers are easy to test, but if the UI keeps separate inline logic, the tests no longer prove the feature works end to end.
+
+## Review Outcome
+
+- **Reject PR #6 for now**
+- Required fixes:
+  1. Make filtered selection transitions explicit after status toggles and deletes.
+  2. Move editable-surface guards ahead of non-global shortcuts like Escape, or narrow Escape behavior so it does not interfere with active text inputs.
+  3. Either wire `cycleStatus` / navigation helpers into `main.js`, or remove them and add tests around the actual integration path instead.
+
+
+# Rusty — Burndown Rendering Note
+
+- **Decision:** Render burndown lines from the stored daily samples as cumulative maxima for `completed` and `total`, instead of plotting the raw daily counts directly.
+- **Why:** This app allows users to clear finished tasks from the live todo list, which can make later raw samples smaller than earlier ones. Using monotonic rendered series preserves the PRD's promise that both burndown lines stay non-decreasing and keeps the chart motivational instead of visually "losing" progress.
+- **Impact:** Sampling still stores the raw `{ date, done, cancelled, active, total }` snapshot requested by the PRD. The chart and its summary derive display values from those samples so the visible trend remains stable and honest over time.
+
+
+# Rusty — Keyboard Shortcuts Implementation Notes
+
+**Date:** 2026-03-29  
+**Status:** Proposed for log
+
+## Decision
+
+Treat keyboard shortcuts as view-layer orchestration in `src/main.js`, while keeping any reusable state-transition or list-navigation rules in `src/todo/model.js` as pure helpers.
+
+## Why
+
+- Shortcut activation depends on DOM context: whether the user is typing, whether help is open, and which visible row is selected. That belongs in the orchestrator, not the model.
+- The actual status cycling and next/previous-item lookup are still useful as pure functions for tests and future UI surfaces, so they stay in the model.
+- Visible-list navigation must respect the actionable filter rather than the raw todo array, otherwise keyboard selection drifts from what the user can see.
+
+## Consequences
+
+- Future shortcut work should extend `main.js` event handling first, then add pure model helpers only when logic is reusable beyond one DOM listener.
+- Any filtered view added later needs keyboard navigation to operate on that filtered projection, not the full backing list.
+
+
+# Saul PR #6 fixes
+
+- Fixed Enter-toggle selection handling in `src/main.js` so keyboard selection never stays on a todo that becomes hidden by the actionable filter; it now moves to the next visible row, falls back to the prior visible row at the end of the list, or clears selection when nothing remains.
+- Reordered global `keydown` Escape handling so help-modal close always wins, edit-mode Escape cancels inline editing before deselection logic, and non-editable Escape still clears the current keyboard selection.
+- Added modal focus restoration by saving `document.activeElement` before opening the shortcuts help modal and restoring focus to that element on close.
+
+
+# Decision: Actionable Now PRD Created
+
+**Author:** Tess  
+**Date:** 2025-07-19  
+**Status:** Proposed  
+**Affects:** PRD-actionable-now.md, task list UI, localStorage (new key)
+
+---
+
+## Summary
+
+Created `PRD-actionable-now.md` — a new feature PRD for a filtered view that shows only unblocked, active tasks. This is bumbledo's 4th feature PRD alongside Smart Blocked Alerts, Keyboard Shortcuts, and Burndown View.
+
+## Context
+
+Every persona opens bumbledo to answer: "What can I actually do right now?" The default list mixes actionable tasks with blocked, done, and cancelled items. Users mentally filter every time. This was the #1 gap identified in the persona review — Priya, Daniel, Jake, and Marco all have the same core need in different life contexts.
+
+## Decision
+
+- **Toggle filter** on the task list: "Actionable" on/off. Not a separate page.
+- **Filter logic:** Show only tasks with `status === "active"`. Leverages ADR-001's auto-unblock — no custom blocker-walking needed.
+- **Count summary:** "N of M tasks are actionable" — always visible, updates in real time.
+- **Persistence:** New localStorage key `"bumbledo_filter_actionable"` — separate from todo data, no migration.
+- **Interactions:** Drag-and-drop works on visible items only; DAG always shows full graph; burndown unaffected; clear finished operates on full list.
+
+## Rationale
+
+1. Simplest high-impact feature — every persona wants it, implementation is lightweight
+2. Builds on existing auto-unblock logic (ADR-001) — no new data model changes
+3. Toggle approach preserves the "one list" mental model — users aren't navigating between views
+4. localStorage preference avoids daily re-toggling friction
+
+## Impact
+
+- Danny: New UI toggle, list filtering logic, localStorage read/write for preference, filtered drag-and-drop behavior, actionable-specific empty state
+- No changes to existing data model or storage schema
+- Complements Smart Blocked Alerts (alerts = "when"; Actionable Now = "what")
+
+
+# Decision: Burndown Chart Metric Change
+
+**Author:** Tess  
+**Date:** 2025-07-18  
+**Status:** Proposed  
+**Affects:** PRD-burndown-view.md, todos_burndown localStorage schema
+
+---
+
+## Summary
+
+Changed the burndown chart's core metric from **single-line "active task count per day"** to **dual-line "cumulative completed vs. cumulative total"**.
+
+## Context
+
+Vladi identified that tracking active task count is a net metric. When users add tasks faster than they complete them, the chart goes up — hiding real progress and demoralizing the user. Example: complete 10 tasks, add 20 → chart shows +10 (looks like failure, but 10 tasks were actually done).
+
+## Decision
+
+- **Primary line ("Completed"):** Cumulative count of done + cancelled tasks. Always non-decreasing. Shows output.
+- **Secondary line ("Total"):** Cumulative count of all tasks ever created. Always non-decreasing. Shows scope.
+- **Gap between lines** = remaining active work.
+- **Summary display:** "X of Y done (Z%) · N remaining"
+
+## localStorage Schema Change
+
+Old: `{ date, count }` (just active count)  
+New: `{ date, done, cancelled, active, total }` (full state snapshot)
+
+## Rationale
+
+1. Cumulative completed always goes up → motivational, never punishing
+2. Scope growth is visible but separate → honest, not demoralizing
+3. Richer snapshots future-proof us for done/cancelled breakdowns later
+4. Gap between lines gives "remaining work" at a glance without a separate metric
+
+## Impact
+
+- Danny: Data collection logic changes (sample all state counts, not just active)
+- Danny: Chart rendering changes (two lines, summary text, tooltip updates)
+- No breaking changes to existing localStorage (new key, additive)
+

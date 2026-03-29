@@ -113,6 +113,12 @@
 - Final README: 130 lines (was 235), ~40% reduction
 - Focus: scannability first, let UI teach the rest
 
+**Docs refresh for shipped UX features (2026-03-29):**
+- When many small UX wins ship together, README updates should group them into outcomes: focus, flow, feedback, and visibility
+- Exact UI labels matter in docs (`Actionable`, `Progress`, `Keyboard shortcuts`) because users scan for what they see on screen
+- Burndown, alerts, and shortcut coverage belong in README, but implementation details stay lightweight to preserve scannability
+- Persona docs should reflect not just core jobs-to-be-done, but the interaction styles that make the product fit those users (keyboard speed, morning clarity, visible momentum)
+
 ### 2026-03-29: Audit Methodology for PRD Drift Detection
 
 **Taught by:** Danny (Lead/Architect)
