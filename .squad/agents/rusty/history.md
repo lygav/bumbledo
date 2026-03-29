@@ -79,3 +79,15 @@
 - Cross-agent history updated with full context
 
 **Status:** ✅ Complete. Project has testable architecture, working dev server, and comprehensive test suite.
+
+### 2026-03-29: Embedded DAG Dependency View
+
+**What I implemented:**
+- Added a dedicated `dag.js` ES module with pure dependency-graph derivation and DFS-based cycle detection.
+- Rendered the dependency graph with native SVG + dagre layout, including selection, keyboard focus, tooltip, panning, reset view, and cycle warnings.
+- Wired the graph into `app.js` so list selection and graph selection stay in sync, with row scroll + highlight on node activation.
+
+**Implementation details:**
+- Cycle edges are removed from dagre layout input but still rendered as dashed red arrows so invalid dependency data stays visible.
+- The graph section lives below the footer and uses a viewport breakout width while preserving the original narrow task list layout.
+- On mobile, the graph defaults to collapsed; when there are no dependency edges, the section stays present with a compact empty state instead of an empty canvas.

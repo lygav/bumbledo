@@ -1,3 +1,5 @@
+import { createDagView } from './dag.js';
+
 // Storage interface - injectable for testing
 const defaultStorage = {
   getItem: (key) => localStorage.getItem(key),
@@ -56,15 +58,15 @@ export function addTodo(todos, text) {
 export function setStatus(todos, id, newStatus) {
   return todos.map(todo => {
     if (todo.id !== id) return todo;
-    
+
     const updated = { ...todo, status: newStatus };
-    
+
     if (newStatus === 'blocked') {
       if (!Array.isArray(updated.blockedBy)) updated.blockedBy = [];
     } else {
       delete updated.blockedBy;
     }
-    
+
     return updated;
   });
 }
@@ -72,33 +74,33 @@ export function setStatus(todos, id, newStatus) {
 export function toggleBlocker(todos, todoId, blockerId) {
   return todos.map(todo => {
     if (todo.id !== todoId || todo.status !== 'blocked') return todo;
-    
+
     const blockedBy = Array.isArray(todo.blockedBy) ? [...todo.blockedBy] : [];
     const idx = blockedBy.indexOf(blockerId);
-    
+
     if (idx >= 0) {
       blockedBy.splice(idx, 1);
       if (blockedBy.length === 0) {
         return { ...todo, status: 'active', blockedBy: undefined };
       }
       return { ...todo, blockedBy };
-    } else {
-      return { ...todo, blockedBy: [...blockedBy, blockerId] };
     }
+
+    return { ...todo, blockedBy: [...blockedBy, blockerId] };
   });
 }
 
 export function cleanupBlockedBy(todos, removedId) {
   return todos.map(t => {
     if (t.status !== 'blocked' || !Array.isArray(t.blockedBy)) return t;
-    
+
     const filteredBlockers = t.blockedBy.filter(id => id !== removedId);
-    
+
     if (filteredBlockers.length === 0) {
       const { blockedBy, ...rest } = t;
       return { ...rest, status: 'active' };
     }
-    
+
     return { ...t, blockedBy: filteredBlockers };
   });
 }
@@ -117,6 +119,14 @@ export function clearFinished(todos) {
   return filtered;
 }
 
+function hasDependencies(todos) {
+  return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
+}
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 479px)').matches;
+}
+
 // DOM initialization - runs on load
 if (typeof document !== 'undefined') {
   (function init() {
@@ -126,11 +136,94 @@ if (typeof document !== 'undefined') {
     const addForm = document.getElementById('add-form');
     const emptyState = document.getElementById('empty-state');
     const clearFinishedBtn = document.getElementById('clear-finished-btn');
+    const dagSection = document.getElementById('dependency-graph-section');
+    const dagContainer = document.getElementById('dependency-graph');
+    const dagEmptyState = document.getElementById('dag-empty-state');
+    const dagToggle = document.getElementById('dag-toggle');
 
     let todos = loadTodos();
-    saveTodos(todos); // persist migrated format
+    let selectedTaskId = null;
+    let dagExpanded = !isMobileViewport() && hasDependencies(todos);
+    let dagToggleTouched = false;
+    let flashTimeoutId = null;
+
+    const dagView = createDagView({
+      container: dagContainer,
+      onSelectTask: (id) => {
+        selectedTaskId = id;
+        syncTaskRowSelection();
+        syncDagState();
+        scrollTaskIntoView(id, true);
+      }
+    });
+
+    saveTodos(todos);
+
+    function findTaskElement(id) {
+      return [...todoList.querySelectorAll('li[data-id]')].find(item => item.dataset.id === id) ?? null;
+    }
+
+    function syncTaskRowSelection() {
+      const validSelection = todos.some(todo => todo.id === selectedTaskId);
+      if (!validSelection) {
+        selectedTaskId = null;
+      }
+
+      todoList.querySelectorAll('li[data-id]').forEach((item) => {
+        item.classList.toggle('task-row-selected', item.dataset.id === selectedTaskId);
+      });
+    }
+
+    function flashTaskRow(taskElement) {
+      if (!taskElement) return;
+      taskElement.classList.remove('task-row-flash');
+      void taskElement.offsetWidth;
+      taskElement.classList.add('task-row-flash');
+      window.clearTimeout(flashTimeoutId);
+      flashTimeoutId = window.setTimeout(() => {
+        taskElement.classList.remove('task-row-flash');
+      }, 1400);
+    }
+
+    function scrollTaskIntoView(id, shouldFlash = false) {
+      const taskElement = findTaskElement(id);
+      if (!taskElement) return;
+      taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (shouldFlash) {
+        flashTaskRow(taskElement);
+      }
+    }
+
+    function syncDagState() {
+      const dependencyState = hasDependencies(todos);
+
+      if (!dagToggleTouched) {
+        dagExpanded = dependencyState && !isMobileViewport();
+      }
+
+      if (!dependencyState) {
+        dagExpanded = false;
+      }
+
+      dagSection.classList.toggle('is-empty', !dependencyState);
+      dagToggle.disabled = !dependencyState;
+      dagToggle.textContent = dagExpanded ? 'Hide' : 'Show graph';
+      dagToggle.setAttribute('aria-expanded', String(dependencyState && dagExpanded));
+      dagContainer.hidden = !dependencyState || !dagExpanded;
+      dagEmptyState.hidden = dependencyState;
+
+      if (dependencyState && dagExpanded) {
+        dagView.update({ todos, selectedTaskId });
+      } else {
+        dagView.update({ todos: [], selectedTaskId: null });
+      }
+    }
 
     function render() {
+      if (!todos.some(todo => todo.id === selectedTaskId)) {
+        selectedTaskId = null;
+      }
+
       todoList.innerHTML = '';
 
       const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
@@ -142,6 +235,7 @@ if (typeof document !== 'undefined') {
         li.draggable = true;
         li.dataset.id = todo.id;
         if (todo.status !== 'active') li.classList.add('status-' + todo.status);
+        if (todo.id === selectedTaskId) li.classList.add('task-row-selected');
 
         const handle = document.createElement('span');
         handle.className = 'drag-handle';
@@ -164,17 +258,13 @@ if (typeof document !== 'undefined') {
           if (s.value === todo.status) opt.selected = true;
           select.appendChild(opt);
         });
-        if (todo.status === 'active') {
-          select.style.color = '#999';
-        } else {
-          select.style.color = '#1a1a1a';
-        }
+        select.style.color = todo.status === 'active' ? '#999' : '#1a1a1a';
         select.addEventListener('change', () => {
           todos = setStatus(todos, todo.id, select.value);
           if (select.value === 'done' || select.value === 'cancelled') {
             todos = cleanupBlockedBy(todos, todo.id);
           }
-          saveTodos(todos);
+          saveTodos(todos, defaultStorage, STORAGE_KEY);
           render();
         });
 
@@ -189,7 +279,10 @@ if (typeof document !== 'undefined') {
         deleteBtn.textContent = '×';
         deleteBtn.addEventListener('click', () => {
           todos = deleteTodo(todos, todo.id);
-          saveTodos(todos);
+          if (selectedTaskId === todo.id) {
+            selectedTaskId = null;
+          }
+          saveTodos(todos, defaultStorage, STORAGE_KEY);
           render();
         });
 
@@ -242,13 +335,12 @@ if (typeof document !== 'undefined') {
               cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
               cb.addEventListener('change', () => {
                 todos = toggleBlocker(todos, todo.id, t.id);
-                saveTodos(todos);
+                saveTodos(todos, defaultStorage, STORAGE_KEY);
                 render();
               });
 
               const labelText = document.createElement('span');
-              const truncated = t.text.length > 40 ? t.text.slice(0, 40) + '…' : t.text;
-              labelText.textContent = truncated;
+              labelText.textContent = t.text.length > 40 ? t.text.slice(0, 40) + '…' : t.text;
 
               label.append(cb, labelText);
               picker.appendChild(label);
@@ -258,14 +350,29 @@ if (typeof document !== 'undefined') {
           li.appendChild(picker);
         }
 
+        li.addEventListener('click', () => {
+          selectedTaskId = todo.id;
+          syncTaskRowSelection();
+          syncDagState();
+        });
+
+        li.addEventListener('focusin', () => {
+          selectedTaskId = todo.id;
+          syncTaskRowSelection();
+          syncDagState();
+        });
+
         todoList.appendChild(li);
       });
+
+      syncTaskRowSelection();
+      syncDagState();
     }
 
     addForm.addEventListener('submit', e => {
       e.preventDefault();
       todos = addTodo(todos, todoInput.value);
-      saveTodos(todos);
+      saveTodos(todos, defaultStorage, STORAGE_KEY);
       render();
       todoInput.value = '';
       todoInput.focus();
@@ -273,11 +380,29 @@ if (typeof document !== 'undefined') {
 
     clearFinishedBtn.addEventListener('click', () => {
       todos = clearFinished(todos);
-      saveTodos(todos);
+      if (!todos.some(todo => todo.id === selectedTaskId)) {
+        selectedTaskId = null;
+      }
+      saveTodos(todos, defaultStorage, STORAGE_KEY);
       render();
     });
 
-    /* --- Drag-and-drop reordering --- */
+    dagToggle.addEventListener('click', () => {
+      if (!hasDependencies(todos)) {
+        return;
+      }
+      dagToggleTouched = true;
+      dagExpanded = !dagExpanded;
+      syncDagState();
+    });
+
+    window.addEventListener('resize', () => {
+      if (!dagToggleTouched) {
+        dagExpanded = hasDependencies(todos) && !isMobileViewport();
+      }
+      syncDagState();
+    });
+
     let draggedId = null;
 
     todoList.addEventListener('dragstart', e => {
@@ -335,7 +460,7 @@ if (typeof document !== 'undefined') {
       if (insertAfter) toIndex += 1;
 
       todos.splice(toIndex, 0, moved);
-      saveTodos(todos);
+      saveTodos(todos, defaultStorage, STORAGE_KEY);
       render();
     });
 
@@ -346,6 +471,10 @@ if (typeof document !== 'undefined') {
         el.classList.remove('dragging', 'drag-over-above', 'drag-over-below');
       });
     });
+
+    window.addEventListener('beforeunload', () => {
+      dagView.destroy();
+    }, { once: true });
 
     render();
   })();
