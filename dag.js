@@ -555,9 +555,7 @@ export function createDagView({ container, onSelectTask, emptyStateElement }) {
       : 'Dependency cycle detected. Layout is approximate until the cycle is removed.';
     resetButton.hidden = currentGraph.nodes.length === 0;
 
-    if (emptyStateElement) {
-      emptyStateElement.hidden = currentGraph.hasDependencies;
-    }
+    // Empty state visibility is managed by app.js syncDagState()
 
     resetView();
     applyHighlightState();
