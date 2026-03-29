@@ -138,52 +138,28 @@
       color: #888;
     }
 
-    /* Checkbox */
-    .todo-checkbox {
-      appearance: none;
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      min-width: 44px;
-      min-height: 44px;
-      border: 2px solid #bbb;
+    /* Status select */
+    .todo-status {
+      font-size: 0.8125rem;
+      font-family: inherit;
+      padding: 0.25rem 0.375rem;
+      border: 1px solid #ccc;
       border-radius: 4px;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       background: #fff;
-      transition: border-color 0.15s, background 0.15s;
-      background-clip: content-box;
-      padding: 12px;
+      color: #1a1a1a;
+      cursor: pointer;
+      width: 100px;
+      flex-shrink: 0;
+      min-height: 44px;
+      transition: border-color 0.15s;
     }
 
-    .todo-checkbox:checked {
-      border-color: #4a90d9;
-      background-color: #4a90d9;
-      background-clip: content-box;
-      padding: 12px;
-    }
-
-    .todo-checkbox:checked::after {
-      content: "✓";
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 700;
-      position: absolute;
-    }
-
-    .todo-checkbox {
-      position: relative;
-    }
-
-    .todo-checkbox:focus-visible {
+    .todo-status:focus-visible {
       outline: 2px solid #4a90d9;
       outline-offset: 2px;
     }
 
-    .todo-checkbox:hover {
+    .todo-status:hover {
       border-color: #888;
     }
 
@@ -194,14 +170,28 @@
       word-break: break-word;
     }
 
-    /* Done state */
-    li.done .todo-text {
+    /* Status: done */
+    li.status-done {
+      opacity: 0.6;
+    }
+    li.status-done .todo-text {
       text-decoration: line-through;
       color: #999;
     }
 
-    li.done {
-      opacity: 0.7;
+    /* Status: cancelled */
+    li.status-cancelled {
+      opacity: 0.5;
+    }
+    li.status-cancelled .todo-text {
+      text-decoration: line-through;
+      color: #c0392b;
+    }
+
+    /* Status: blocked */
+    li.status-blocked {
+      border-left: 3px solid #e67e22;
+      background: #fffbf0;
     }
 
     /* Delete button */
@@ -255,7 +245,7 @@
       text-align: center;
     }
 
-    #clear-done-btn {
+    #clear-finished-btn {
       padding: 0.5rem 1.25rem;
       font-size: 0.875rem;
       font-family: inherit;
@@ -269,18 +259,18 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
 
-    #clear-done-btn:hover:not(:disabled) {
+    #clear-finished-btn:hover:not(:disabled) {
       background: #f0f0f0;
       border-color: #999;
       color: #333;
     }
 
-    #clear-done-btn:focus-visible {
+    #clear-finished-btn:focus-visible {
       outline: 2px solid #4a90d9;
       outline-offset: 2px;
     }
 
-    #clear-done-btn:disabled {
+    #clear-finished-btn:disabled {
       opacity: 0.4;
       cursor: not-allowed;
     }
@@ -331,7 +321,7 @@
     </main>
 
     <footer>
-      <button type="button" id="clear-done-btn" disabled>Clear done</button>
+      <button type="button" id="clear-finished-btn" disabled>Clear finished</button>
     </footer>
   </div>
 
@@ -342,16 +332,30 @@
       const todoInput = document.getElementById('todo-input');
       const addForm = document.getElementById('add-form');
       const emptyState = document.getElementById('empty-state');
-      const clearDoneBtn = document.getElementById('clear-done-btn');
+      const clearFinishedBtn = document.getElementById('clear-finished-btn');
 
       function generateId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
       }
 
+      function migrateTodos(list) {
+        return list.map(t => {
+          if ('done' in t && !('status' in t)) {
+            const { done, ...rest } = t;
+            return { ...rest, status: done ? 'done' : 'active' };
+          }
+          if (!('status' in t)) {
+            return { ...t, status: 'active' };
+          }
+          return t;
+        });
+      }
+
       function loadTodos() {
         try {
           const data = localStorage.getItem(STORAGE_KEY);
-          return data ? JSON.parse(data) : [];
+          const parsed = data ? JSON.parse(data) : [];
+          return migrateTodos(parsed);
         } catch {
           return [];
         }
@@ -362,31 +366,37 @@
       }
 
       let todos = loadTodos();
+      saveTodos(todos); // persist migrated format
 
       function render() {
         todoList.innerHTML = '';
 
-        const hasDone = todos.some(t => t.done);
-        clearDoneBtn.disabled = !hasDone;
+        const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
+        clearFinishedBtn.disabled = !hasFinished;
         emptyState.hidden = todos.length > 0;
 
         todos.forEach(todo => {
           const li = document.createElement('li');
           li.draggable = true;
           li.dataset.id = todo.id;
-          if (todo.done) li.classList.add('done');
+          if (todo.status !== 'active') li.classList.add('status-' + todo.status);
 
           const handle = document.createElement('span');
           handle.className = 'drag-handle';
           handle.setAttribute('aria-hidden', 'true');
           handle.textContent = '⠿';
 
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.className = 'todo-checkbox';
-          checkbox.checked = todo.done;
-          checkbox.setAttribute('aria-label', `Mark "${todo.text}" as ${todo.done ? 'not done' : 'done'}`);
-          checkbox.addEventListener('change', () => toggleTodo(todo.id));
+          const select = document.createElement('select');
+          select.className = 'todo-status';
+          select.setAttribute('aria-label', `Status for "${todo.text}"`);
+          ['active', 'done', 'cancelled', 'blocked'].forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+            if (s === todo.status) opt.selected = true;
+            select.appendChild(opt);
+          });
+          select.addEventListener('change', () => setStatus(todo.id, select.value));
 
           const text = document.createElement('span');
           text.className = 'todo-text';
@@ -399,7 +409,7 @@
           deleteBtn.textContent = '×';
           deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
-          li.append(handle, checkbox, text, deleteBtn);
+          li.append(handle, select, text, deleteBtn);
           todoList.appendChild(li);
         });
       }
@@ -407,15 +417,15 @@
       function addTodo(text) {
         const trimmed = text.trim();
         if (!trimmed) return;
-        todos.push({ id: generateId(), text: trimmed, done: false });
+        todos.push({ id: generateId(), text: trimmed, status: 'active' });
         saveTodos(todos);
         render();
       }
 
-      function toggleTodo(id) {
+      function setStatus(id, newStatus) {
         const todo = todos.find(t => t.id === id);
         if (todo) {
-          todo.done = !todo.done;
+          todo.status = newStatus;
           saveTodos(todos);
           render();
         }
@@ -427,8 +437,8 @@
         render();
       }
 
-      function clearDone() {
-        todos = todos.filter(t => !t.done);
+      function clearFinished() {
+        todos = todos.filter(t => t.status !== 'done' && t.status !== 'cancelled');
         saveTodos(todos);
         render();
       }
@@ -440,7 +450,7 @@
         todoInput.focus();
       });
 
-      clearDoneBtn.addEventListener('click', clearDone);
+      clearFinishedBtn.addEventListener('click', clearFinished);
 
       /* --- Drag-and-drop reordering --- */
       let draggedId = null;
