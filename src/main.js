@@ -33,6 +33,10 @@ const BURNDOWN_STORAGE_KEY = 'todos_burndown';
 const BURNDOWN_TOTAL_COLOR = '#4a90d9';
 const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
 const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
+const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
+const CONFETTI_COUNT = 24;
+const CONFETTI_MIN_DURATION_MS = 900;
+const CONFETTI_MAX_DURATION_MS = 1200;
 
 function parseBurndownDate(dateKey) {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -345,6 +349,80 @@ if (typeof document !== 'undefined') {
       }, 1400);
     }
 
+    function fireConfetti(originElement = null) {
+      const sourceRect = originElement?.getBoundingClientRect?.() ?? null;
+      const originX = sourceRect
+        ? sourceRect.left + (sourceRect.width / 2)
+        : window.innerWidth / 2;
+      const originY = sourceRect
+        ? sourceRect.top + Math.min(sourceRect.height * 0.45, 24)
+        : Math.max(72, window.innerHeight * 0.18);
+      const burst = document.createElement('div');
+      burst.className = 'confetti-burst';
+      burst.style.left = `${originX}px`;
+      burst.style.top = `${originY}px`;
+
+      let remainingPieces = CONFETTI_COUNT;
+      let longestAnimationMs = CONFETTI_MAX_DURATION_MS;
+      let cleanupTimeoutId = null;
+
+      function cleanupConfetti() {
+        if (cleanupTimeoutId !== null) {
+          window.clearTimeout(cleanupTimeoutId);
+          cleanupTimeoutId = null;
+        }
+
+        burst.replaceChildren();
+        burst.remove();
+      }
+
+      burst.addEventListener('animationend', (event) => {
+        if (!(event.target instanceof HTMLElement) || !event.target.classList.contains('confetti-piece')) {
+          return;
+        }
+
+        event.target.remove();
+        remainingPieces -= 1;
+        if (remainingPieces <= 0) {
+          cleanupConfetti();
+        }
+      });
+
+      for (let index = 0; index < CONFETTI_COUNT; index += 1) {
+        const piece = document.createElement('span');
+        const isCircle = Math.random() > 0.55;
+        const size = 6 + Math.random() * 6;
+        const midX = Math.round((Math.random() - 0.5) * 72);
+        const endX = Math.round((Math.random() - 0.5) * 180);
+        const midY = -Math.round(18 + Math.random() * 50);
+        const endY = Math.round(72 + Math.random() * 86);
+        const rotation = Math.round((Math.random() - 0.5) * 520);
+        const midRotation = Math.round(rotation * 0.45);
+        const durationMs = Math.round(CONFETTI_MIN_DURATION_MS + Math.random() * (CONFETTI_MAX_DURATION_MS - CONFETTI_MIN_DURATION_MS));
+        const delayMs = Math.round(Math.random() * 120);
+        const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+
+        longestAnimationMs = Math.max(longestAnimationMs, durationMs + delayMs);
+
+        piece.className = `confetti-piece${isCircle ? ' is-circle' : ''}`;
+        piece.style.backgroundColor = color;
+        piece.style.width = `${size}px`;
+        piece.style.height = `${isCircle ? size : Math.max(4, size * 0.62)}px`;
+        piece.style.setProperty('--confetti-mid-x', `${midX}px`);
+        piece.style.setProperty('--confetti-mid-y', `${midY}px`);
+        piece.style.setProperty('--confetti-end-x', `${endX}px`);
+        piece.style.setProperty('--confetti-end-y', `${endY}px`);
+        piece.style.setProperty('--confetti-mid-rotate', `${midRotation}deg`);
+        piece.style.setProperty('--confetti-end-rotate', `${rotation}deg`);
+        piece.style.setProperty('--confetti-duration', `${durationMs}ms`);
+        piece.style.animationDelay = `${delayMs}ms`;
+        burst.appendChild(piece);
+      }
+
+      document.body.appendChild(burst);
+      cleanupTimeoutId = window.setTimeout(cleanupConfetti, longestAnimationMs + 120);
+    }
+
     function scrollTaskIntoView(id, shouldFlash = false) {
       const taskElement = findTaskElement(id);
       if (!taskElement) return;
@@ -448,12 +526,16 @@ if (typeof document !== 'undefined') {
       const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
       const nextStatus = selectedTodo.status === 'done' ? 'active' : 'done';
       const todosBefore = todos;
+      const confettiOrigin = nextStatus === 'done' ? findTaskElement(selectedTodo.id) : null;
       todos = setStatus(todos, selectedTodo.id, nextStatus);
       if (nextStatus === 'done') {
         todos = cleanupBlockedBy(todos, selectedTodo.id);
         surfaceUnblockedTodos(todosBefore, todos);
       }
       saveTodos(todos);
+      if (nextStatus === 'done') {
+        fireConfetti(confettiOrigin);
+      }
       render();
 
       const nextVisibleTodos = getVisibleTodos();
@@ -829,6 +911,7 @@ if (typeof document !== 'undefined') {
           const nextStatus = select.value;
           const currentTodo = todos.find(item => item.id === todo.id);
           if (!currentTodo) return;
+          const confettiOrigin = nextStatus === 'done' ? select.closest('li') : null;
 
           const isBlockedCompletionAttempt = currentTodo.status === 'blocked'
             && (nextStatus === 'done' || nextStatus === 'cancelled')
@@ -849,6 +932,9 @@ if (typeof document !== 'undefined') {
             surfaceUnblockedTodos(todosBefore, todos);
           }
           saveTodos(todos);
+          if (nextStatus === 'done') {
+            fireConfetti(confettiOrigin);
+          }
           render();
         });
 
