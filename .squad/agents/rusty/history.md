@@ -119,3 +119,15 @@
 2. ✅ Post-implementation review (2026-03-29T16:49)
 
 **Outcome:** PR #3 approved and merged to main.
+
+### 2026-03-29: Keyboard Shortcuts + Help Modal
+
+**What I implemented:**
+- Added global keyboard handling in `src/main.js` for focus-input, row navigation, toggle, delete, help, and escape behaviors.
+- Added a lightweight help modal and shortcut trigger in `index.html`, including platform-aware Cmd/Ctrl copy.
+- Restored missing pure helpers in `src/todo/model.js` (`cycleStatus`, `getNextTodoId`, `getPrevTodoId`) so keyboard-oriented behavior stays testable.
+
+**Interaction rules to preserve:**
+- Todo shortcuts only fire when the user is not typing in an editable field; `Escape` and the input-focus shortcut still work globally.
+- Todo rows are keyboard-focusable and selection follows both click and focus so ArrowUp/ArrowDown navigation has a stable anchor.
+- Keyboard navigation operates on the visible list, so the actionable filter and selection state stay aligned.

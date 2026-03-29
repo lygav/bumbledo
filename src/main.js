@@ -86,6 +86,7 @@ if (typeof document !== 'undefined') {
     let flashTimeoutId = null;
     let editingId = null;
     let helpModalOpen = false;
+    let helpModalReturnFocusEl = null;
 
     const prefersMacKeys = isMacPlatform();
 
@@ -186,6 +187,9 @@ if (typeof document !== 'undefined') {
 
     function openHelpModal() {
       if (helpModalOpen) return;
+      helpModalReturnFocusEl = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
       helpModalOpen = true;
       shortcutsHelpModal.hidden = false;
       shortcutsHelpBtn.setAttribute('aria-expanded', 'true');
@@ -197,6 +201,10 @@ if (typeof document !== 'undefined') {
       helpModalOpen = false;
       shortcutsHelpModal.hidden = true;
       shortcutsHelpBtn.setAttribute('aria-expanded', 'false');
+      if (helpModalReturnFocusEl?.isConnected) {
+        helpModalReturnFocusEl.focus();
+      }
+      helpModalReturnFocusEl = null;
     }
 
     function clearSelection({ focusList = false } = {}) {
@@ -242,6 +250,8 @@ if (typeof document !== 'undefined') {
       if (!selectedTodo) return;
       if (selectedTodo.status !== 'active' && selectedTodo.status !== 'done') return;
 
+      const visibleTodos = getVisibleTodos();
+      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
       const nextStatus = selectedTodo.status === 'done' ? 'active' : 'done';
       todos = setStatus(todos, selectedTodo.id, nextStatus);
       if (nextStatus === 'done') {
@@ -249,7 +259,22 @@ if (typeof document !== 'undefined') {
       }
       saveTodos(todos);
       render();
-      selectTask(selectedTodo.id, { focus: true, scroll: true });
+
+      const nextVisibleTodos = getVisibleTodos();
+      if (nextVisibleTodos.some(todo => todo.id === selectedTodo.id)) {
+        selectTask(selectedTodo.id, { focus: true, scroll: true });
+        return;
+      }
+
+      const fallbackTodo = currentIndex === -1
+        ? null
+        : nextVisibleTodos[currentIndex] ?? nextVisibleTodos[currentIndex - 1] ?? null;
+
+      if (fallbackTodo) {
+        selectTask(fallbackTodo.id, { focus: true, scroll: true });
+      } else {
+        clearSelection({ focusList: true });
+      }
     }
 
     function deleteSelectedTodo() {
@@ -575,7 +600,6 @@ if (typeof document !== 'undefined') {
 
     shortcutsHelpClose.addEventListener('click', () => {
       closeHelpModal();
-      focusTaskList();
     });
 
     shortcutsHelpModal.addEventListener('click', (event) => {
@@ -596,10 +620,23 @@ if (typeof document !== 'undefined') {
       }
 
       if (event.key === 'Escape') {
-        const shouldHandleEscape = helpModalOpen || selectedTaskId !== null;
-        if (!shouldHandleEscape) return;
+        if (helpModalOpen) {
+          event.preventDefault();
+          closeHelpModal();
+          return;
+        }
+
+        if (isTyping && editingId !== null) {
+          event.preventDefault();
+          cancelEdit();
+          return;
+        }
+
+        if (isTyping || selectedTaskId === null) {
+          return;
+        }
+
         event.preventDefault();
-        closeHelpModal();
         clearSelection({ focusList: true });
         return;
       }

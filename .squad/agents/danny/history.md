@@ -10,6 +10,16 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: PR #6 Keyboard Shortcuts Review
+
+**Verdict:** Reject pending integration cleanup.
+
+**What I learned:**
+- The keyboard layer currently breaks its own visibility contract: with the Actionable filter on, `render()` clears hidden selection, but `toggleSelectedTodoStatus()` immediately restores `selectedTaskId` to a now-invisible todo. That leaves keyboard actions targeting a task the user cannot see.
+- The global `Escape` handler runs before the editable-target guard, so form fields and inline edit inputs are not fully insulated from list-level shortcuts. The app mostly protects `?`, arrows, Enter, and delete while typing, but not the full shortcut surface.
+- The new model helpers (`cycleStatus`, `getNextTodoId`, `getPrevTodoId`) are pure and reasonable in isolation, but they are not wired into `main.js`. That means the 14 new tests mostly validate detached helpers rather than the behavior the user actually exercises.
+- The help modal markup is directionally good (`role="dialog"`, `aria-modal`, table semantics), but it still behaves like a lightweight overlay, not a fully managed dialog. Focus return is only handled on the close button path.
+
 ### 2026-03-29: PRD Audit — Architectural Drift Detected
 
 **Verdict:** Core PRD is honored; implementation has evolved beyond stated constraints.
