@@ -8,9 +8,9 @@
 
 ## 1. Overview
 
-A single-page, browser-based todo application. One HTML file, no backend, no build tools. Users can add, complete, delete, and **drag-to-reorder** todo items. Data persists in `localStorage`.
+A single-page, browser-based todo application with dependency graph visualization. Users can add, complete, delete, and **drag-to-reorder** todo items, set task dependencies, and view blocking relationships in an interactive dependency graph. Data persists in `localStorage`.
 
-**Target user:** Anyone who wants a lightweight, instant-on task list — no accounts, no setup, no servers.
+**Target user:** Anyone who wants a lightweight, feature-rich task list with visual dependency tracking — no accounts, no backend, no frameworks.
 
 ---
 
@@ -18,18 +18,19 @@ A single-page, browser-based todo application. One HTML file, no backend, no bui
 
 ### Goals
 
-- Ship a fully functional todo app in a single HTML file (inline CSS + JS)
+- Ship a fully functional todo app with drag-and-drop and task dependency visualization
 - Drag-and-drop reordering that feels responsive and intuitive
+- Task blocking and dependency tracking with interactive graph visualization
 - Persistent state across browser sessions via `localStorage`
 - Clean, minimal UI that works on desktop and mobile browsers
 
 ### Non-Goals
 
 - No backend, API, or database
-- No build step, bundler, or package manager
 - No authentication or multi-user support
 - No framework dependencies (React, Vue, etc.)
 - No offline-first/PWA features beyond basic `localStorage`
+- No user accounts or multi-user list sharing
 
 ---
 
@@ -191,16 +192,50 @@ When a todo's status is set to "blocked", the user can specify which other task(
 
 | Constraint | Detail |
 |-----------|--------|
-| **Single file** | One `.html` file with inline `<style>` and `<script>`. No external CSS/JS files. |
-| **No frameworks** | Vanilla HTML, CSS, JavaScript only. No React, Vue, jQuery, etc. |
-| **No build step** | No Webpack, Vite, npm, etc. Open the file in a browser and it works. |
+| **Architecture** | Modular ES modules in `src/` tree. Entry point: `index.html` → `src/main.js`. CSS inlined in HTML. |
+| **Build tools** | Vite for dev server and production build. npm for package management. Dev workflow: `npm install` then `npm run dev`. |
+| **No frameworks** | Vanilla HTML, CSS, JavaScript only. No React, Vue, jQuery, or UI frameworks. |
+| **External dependencies** | Only `dagre` for dependency graph layout. No other third-party packages. |
 | **No backend** | No server, no API calls, no database. `localStorage` only. |
 | **Browser support** | Modern evergreen browsers (Chrome, Firefox, Safari, Edge — latest 2 versions). No IE11. |
-| **No external dependencies** | No CDN links, no imported libraries. Fully self-contained. |
 
 ---
 
-## 7. Out of Scope
+## 7. Dependency Graph Visualization
+
+### Overview
+
+An interactive, SVG-based visualization showing task blocking relationships. When tasks have dependencies (via the `blockedBy` field), the graph displays them in a left-to-right layered layout.
+
+### Features
+
+- **Layout:** Directed acyclic graph (DAG) with layered left-to-right positioning using dagre
+- **Cycle detection:** Dashed red edges and warning message when circular dependencies exist
+- **Interactive nodes:** Click a node to select the corresponding task row (auto-scrolls into view)
+- **Bidirectional selection:** Click a task row to select the corresponding graph node
+- **Neighbor highlighting:** Edges connected to a selected node are highlighted
+- **Pan and zoom:** Users can navigate the graph on small screens
+- **Tooltips:** Hover over a node to see the full task name
+- **Keyboard navigation:** Tab through nodes, Enter/Space to select
+
+### Display & Toggles
+
+- **Desktop (≥ 480px):** Graph section shown by default, collapsible with toggle button
+- **Mobile (< 480px):** Graph section hidden by default, expandable with toggle button
+- **Summary line:** Shows "X tasks · Y dependencies"
+- **Empty state:** "No task dependencies yet..." when no blockedBy relationships exist
+- **Cycle warning:** "Dependency cycle detected. Layout is approximate." when cycles are detected
+
+### Integration
+
+- Section below the task list in the main container
+- Breaks out to a wider layout (max-width 1200px) to accommodate the graph
+- Does not affect task list functionality or data model
+- Read-only visualization (cannot add/modify dependencies from the graph directly)
+
+---
+
+## 8. Out of Scope
 
 The following are explicitly **not** part of this project:
 
@@ -215,11 +250,11 @@ The following are explicitly **not** part of this project:
 - Dark mode toggle (may style with `prefers-color-scheme` if trivial, but not required)
 - Animations beyond basic drag feedback
 - PWA / service worker / installability
-- Automated testing infrastructure (Linus will test manually per acceptance criteria; no test framework to ship)
+- Automated testing infrastructure
 
 ---
 
-## 8. Acceptance Criteria
+## 9. Acceptance Criteria
 
 The app is **done** when all of the following pass in Chrome and Firefox (latest):
 

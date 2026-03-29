@@ -39,7 +39,49 @@
 - DAG visualization is advanced but explained simply in Dependencies section
 - localStorage persistence is a feature, not a limitation for this use case
 
+## Sessions
+
+### 2025-03-30: PRD Update for Architectural Alignment
+
+**Deliverable:** `PRD.md` updated to reflect actual implementation.
+
+**Context:** Danny's PRD audit (danny-prd-drift.md) found three architectural gaps:
+1. Implementation uses Vite + npm (PRD forbade build tools)
+2. Implementation has modular src/ structure (PRD required single HTML file)
+3. DAG visualization is fully implemented but completely absent from PRD
+
+**Changes Made:**
+- **Section 1 (Overview):** Added "dependency graph visualization" to headline
+- **Section 2 (Goals):** Rewrote to remove "single HTML file" constraint; added dependency graph as explicit goal
+- **Section 2 (Non-Goals):** Removed "No build step, bundler, or package manager" (now implemented)
+- **Section 6 (Technical Constraints):** Completely rewritten:
+  - Changed "Single file" → "Architecture: modular ES modules in src/"
+  - Added "Build tools: Vite + npm" with dev workflow
+  - Changed "No external dependencies" → "Only dagre for graph layout"
+- **Section 7 (NEW):** Added "Dependency Graph Visualization" section:
+  - Documented all features (cycle detection, interactive nodes, pan/zoom, tooltips, keyboard nav)
+  - Described display behavior (desktop-default, mobile-hidden)
+  - Clarified integration (read-only, below task list, wider layout)
+- **Section 8 (renamed from 7):** Out of Scope section (removed outdated constraints)
+- **Section 9 (renamed from 8):** Acceptance Criteria section
+
+**Decision Rationale:**
+- Chose Option 1 from Danny's recommendations: update PRD to match implementation
+- The DAG feature is well-executed and genuinely useful (not over-engineering)
+- Modular architecture is proportional to code complexity and enables testing
+- Users receive a built artifact, not raw source, so Vite/npm setup is transparent
+- It's more valuable to document the current system than regress features
+
+**Tone:** Kept PRD's existing professional tone; clarified technical reality without apology
+
+---
+
 ## Learnings
+
+**PRD governance:**
+- PRD drift happens naturally as implementations evolve and discover better approaches
+- A PRD update is cheaper than a feature revert or code regression
+- Clear documentation of "why we made this trade-off" reduces future confusion
 
 **Architecture patterns:**
 - main.js owns state & section visibility (dag-toggle, selectedTaskId)

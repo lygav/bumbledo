@@ -10,6 +10,37 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: PRD Audit — Architectural Drift Detected
+
+**Verdict:** Core PRD is honored; implementation has evolved beyond stated constraints.
+
+**Key Findings:**
+- ✅ All 10 user stories fully implemented and working as specified
+- ✅ All task states, blocking logic, persistence, and accessibility requirements met
+- ❌ **Build tools:** PRD forbids npm/Vite; implementation uses both
+- ❌ **Single file:** PRD requires one HTML file with inline JS; code split across `src/` tree
+- ❌ **No dependencies:** PRD forbids external packages; `dagre` added for graph layout
+- 🆕 **Dependency graph visualization:** Full interactive SVG system built but not documented in PRD (graph panel, cycle detection, pan/zoom, node selection, tooltips)
+
+**Trade-off Analysis:**
+- The original PRD prioritized **simplicity and no setup** ("open in browser, it works")
+- The implementation prioritizes **maintainability, testability, and scalability** (modular architecture, separation of concerns, proper dev/build workflow)
+- For a todo app staying as "one HTML file," the current approach is over-engineered
+- For a todo app with a full dependency graph visualization, the current approach is proportional
+
+**Architectural Decision:**
+The project has implicitly chosen **scalable single-page app** over **zero-setup HTML file**. This is a valid choice, but the trade-off should be explicit: gaining graph visualization, easier testing, and modularity at the cost of setup friction. PRD must be updated to reflect this.
+
+**Next Steps:**
+1. Update PRD Section 6 to document actual build/module constraints
+2. Add new PRD section documenting the dependency graph visualization (now in-scope)
+3. Remove or relocate "No build step" and "Single file" constraints
+4. Consider: does the graph visualization justify the complexity? Or should it be optional?
+
+**Files affected:**
+- PRD.md (needs updates)
+- .squad/decisions/inbox/danny-prd-drift.md (created)
+
 ### 2026-03-29: Project Structure Recommendation
 
 **Recommendation:** Move app code under a light `src/` tree, keep `index.html` at the project root for Vite, and prefer co-located tests next to the modules they verify.
