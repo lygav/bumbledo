@@ -171,25 +171,25 @@
     }
 
     /* Status: done */
-    li.status-done {
+    #todo-list li.status-done {
       opacity: 0.6;
     }
-    li.status-done .todo-text {
+    #todo-list li.status-done .todo-text {
       text-decoration: line-through;
       color: #999;
     }
 
     /* Status: cancelled */
-    li.status-cancelled {
+    #todo-list li.status-cancelled {
       opacity: 0.5;
     }
-    li.status-cancelled .todo-text {
+    #todo-list li.status-cancelled .todo-text {
       text-decoration: line-through;
       color: #c0392b;
     }
 
     /* Status: blocked */
-    li.status-blocked {
+    #todo-list li.status-blocked {
       border-left: 3px solid #e67e22;
       background: #fffbf0;
     }
@@ -389,13 +389,24 @@
           const select = document.createElement('select');
           select.className = 'todo-status';
           select.setAttribute('aria-label', `Status for "${todo.text}"`);
-          ['active', 'done', 'cancelled', 'blocked'].forEach(s => {
+          const statusOptions = [
+            { value: 'active', label: '— None —' },
+            { value: 'done', label: 'Done' },
+            { value: 'cancelled', label: 'Cancelled' },
+            { value: 'blocked', label: 'Blocked' }
+          ];
+          statusOptions.forEach(s => {
             const opt = document.createElement('option');
-            opt.value = s;
-            opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
-            if (s === todo.status) opt.selected = true;
+            opt.value = s.value;
+            opt.textContent = s.label;
+            if (s.value === todo.status) opt.selected = true;
             select.appendChild(opt);
           });
+          if (todo.status === 'active') {
+            select.style.color = '#999';
+          } else {
+            select.style.color = '#1a1a1a';
+          }
           select.addEventListener('change', () => setStatus(todo.id, select.value));
 
           const text = document.createElement('span');
