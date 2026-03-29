@@ -10,7 +10,7 @@ import {
   cleanupBlockedBy,
   deleteTodo,
   clearFinished
-} from './app.js';
+} from './model.js';
 
 describe('generateId', () => {
   it('returns a string', () => {
