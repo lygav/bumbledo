@@ -964,11 +964,13 @@
       font-size: 0.875rem;
     }
 
-    .shortcut-help-modal[hidden] {
+    .shortcut-help-modal[hidden],
+    .blocked-completion-modal[hidden] {
       display: none;
     }
 
-    .shortcut-help-modal {
+    .shortcut-help-modal,
+    .blocked-completion-modal {
       position: fixed;
       inset: 0;
       z-index: 20;
@@ -979,7 +981,8 @@
       background: rgba(17, 24, 39, 0.56);
     }
 
-    .shortcut-help-dialog {
+    .shortcut-help-dialog,
+    .blocked-completion-dialog {
       width: min(560px, 100%);
       max-height: min(90vh, 720px);
       overflow: auto;
@@ -989,7 +992,12 @@
       padding: 1.25rem;
     }
 
-    .shortcut-help-header {
+    .blocked-completion-dialog {
+      width: min(420px, 100%);
+    }
+
+    .shortcut-help-header,
+    .blocked-completion-header {
       display: flex;
       align-items: start;
       justify-content: space-between;
@@ -997,7 +1005,8 @@
       margin-bottom: 1rem;
     }
 
-    .shortcut-help-header h2 {
+    .shortcut-help-header h2,
+    .blocked-completion-header h2 {
       font-size: 1.125rem;
       font-weight: 700;
       color: #111;
@@ -1007,6 +1016,12 @@
       margin-top: 0.25rem;
       color: #667085;
       font-size: 0.9375rem;
+    }
+
+    .blocked-completion-copy {
+      color: #374151;
+      font-size: 1rem;
+      line-height: 1.6;
     }
 
     .shortcut-help-close {
@@ -1027,6 +1042,34 @@
     }
 
     .shortcut-help-close:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    .blocked-completion-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1.25rem;
+    }
+
+    .blocked-completion-dismiss {
+      padding: 0.625rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #4a90d9;
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 88px;
+      min-height: 44px;
+    }
+
+    .blocked-completion-dismiss:hover {
+      background: #3a7bc8;
+    }
+
+    .blocked-completion-dismiss:focus-visible {
       outline: 2px solid #4a90d9;
       outline-offset: 2px;
     }
@@ -1378,6 +1421,24 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="blocked-completion-modal" id="blocked-completion-modal" hidden>
+    <div
+      class="blocked-completion-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="blocked-completion-title"
+      aria-describedby="blocked-completion-message"
+    >
+      <div class="blocked-completion-header">
+        <h2 id="blocked-completion-title">Can’t complete yet</h2>
+      </div>
+      <p class="blocked-completion-copy" id="blocked-completion-message"></p>
+      <div class="blocked-completion-actions">
+        <button type="button" class="blocked-completion-dismiss" id="blocked-completion-dismiss">OK</button>
+      </div>
     </div>
   </div>
 

@@ -10,6 +10,7 @@ import {
   deleteTodo,
   getActionableCount,
   getActionableTodos,
+  getActiveBlockerCount,
   hasActiveBlockers,
   hasDependencies,
   loadBurndownData,
@@ -195,6 +196,9 @@ if (typeof document !== 'undefined') {
     const shortcutsHelpModal = document.getElementById('shortcuts-help-modal');
     const shortcutsHelpClose = document.getElementById('shortcuts-help-close');
     const focusInputShortcut = document.getElementById('focus-input-shortcut');
+    const blockedCompletionModal = document.getElementById('blocked-completion-modal');
+    const blockedCompletionMessage = document.getElementById('blocked-completion-message');
+    const blockedCompletionDismiss = document.getElementById('blocked-completion-dismiss');
 
     let todos = loadTodos();
     let burndownData = loadBurndownData();
@@ -207,6 +211,8 @@ if (typeof document !== 'undefined') {
     let editingId = null;
     let helpModalOpen = false;
     let helpModalReturnFocusEl = null;
+    let blockedCompletionModalOpen = false;
+    let blockedCompletionReturnFocusEl = null;
 
     const prefersMacKeys = isMacPlatform();
 
@@ -268,33 +274,46 @@ if (typeof document !== 'undefined') {
       notificationController.dismiss({ clearHighlights });
     }
 
-    function getActiveBlockerNames(todoId) {
-      const todo = todos.find(item => item.id === todoId);
-      if (!todo || !Array.isArray(todo.blockedBy) || todo.blockedBy.length === 0) {
-        return [];
-      }
-
-      const todosById = new Map(todos.map(item => [item.id, item]));
-      return todo.blockedBy
-        .map(blockerId => todosById.get(blockerId))
-        .filter(blocker => blocker && (blocker.status === 'active' || blocker.status === 'blocked'))
-        .map(blocker => blocker.text);
+    function getBlockedCompletionMessage(activeBlockerCount) {
+      const dependencyLabel = activeBlockerCount === 1 ? 'dependency' : 'dependencies';
+      return `Can't complete — this task has ${activeBlockerCount} ${dependencyLabel} remaining.`;
     }
 
-    function showBlockedCompletionNotification(todoId) {
-      const blockerNames = getActiveBlockerNames(todoId);
-      if (blockerNames.length === 0) {
+    function openBlockedCompletionModal(message, returnFocusEl = null) {
+      if (blockedCompletionModalOpen) {
+        blockedCompletionMessage.textContent = message;
         return;
       }
 
-      unblockedNotificationMessage.textContent = `Can't complete this task — it's blocked by: ${blockerNames.join(', ')}`;
-      unblockedNotificationDetail.textContent = `Alert: Can't complete this task because it depends on ${blockerNames.join(', ')}.`;
-      unblockedNotification.hidden = false;
+      blockedCompletionReturnFocusEl = returnFocusEl ?? (
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      );
+      blockedCompletionMessage.textContent = message;
+      blockedCompletionModal.hidden = false;
+      blockedCompletionModalOpen = true;
+      blockedCompletionDismiss.focus();
+    }
 
-      clearUnblockedNotificationTimeout();
-      unblockedNotificationTimeoutId = window.setTimeout(() => {
-        hideUnblockedNotification();
-      }, 5000);
+    function closeBlockedCompletionModal() {
+      if (!blockedCompletionModalOpen) return;
+      blockedCompletionModalOpen = false;
+      blockedCompletionModal.hidden = true;
+      if (blockedCompletionReturnFocusEl?.isConnected) {
+        blockedCompletionReturnFocusEl.focus();
+      }
+      blockedCompletionReturnFocusEl = null;
+    }
+
+    function showBlockedCompletionNotification(todoId, returnFocusEl = null) {
+      const activeBlockerCount = getActiveBlockerCount(todos, todoId);
+      if (activeBlockerCount === 0) {
+        return;
+      }
+
+      openBlockedCompletionModal(
+        getBlockedCompletionMessage(activeBlockerCount),
+        returnFocusEl
+      );
     }
 
     function surfaceUnblockedTodos(todosBefore, todosAfter) {
@@ -921,7 +940,7 @@ if (typeof document !== 'undefined') {
 
           if (isBlockedCompletionAttempt) {
             select.value = currentTodo.status;
-            showBlockedCompletionNotification(currentTodo.id);
+            showBlockedCompletionNotification(currentTodo.id, select);
             return;
           }
 
@@ -1158,18 +1177,26 @@ if (typeof document !== 'undefined') {
       }
     });
 
+    blockedCompletionDismiss.addEventListener('click', () => {
+      closeBlockedCompletionModal();
+    });
+
+    blockedCompletionModal.addEventListener('click', (event) => {
+      if (event.target === blockedCompletionModal) {
+        closeBlockedCompletionModal();
+      }
+    });
+
     document.addEventListener('keydown', (event) => {
-      const modifierPressed = prefersMacKeys ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
       const isTyping = isEditableTarget(event.target);
 
-      if (modifierPressed && event.shiftKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        todoInput.focus();
-        todoInput.select();
-        return;
-      }
-
       if (event.key === 'Escape') {
+        if (blockedCompletionModalOpen) {
+          event.preventDefault();
+          closeBlockedCompletionModal();
+          return;
+        }
+
         if (helpModalOpen) {
           event.preventDefault();
           closeHelpModal();
@@ -1188,6 +1215,19 @@ if (typeof document !== 'undefined') {
 
         event.preventDefault();
         clearSelection({ focusList: true });
+        return;
+      }
+
+      if (blockedCompletionModalOpen) {
+        return;
+      }
+
+      const modifierPressed = prefersMacKeys ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+
+      if (modifierPressed && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        todoInput.focus();
+        todoInput.select();
         return;
       }
 

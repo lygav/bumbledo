@@ -16,6 +16,7 @@ import {
   finalizeBlockedStatus,
   getActionableCount,
   getActionableTodos,
+  getActiveBlockerCount,
   hasActiveBlockers,
   updateTodoText
 } from './model.js';
@@ -417,6 +418,30 @@ describe('hasActiveBlockers', () => {
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(false);
+  });
+});
+
+describe('getActiveBlockerCount', () => {
+  it('counts active and blocked direct blockers', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3', '4'] },
+      { id: '2', text: 'active blocker', status: 'active' },
+      { id: '3', text: 'blocked blocker', status: 'blocked', blockedBy: ['5'] },
+      { id: '4', text: 'done blocker', status: 'done' },
+      { id: '5', text: 'nested blocker', status: 'active' }
+    ];
+
+    expect(getActiveBlockerCount(todos, '1')).toBe(2);
+  });
+
+  it('ignores self references, missing blockers, and finished blockers', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1', '2', '3'] },
+      { id: '2', text: 'done blocker', status: 'done' },
+      { id: '3', text: 'cancelled blocker', status: 'cancelled' }
+    ];
+
+    expect(getActiveBlockerCount(todos, '1')).toBe(0);
   });
 });
 
