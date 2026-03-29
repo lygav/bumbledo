@@ -125,6 +125,17 @@ export function hasDependencies(todos) {
   return todos.some(todo => Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0);
 }
 
+export function getActionableCount(todos) {
+  return {
+    actionable: todos.filter(todo => todo.status === 'active').length,
+    total: todos.length
+  };
+}
+
+export function getActionableTodos(todos) {
+  return todos.filter(todo => todo.status === 'active');
+}
+
 export function updateTodoText(todos, id, newText) {
   const trimmed = newText.trim();
   if (!trimmed) return todos;
