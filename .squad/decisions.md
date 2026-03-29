@@ -1575,3 +1575,70 @@ The implementation honors the core PRD specification (all 10 user stories, task 
 **Why:** User request — captured for team memory
 
 **Status:** Active
+
+---
+
+## 2026-03-29T17:31:00Z: Feature PRDs Created (Smart Blocked Alerts, Keyboard Shortcuts, Burndown View)
+
+**Status:** Accepted  
+**Author:** Tess (PM)  
+**Date:** 2025-07-18  
+**Related:** Product learnings session on todo app space (2025-07-17)
+
+### Summary
+
+Three feature PRDs have been authored based on product learnings from the todo app competitive landscape. These features address specific user pain points identified in market research: clarity (Smart Blocked Alerts), power-user efficiency (Keyboard Shortcuts), and progress visibility (Burndown View).
+
+### Features
+
+1. **Smart Blocked Alerts**
+   - **File:** `PRD-smart-blocked-alerts.md`
+   - **Rationale:** Turns the dependency DAG from a passive visual into an active planning tool by proactively surfacing newly unblocked tasks
+   - **User Impact:** Reduces context loss after completing a blocker; maintains workflow momentum
+   - **Technical Scope:** Builds on existing `blockedBy` data; no new fields
+
+2. **Keyboard Shortcuts**
+   - **File:** `PRD-keyboard-shortcuts.md`
+   - **Rationale:** Empowers power users with frictionless task manipulation; rewards expertise without alienating casual users
+   - **User Impact:** Enables rapid capture and state toggling; appeals to developers and keyboard-first planners
+   - **Shortcut Set:** 6 core shortcuts (add, navigate, toggle, delete, help)
+
+3. **Burndown View**
+   - **File:** `PRD-burndown-view.md`
+   - **Rationale:** Provides motivational progress visibility by tracking active task count over 30 days
+   - **User Impact:** Gives users confidence in progress; helps spot personal work patterns
+   - **Data Model:** New localStorage key `"todos_burndown"` for daily samples
+
+### Positioning Rationale
+
+These three features align with bumbledo's **"trust-first planning for makers"** positioning:
+
+1. **Smart Alerts** strengthen the **clarity moat** (show dependencies, not just visualize them)
+2. **Keyboard Shortcuts** attract **power users** (makers optimize for speed)
+3. **Burndown View** address **progress anxiety** (transparent, visible, local)
+
+All three work with the existing dependency DAG, respect the localStorage-only constraint, and avoid backend complexity.
+
+### Next Steps
+
+- Danny reviews PRDs for technical feasibility
+- Team discusses priority and sequencing
+- Features are broken down into tickets and estimated
+
+### Non-Decisions
+
+- These PRDs are feature exploration, not commitments
+- Priority order TBD (needs team discussion)
+- Implementation approach deferred to Danny (architecture/design)
+
+---
+
+## 2026-03-29T17:22:19Z: User directive — GitHub account
+
+**By:** Vladi Lyga (via Copilot)
+
+**What:** Always make sure you are working with the `lygav` GitHub account. Verify `gh auth status` shows `lygav` before any GitHub operations.
+
+**Why:** User request — captured for team memory
+
+**Status:** Active
