@@ -112,3 +112,40 @@
 - Trimmed Tips & Tricks—only essential keyboard/offline hints remain
 - Final README: 130 lines (was 235), ~40% reduction
 - Focus: scannability first, let UI teach the rest
+
+### 2026-03-29: Audit Methodology for PRD Drift Detection
+
+**Taught by:** Danny (Lead/Architect)
+
+**Methodology for identifying architectural drift:**
+
+1. **Verify core specification first** — Check all user stories, functional requirements, and acceptance criteria
+2. **Map stated constraints to implementation:**
+   - Build tools: Check package.json, build scripts, dev dependencies
+   - Architecture: List all source files and directory structure
+   - Dependencies: Count external packages, check for third-party integrations
+   - File format: Verify HTML/CSS/JS inline vs external modules
+3. **Identify feature scope mismatches:**
+   - Search codebase for features mentioned in UI but absent from PRD
+   - Check for PRD features that are implemented but undocumented
+   - Note new integrations or visual systems added since PRD was written
+4. **Analyze trade-offs made:**
+   - Original goal (from PRD) vs actual goal (implementation reveals)
+   - What simplifications/constraints were relaxed?
+   - What complexity was added, and why?
+5. **Document decision required:**
+   - Option 1: Update documentation to match implementation
+   - Option 2: Revert implementation to match documentation
+   - Option 3: Leave gap (not recommended; causes future confusion)
+6. **Recommend based on proportionality:**
+   - Is the added complexity justified by the feature value?
+   - Is maintenance cost of documentation update vs feature revert proportional?
+   - What does the target user actually need?
+
+**Key insight:** PRD drift is natural—implementations evolve, constraints prove unrealistic, better approaches emerge. The goal is not to prevent drift, but to document and rationalize it. A stale PRD is worse than an evolved one that's kept current.
+
+**When to use this pattern:**
+- Quarterly architectural reviews
+- Before releasing major versions
+- When team members join and ask "what are we building?"
+- Before adding foundational features (graph visualization, new data models, dependency systems)
