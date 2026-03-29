@@ -384,6 +384,23 @@ describe('hasActiveBlockers', () => {
     expect(hasActiveBlockers(todos, '1')).toBe(true);
   });
 
+  it('returns false when the only blocker is the todo itself', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(false);
+  });
+
+  it('returns false when blockers only loop back to the current todo', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'upstream task', status: 'blocked', blockedBy: ['1'] }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(false);
+  });
+
   it('returns false when blockers are already finished', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3'] },

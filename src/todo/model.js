@@ -317,15 +317,53 @@ export function clearFinished(todos) {
 
 export function hasActiveBlockers(todos, todoId) {
   const todo = todos.find(item => item.id === todoId);
-  if (!todo || !Array.isArray(todo.blockedBy) || todo.blockedBy.length === 0) {
+  const blockerIds = Array.isArray(todo?.blockedBy)
+    ? todo.blockedBy.filter(blockerId => blockerId !== todoId)
+    : [];
+
+  if (!todo || blockerIds.length === 0) {
     return false;
   }
 
   const todosById = new Map(todos.map(item => [item.id, item]));
-  return todo.blockedBy.some(blockerId => {
+
+  function keepsTodoBlocked(blockerId, visiting = new Set()) {
+    if (blockerId === todoId) {
+      return false;
+    }
+
+    if (visiting.has(blockerId)) {
+      return true;
+    }
+
     const blocker = todosById.get(blockerId);
-    return blocker && (blocker.status === 'active' || blocker.status === 'blocked');
-  });
+    if (!blocker) {
+      return false;
+    }
+
+    if (blocker.status === 'active') {
+      return true;
+    }
+
+    if (blocker.status !== 'blocked') {
+      return false;
+    }
+
+    const nestedBlockers = Array.isArray(blocker.blockedBy)
+      ? blocker.blockedBy.filter(nestedBlockerId => nestedBlockerId !== blockerId)
+      : [];
+
+    if (nestedBlockers.length === 0) {
+      return false;
+    }
+
+    const nextVisiting = new Set(visiting);
+    nextVisiting.add(blockerId);
+
+    return nestedBlockers.some(nestedBlockerId => keepsTodoBlocked(nestedBlockerId, nextVisiting));
+  }
+
+  return blockerIds.some(blockerId => keepsTodoBlocked(blockerId));
 }
 
 export function hasDependencies(todos) {
