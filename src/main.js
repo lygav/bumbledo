@@ -164,6 +164,24 @@ function isEditableTarget(target) {
   );
 }
 
+function getFocusableElements(container) {
+  if (!(container instanceof HTMLElement)) {
+    return [];
+  }
+
+  return [...container.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    return !element.hidden
+      && !element.hasAttribute('disabled')
+      && element.getAttribute('aria-hidden') !== 'true';
+  });
+}
+
 // DOM initialization - runs on load
 if (typeof document !== 'undefined') {
   (function init() {
@@ -1215,6 +1233,36 @@ if (typeof document !== 'undefined') {
 
         event.preventDefault();
         clearSelection({ focusList: true });
+        return;
+      }
+
+      if (blockedCompletionModalOpen && event.key === 'Tab') {
+        const focusableElements = getFocusableElements(blockedCompletionModal);
+
+        if (focusableElements.length === 0) {
+          event.preventDefault();
+          blockedCompletionDismiss.focus();
+          return;
+        }
+
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+        const focusInsideModal = activeElement instanceof HTMLElement
+          && blockedCompletionModal.contains(activeElement);
+
+        if (event.shiftKey) {
+          if (!focusInsideModal || activeElement === firstFocusable) {
+            event.preventDefault();
+            lastFocusable.focus();
+          }
+          return;
+        }
+
+        if (!focusInsideModal || activeElement === lastFocusable) {
+          event.preventDefault();
+          firstFocusable.focus();
+        }
         return;
       }
 
