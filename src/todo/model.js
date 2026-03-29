@@ -73,6 +73,49 @@ export function setStatus(todos, id, newStatus) {
   });
 }
 
+export function cycleStatus(todos, id) {
+  return todos.map(todo => {
+    if (todo.id !== id) return todo;
+
+    if (todo.status === 'active') {
+      return { ...todo, status: 'done' };
+    }
+
+    if (todo.status === 'done' || todo.status === 'cancelled') {
+      return { ...todo, status: 'active' };
+    }
+
+    if (todo.status === 'blocked' && Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
+      return todo;
+    }
+
+    if (todo.status === 'blocked') {
+      const { blockedBy, ...rest } = todo;
+      return { ...rest, status: 'active' };
+    }
+
+    return todo;
+  });
+}
+
+export function getNextTodoId(todos, currentId) {
+  if (todos.length === 0) return null;
+
+  const currentIndex = todos.findIndex(todo => todo.id === currentId);
+  if (currentIndex === -1) return todos[0].id;
+
+  return todos[(currentIndex + 1) % todos.length].id;
+}
+
+export function getPrevTodoId(todos, currentId) {
+  if (todos.length === 0) return null;
+
+  const currentIndex = todos.findIndex(todo => todo.id === currentId);
+  if (currentIndex === -1) return todos[0].id;
+
+  return todos[(currentIndex - 1 + todos.length) % todos.length].id;
+}
+
 export function toggleBlocker(todos, todoId, blockerId) {
   return todos.map(todo => {
     if (todo.id !== todoId || todo.status !== 'blocked') return todo;

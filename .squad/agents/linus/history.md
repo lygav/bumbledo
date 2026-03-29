@@ -8,6 +8,24 @@
 
 ## Learnings
 
+### 2026-03-29: Keyboard shortcuts model-layer contract tests
+
+**What I delivered:**
+- Added 14 new model-level tests in `src/todo/model.test.js` for shortcut support helpers
+- Covered the intended `cycleStatus()` contract plus `getNextTodoId()` / `getPrevTodoId()` navigation helpers
+- Kept the suite at the pure-function level; no DOM or event wiring assertions
+
+**Decisions captured in tests:**
+- Enter cycling is specified as `active -> done -> active`
+- `cancelled` should recover to `active` when cycled from the keyboard
+- `blocked` with active dependencies should **not** cycle, to avoid silently discarding blocker state
+- Navigation helpers should wrap, tolerate missing current IDs, return self for one item, and return `null` for empty lists
+
+**Execution outcome:**
+- Baseline before changes: existing suite was green
+- After adding tests: 14 expected red tests now fail because `cycleStatus`, `getNextTodoId`, and `getPrevTodoId` are not implemented/exported in `model.js`
+- This gives Rusty a clear TDD target without mixing in UI/integration concerns
+
 ### 2025-07-17: Unit test strategy for app.js
 
 **Test Coverage Approach:**

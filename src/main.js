@@ -42,6 +42,22 @@ function saveActionableFilterPreference(isActive) {
   }
 }
 
+function isMacPlatform() {
+  if (typeof navigator === 'undefined') return false;
+  return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+}
+
+function isEditableTarget(target) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest('input, textarea, select, [contenteditable="true"]')
+      || target.isContentEditable
+  );
+}
+
 // DOM initialization - runs on load
 if (typeof document !== 'undefined') {
   (function init() {
@@ -57,6 +73,10 @@ if (typeof document !== 'undefined') {
     const dagSummary = document.getElementById('dag-summary');
     const dagEmptyState = document.getElementById('dag-empty-state');
     const dagToggle = document.getElementById('dag-toggle');
+    const shortcutsHelpBtn = document.getElementById('shortcuts-help-btn');
+    const shortcutsHelpModal = document.getElementById('shortcuts-help-modal');
+    const shortcutsHelpClose = document.getElementById('shortcuts-help-close');
+    const focusInputShortcut = document.getElementById('focus-input-shortcut');
 
     let todos = loadTodos();
     let selectedTaskId = null;
@@ -65,6 +85,16 @@ if (typeof document !== 'undefined') {
     let dagToggleTouched = false;
     let flashTimeoutId = null;
     let editingId = null;
+    let helpModalOpen = false;
+    let helpModalReturnFocusEl = null;
+
+    const prefersMacKeys = isMacPlatform();
+
+    if (focusInputShortcut) {
+      focusInputShortcut.innerHTML = prefersMacKeys
+        ? '<kbd>Cmd</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>A</kbd>'
+        : '<kbd>Ctrl</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>A</kbd>';
+    }
 
     const dagView = createDagView({
       container: dagContainer,
@@ -78,8 +108,23 @@ if (typeof document !== 'undefined') {
 
     saveTodos(todos);
 
+    function getVisibleTodos() {
+      return filterActive ? getActionableTodos(todos) : todos;
+    }
+
     function findTaskElement(id) {
       return [...todoList.querySelectorAll('li[data-id]')].find(item => item.dataset.id === id) ?? null;
+    }
+
+    function focusTaskList() {
+      todoList.focus();
+    }
+
+    function focusTaskRow(id) {
+      const taskElement = findTaskElement(id);
+      if (taskElement) {
+        taskElement.focus();
+      }
     }
 
     function syncTaskRowSelection() {
@@ -89,7 +134,9 @@ if (typeof document !== 'undefined') {
       }
 
       todoList.querySelectorAll('li[data-id]').forEach((item) => {
-        item.classList.toggle('task-row-selected', item.dataset.id === selectedTaskId);
+        const isSelected = item.dataset.id === selectedTaskId;
+        item.classList.toggle('task-row-selected', isSelected);
+        item.setAttribute('aria-selected', String(isSelected));
       });
     }
 
@@ -136,6 +183,116 @@ if (typeof document !== 'undefined') {
     function cancelEdit() {
       editingId = null;
       render();
+    }
+
+    function openHelpModal() {
+      if (helpModalOpen) return;
+      helpModalReturnFocusEl = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      helpModalOpen = true;
+      shortcutsHelpModal.hidden = false;
+      shortcutsHelpBtn.setAttribute('aria-expanded', 'true');
+      shortcutsHelpClose.focus();
+    }
+
+    function closeHelpModal() {
+      if (!helpModalOpen) return;
+      helpModalOpen = false;
+      shortcutsHelpModal.hidden = true;
+      shortcutsHelpBtn.setAttribute('aria-expanded', 'false');
+      if (helpModalReturnFocusEl?.isConnected) {
+        helpModalReturnFocusEl.focus();
+      }
+      helpModalReturnFocusEl = null;
+    }
+
+    function clearSelection({ focusList = false } = {}) {
+      selectedTaskId = null;
+      syncTaskRowSelection();
+      syncDagState();
+      if (focusList) {
+        focusTaskList();
+      }
+    }
+
+    function selectTask(id, { focus = false, scroll = false, flash = false } = {}) {
+      selectedTaskId = id;
+      syncTaskRowSelection();
+      syncDagState();
+
+      if (scroll) {
+        scrollTaskIntoView(id, flash);
+      }
+
+      if (focus) {
+        focusTaskRow(id);
+      }
+    }
+
+    function moveSelection(step) {
+      const visibleTodos = getVisibleTodos();
+      if (visibleTodos.length === 0) return;
+
+      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTaskId);
+      const nextIndex = currentIndex === -1
+        ? (step > 0 ? 0 : visibleTodos.length - 1)
+        : Math.max(0, Math.min(visibleTodos.length - 1, currentIndex + step));
+
+      const nextTodo = visibleTodos[nextIndex];
+      if (!nextTodo) return;
+
+      selectTask(nextTodo.id, { focus: true, scroll: true });
+    }
+
+    function toggleSelectedTodoStatus() {
+      const selectedTodo = todos.find(todo => todo.id === selectedTaskId);
+      if (!selectedTodo) return;
+      if (selectedTodo.status !== 'active' && selectedTodo.status !== 'done') return;
+
+      const visibleTodos = getVisibleTodos();
+      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
+      const nextStatus = selectedTodo.status === 'done' ? 'active' : 'done';
+      todos = setStatus(todos, selectedTodo.id, nextStatus);
+      if (nextStatus === 'done') {
+        todos = cleanupBlockedBy(todos, selectedTodo.id);
+      }
+      saveTodos(todos);
+      render();
+
+      const nextVisibleTodos = getVisibleTodos();
+      if (nextVisibleTodos.some(todo => todo.id === selectedTodo.id)) {
+        selectTask(selectedTodo.id, { focus: true, scroll: true });
+        return;
+      }
+
+      const fallbackTodo = currentIndex === -1
+        ? null
+        : nextVisibleTodos[currentIndex] ?? nextVisibleTodos[currentIndex - 1] ?? null;
+
+      if (fallbackTodo) {
+        selectTask(fallbackTodo.id, { focus: true, scroll: true });
+      } else {
+        clearSelection({ focusList: true });
+      }
+    }
+
+    function deleteSelectedTodo() {
+      const visibleTodos = getVisibleTodos();
+      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTaskId);
+      const fallbackId = currentIndex === -1
+        ? null
+        : visibleTodos[currentIndex + 1]?.id ?? visibleTodos[currentIndex - 1]?.id ?? null;
+
+      todos = deleteTodo(todos, selectedTaskId);
+      saveTodos(todos);
+      render();
+
+      if (fallbackId && todos.some(todo => todo.id === fallbackId)) {
+        selectTask(fallbackId, { focus: true, scroll: true });
+      } else {
+        clearSelection({ focusList: true });
+      }
     }
 
     function syncDagState() {
@@ -212,8 +369,12 @@ if (typeof document !== 'undefined') {
       }
 
       const { actionable, total } = getActionableCount(todos);
-      const visibleTodos = filterActive ? getActionableTodos(todos) : todos;
+      const visibleTodos = getVisibleTodos();
       const showActionableEmptyState = filterActive && total > 0 && actionable === 0;
+
+      if (!visibleTodos.some(todo => todo.id === selectedTaskId)) {
+        selectedTaskId = null;
+      }
 
       todoList.innerHTML = '';
 
@@ -230,6 +391,7 @@ if (typeof document !== 'undefined') {
       visibleTodos.forEach(todo => {
         const li = document.createElement('li');
         li.draggable = true;
+        li.tabIndex = 0;
         li.dataset.id = todo.id;
         if (todo.status !== 'active') li.classList.add('status-' + todo.status);
         if (todo.id === selectedTaskId) li.classList.add('task-row-selected');
@@ -374,15 +536,11 @@ if (typeof document !== 'undefined') {
         }
 
         li.addEventListener('click', () => {
-          selectedTaskId = todo.id;
-          syncTaskRowSelection();
-          syncDagState();
+          selectTask(todo.id);
         });
 
         li.addEventListener('focusin', () => {
-          selectedTaskId = todo.id;
-          syncTaskRowSelection();
-          syncDagState();
+          selectTask(todo.id);
         });
 
         todoList.appendChild(li);
@@ -430,6 +588,99 @@ if (typeof document !== 'undefined') {
         dagExpanded = hasDependencies(todos) && !isMobileViewport();
       }
       syncDagState();
+    });
+
+    shortcutsHelpBtn.addEventListener('click', () => {
+      if (helpModalOpen) {
+        closeHelpModal();
+        return;
+      }
+      openHelpModal();
+    });
+
+    shortcutsHelpClose.addEventListener('click', () => {
+      closeHelpModal();
+    });
+
+    shortcutsHelpModal.addEventListener('click', (event) => {
+      if (event.target === shortcutsHelpModal) {
+        closeHelpModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const modifierPressed = prefersMacKeys ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+      const isTyping = isEditableTarget(event.target);
+
+      if (modifierPressed && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        todoInput.focus();
+        todoInput.select();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (helpModalOpen) {
+          event.preventDefault();
+          closeHelpModal();
+          return;
+        }
+
+        if (isTyping && editingId !== null) {
+          event.preventDefault();
+          cancelEdit();
+          return;
+        }
+
+        if (isTyping || selectedTaskId === null) {
+          return;
+        }
+
+        event.preventDefault();
+        clearSelection({ focusList: true });
+        return;
+      }
+
+      if (isTyping) {
+        return;
+      }
+
+      if (event.key === '?') {
+        event.preventDefault();
+        if (helpModalOpen) {
+          closeHelpModal();
+        } else {
+          openHelpModal();
+        }
+        return;
+      }
+
+      if (helpModalOpen) {
+        return;
+      }
+
+      const canNavigate = selectedTaskId !== null || document.activeElement === todoList || todoList.contains(document.activeElement);
+
+      if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && canNavigate) {
+        event.preventDefault();
+        moveSelection(event.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+
+      if (!selectedTaskId) {
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        toggleSelectedTodoStatus();
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        deleteSelectedTodo();
+      }
     });
 
     let draggedId = null;

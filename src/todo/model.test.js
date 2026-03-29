@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as model from './model.js';
 import {
   generateId,
   migrateTodos,
@@ -279,6 +280,116 @@ describe('setStatus', () => {
     const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
     const result = setStatus(todos, '1', 'blocked');
     expect(result[0].blockedBy).toEqual(['2']);
+  });
+});
+
+describe('cycleStatus', () => {
+  it('cycles active todos to done', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result[0].status).toBe('done');
+  });
+
+  it('cycles done todos back to active', () => {
+    const todos = [{ id: '1', text: 'task', status: 'done' }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result[0].status).toBe('active');
+  });
+
+  it('cycles cancelled todos back to active', () => {
+    const todos = [{ id: '1', text: 'task', status: 'cancelled' }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result[0].status).toBe('active');
+  });
+
+  it('does not cycle blocked todos with blockers', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] });
+  });
+});
+
+describe('getNextTodoId', () => {
+  it('returns the next todo id for a middle item', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' },
+      { id: '3', text: 'task3', status: 'active' }
+    ];
+    const result = model.getNextTodoId(todos, '2');
+    expect(result).toBe('3');
+  });
+
+  it('wraps to the first todo id from the last item', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' },
+      { id: '3', text: 'task3', status: 'active' }
+    ];
+    const result = model.getNextTodoId(todos, '3');
+    expect(result).toBe('1');
+  });
+
+  it('returns the same todo id for a single-item list', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = model.getNextTodoId(todos, '1');
+    expect(result).toBe('1');
+  });
+
+  it('returns the first todo id when current id is not found', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' }
+    ];
+    const result = model.getNextTodoId(todos, 'missing');
+    expect(result).toBe('1');
+  });
+
+  it('returns null for an empty list', () => {
+    const result = model.getNextTodoId([], '1');
+    expect(result).toBeNull();
+  });
+});
+
+describe('getPrevTodoId', () => {
+  it('returns the previous todo id for a middle item', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' },
+      { id: '3', text: 'task3', status: 'active' }
+    ];
+    const result = model.getPrevTodoId(todos, '2');
+    expect(result).toBe('1');
+  });
+
+  it('wraps to the last todo id from the first item', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' },
+      { id: '3', text: 'task3', status: 'active' }
+    ];
+    const result = model.getPrevTodoId(todos, '1');
+    expect(result).toBe('3');
+  });
+
+  it('returns the same todo id for a single-item list', () => {
+    const todos = [{ id: '1', text: 'task', status: 'active' }];
+    const result = model.getPrevTodoId(todos, '1');
+    expect(result).toBe('1');
+  });
+
+  it('returns the first todo id when current id is not found', () => {
+    const todos = [
+      { id: '1', text: 'task1', status: 'active' },
+      { id: '2', text: 'task2', status: 'done' }
+    ];
+    const result = model.getPrevTodoId(todos, 'missing');
+    expect(result).toBe('1');
+  });
+
+  it('returns null for an empty list', () => {
+    const result = model.getPrevTodoId([], '1');
+    expect(result).toBeNull();
   });
 });
 
