@@ -10,15 +10,16 @@ A lightweight, zero-friction browser-based todo app built with vanilla JavaScrip
 
 ## ✨ Features
 
-- **📝 Quick task capture** — Type and press Enter to add a new todo instantly
+- **📝 Quick capture, mouse or keyboard** — Add tasks instantly, then fly with shortcuts
 - **🎯 Four-state tracking** — Mark tasks as Active, Done, Cancelled, or Blocked
-- **🔗 Dependency tracking** — Flag blocked tasks and specify what's holding them up
-- **✅ Actionable Now filter** — Focus on only the tasks you can work on right now
-- **📊 Dependency graph** — Visualize task dependencies with an interactive DAG
-- **🎚️ Drag-to-reorder** — Grab any task and drag it to your preferred position
-- **📋 Clear clutter** — Remove all completed and cancelled tasks with one click
-- **💾 Auto-save** — Your tasks persist across browser sessions with localStorage
-- **⚡ Zero overhead** — No server, no accounts, no setup. Just works.
+- **✅ Actionable focus** — Toggle **Actionable** to show only ready work, with a persisted “N of M tasks are actionable” summary
+- **🔗 Dependency tracking** — Block tasks, pick blockers, and prevent premature completion when dependencies remain
+- **🔔 Smart unblock alerts** — Get a notification when finishing one task unlocks others, plus a brief highlight on newly actionable rows
+- **📈 Burndown progress** — Track completed vs total tasks in a 30-day rolling chart inside the collapsible **Progress** section
+- **📊 Dependency graph** — Visualize task dependencies with status-aware colors in an interactive DAG
+- **🎉 Delightful feedback** — Done tasks get a green success state and a confetti burst
+- **🖥️ Responsive layout** — Desktop shows tasks beside a sidebar; mobile stacks everything cleanly
+- **🎚️ Drag, clear, save** — Reorder tasks, clear finished work, and keep everything in localStorage
 
 ---
 
@@ -69,12 +70,30 @@ npm test:watch
 ## 🎮 Quick Start
 
 - **Add a task:** Type and press Enter
-- **Change status:** Click the status dropdown (Active, Done, Cancelled, Blocked)
+- **Jump to input:** Press **Cmd/Ctrl + Shift + A**
+- **Select and move:** Click a todo, then use **↑ / ↓** to move through visible tasks
+- **Change status fast:** Press **Enter** to cycle a selected task between Active and Done, or use the status dropdown
+- **Delete quickly:** Press **Delete** or **Backspace** on a selected todo
 - **Block tasks:** Mark as Blocked and check which tasks are blocking it
-- **Reorder:** Drag the ⋮ handle to move tasks up or down
-- **Focus:** Toggle "Actionable" to hide done, cancelled, and blocked tasks
+- **Focus:** Toggle **Actionable** to hide work that isn’t ready yet and keep that preference between visits
+- **Track momentum:** Open **Progress** to see the burndown chart for the last 30 days
 - **Visualize:** Click "Dependencies" to see task blocking relationships in a graph
+- **Learn shortcuts:** Press **?** for the help modal, and **Escape** to close dialogs or clear selection
+- **Reorder:** Drag the ⋮ handle to move tasks up or down
 - **Clean up:** Click "Clear finished" to remove Done and Cancelled tasks
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **Cmd/Ctrl + Shift + A** | Focus the task input and select its text |
+| **↑ / ↓** | Move selection to the previous or next visible todo |
+| **Enter** | Toggle the selected todo between Active and Done |
+| **Delete / Backspace** | Delete the selected todo |
+| **?** | Show or hide shortcut help |
+| **Escape** | Deselect the current todo and close open dialogs |
 
 ---
 
@@ -83,10 +102,11 @@ npm test:watch
 | Layer | Tech |
 |-------|------|
 | **Framework** | Vanilla JavaScript (no React, Vue, etc.) |
+| **Architecture** | Modular ES modules for todos, DAG rendering, and notifications |
 | **Build** | Vite |
 | **Testing** | Vitest |
 | **Persistence** | Browser localStorage |
-| **Visualization** | D3 + Dagre (DAG layout) |
+| **Visualization** | Dagre + custom SVG rendering |
 | **Styling** | Vanilla CSS |
 
 **Zero external runtime dependencies.** The only npm package at runtime is `dagre` for graph layout.
@@ -100,7 +120,7 @@ Tasks are stored in your browser's `localStorage`. No backend, no sync across de
 
 ## 🌐 Browser & Accessibility
 
-Works in all modern browsers (Chrome, Firefox, Safari). Keyboard navigation, ARIA labels, touch-friendly, and responsive from mobile to desktop.
+Works in all modern browsers (Chrome, Firefox, Safari). Keyboard navigation, ARIA labels, touch-friendly controls, and a responsive layout that becomes a task-list-plus-sidebar view on desktop.
 
 ---
 
@@ -125,7 +145,9 @@ No cross-device sync, no undo, no search, no categories, no cloud backup. These 
 ## 💡 Quick Tips
 
 - **Rapid entry:** Press Enter repeatedly to add tasks quickly
-- **Keyboard workflow:** Tab through tasks, press Space to toggle state, Shift+Tab to go backward
+- **Shortcut memory:** `?` opens the keyboard cheat sheet anytime
+- **Stay focused:** Leave **Actionable** on to return to only ready work next time
+- **Read progress at a glance:** The **Progress** sidebar shows burndown, while smart alerts call out newly unblocked tasks
 - **Offline:** Works with no internet—data lives on your device
 
 ---

@@ -1,8 +1,8 @@
 # Bumbledo — User Personas
 
 > **Product space:** Personal life organization
-> **Core differentiators:** Dependency DAG visualization, local-first (no backend), zero friction
-> **Last updated:** 2025-07-19
+> **Core differentiators:** Dependency DAG visualization, actionable focus, local-first (no backend), zero friction
+> **Last updated:** 2026-03-29
 
 These personas guide feature decisions for bumbledo. They represent real people organizing their everyday lives — household management, family events, health, finances, and daily routines. Each persona encounters natural dependency chains in their personal life and needs a tool that makes those chains visible without adding overhead.
 
@@ -27,7 +27,7 @@ Priya's life is a web of dependency chains she manages in her head. She can't co
 
 **Key behaviors:**
 - Plans in categories: Home, Family, Finance, Health, Weekly Routines
-- Checks her list every morning with coffee — "what can I actually do today?"
+- Checks her list every morning with coffee — the Actionable view answers "what can I actually do today?" and remembers that focus
 - Adds tasks when she thinks of them (phone or laptop, whenever)
 - Shares her screen with her partner to coordinate household tasks (no accounts needed)
 
@@ -40,7 +40,7 @@ Priya's life is a web of dependency chains she manages in her head. She can't co
 **Feature priorities:**
 1. Visual dependency map — see at a glance what's ready vs. waiting
 2. Dead-simple UX — add a task, set a dependency, done
-3. No sign-up, no cloud — open in browser and start immediately
+3. Actionable focus — filter down to the tasks she can actually do right now
 4. Progress visibility (burndown) — see she's making headway on big life projects
 
 ---
@@ -111,7 +111,7 @@ Jake's life is a web of overlapping dependency chains — academic, domestic, an
 1. Dependency chains — model prerequisite sequences for school, chores, and life tasks
 2. Zero cost, zero friction — free, no account, opens instantly in a browser
 3. Clarity on "what's next" — filtered view of unblocked tasks across all life areas
-4. Keyboard shortcuts — fast capture between classes
+4. Keyboard shortcuts — fast capture and task triage between classes
 
 ---
 
@@ -143,10 +143,10 @@ Marco originally found bumbledo for his side projects — he can't deploy until 
 - Doesn't trust cloud services with half-baked project notes or personal plans
 
 **Feature priorities:**
-1. Fast task capture (keyboard-first, no modals)
+1. Fast task capture (keyboard-first, no fuss)
 2. Dependency DAG — see the critical path through life tasks and personal projects
 3. Smart blocked alerts — know instantly what's unblocked after completing a task
-4. No account, no sync, no subscription — just open and use
+4. Desktop-friendly layout — list + sidebar makes weekend planning feel like a lightweight control panel
 
 ---
 
@@ -168,4 +168,6 @@ All four personas share these needs:
 - **Zero friction** — no accounts, no subscriptions, no onboarding tutorials
 - **Local-first trust** — personal data stays on their device, period
 - **Instant clarity** — open the app, see what's actionable, start doing
+- **Visible momentum** — progress charts and success states help them feel movement on longer chains
+- **Fast when needed** — shortcuts matter for users squeezing life admin into small time windows
 - **Lightweight over powerful** — they want a sharp knife, not a Swiss Army knife
