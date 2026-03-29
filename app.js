@@ -149,6 +149,7 @@ if (typeof document !== 'undefined') {
 
     const dagView = createDagView({
       container: dagContainer,
+      emptyStateElement: dagEmptyState,
       onSelectTask: (id) => {
         selectedTaskId = id;
         syncTaskRowSelection();

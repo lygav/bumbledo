@@ -10,6 +10,23 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-29: Embedded DAG Architecture
+
+**Decision:** Keep `todos` as the single source of truth and derive a graph view in a separate `dag.js` module.
+
+**Recommended implementation:**
+- Use `dagre` for left-to-right layered layout
+- Render with native SVG, not a heavy graph framework
+- Place the graph below the task list and let it break out wider than the 600px list column
+- Keep interactions modest: node selection, tooltip, neighborhood highlight, pan/reset
+
+**Key trade-offs:**
+- Prefer a small layout dependency over maintaining custom graph layout logic
+- Do not build graph editing in v1; keep dependency editing in the existing blocker picker
+- Detect cycles and render them as warning-state edges instead of letting the graph fail
+
+**Files:** `app.js`, `index.html`, `.squad/decisions/inbox/danny-dag-architecture.md`
+
 ### 2025-03-29: JavaScript Extraction Architecture
 
 **Decision:** Extract JS to `app.js` as ES module, keep CSS embedded in `index.html`

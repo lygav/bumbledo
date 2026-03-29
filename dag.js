@@ -238,7 +238,7 @@ export function buildDependencyGraph(todos) {
   };
 }
 
-export function createDagView({ container, onSelectTask }) {
+export function createDagView({ container, onSelectTask, emptyStateElement }) {
   const warning = document.createElement('div');
   warning.className = 'dag-warning';
   warning.hidden = true;
@@ -554,6 +554,10 @@ export function createDagView({ container, onSelectTask }) {
       ? ''
       : 'Dependency cycle detected. Layout is approximate until the cycle is removed.';
     resetButton.hidden = currentGraph.nodes.length === 0;
+
+    if (emptyStateElement) {
+      emptyStateElement.hidden = currentGraph.hasDependencies;
+    }
 
     resetView();
     applyHighlightState();

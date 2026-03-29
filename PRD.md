@@ -45,6 +45,8 @@ A single-page, browser-based todo application. One HTML file, no backend, no bui
 | U6 | User | Click "Clear finished" to remove all done and cancelled todos at once | I can clean up my list without deleting one-by-one |
 | U7 | User | Close the browser and come back to find my list intact | I don't lose my work |
 | U8 | User | See a helpful message when I have no todos | I know the app is working and how to start |
+| U9 | User | Specify which task(s) block a "blocked" todo | I can track *why* a task is stuck and what needs to happen first |
+| U10 | User | See "Blocked by: ..." on a blocked todo | I can quickly see what's holding up a task without opening anything |
 
 ---
 
@@ -74,13 +76,44 @@ Each todo has one of four mutually exclusive states, controlled by a `<select>` 
 - Todos remain in their current list position regardless of state — they are **not** automatically moved or hidden.
 - The `<select>` is accessible by keyboard and screen reader out of the box.
 
-### 4.3 Deleting a Single Todo
+### 4.3 Task Dependencies (Blocked-By)
+
+When a todo's status is set to "blocked", the user can specify which other task(s) block it.
+
+#### Data Model
+
+- Each todo gains an optional `blockedBy` field: an array of todo IDs.
+- `blockedBy` is only meaningful when `status === "blocked"`. It is cleared when status changes away from "blocked".
+- Example: `{ "id": "abc", "text": "Deploy", "status": "blocked", "blockedBy": ["def"] }`
+
+#### Setting Blockers
+
+- When the user changes a todo's status to "blocked", an inline panel appears **below that list item** showing checkboxes for all other active or blocked tasks.
+- Checking/unchecking a box immediately adds/removes that task's ID from `blockedBy` and persists the change.
+- The panel is only visible on items with `status === "blocked"`.
+- If there are no other eligible tasks, the panel shows: "No other tasks to select."
+
+#### Displaying Blockers
+
+- When a blocked todo has blockers, a subtitle line appears below the todo text: _"Blocked by: Task A, Task B"_.
+- Blocker text is truncated to ~30 characters each. If more than 3 blockers, show the first 2 and "+ N more".
+- Styled with smaller, muted text.
+
+#### Edge Cases
+
+- **Blocking task deleted or completed/cancelled:** Remove its ID from all `blockedBy` arrays. If `blockedBy` becomes empty, auto-set the blocked task's status to `active`.
+- **Circular dependencies:** Allowed. No validation. A task may be blocked by a blocked task.
+- **User unchecks all blockers:** `blockedBy` becomes `[]`, status auto-reverts to `active`.
+- **Status changed away from "blocked":** `blockedBy` is cleared to `[]`.
+- **Transitional state:** A todo can be `blocked` with `blockedBy: []` immediately after the user selects "Blocked" (before picking blockers). Auto-unblock fires only when blockers are *removed*, not on initial status change.
+
+### 4.4 Deleting a Single Todo
 
 - Each todo has a **delete** control (e.g., an "×" button).
 - Clicking it removes the todo immediately — no confirmation dialog.
 - The delete control should be visually subtle to avoid accidental clicks (e.g., visible on hover/focus, or low-contrast until hovered).
 
-### 4.4 Drag-and-Drop Reordering
+### 4.5 Drag-and-Drop Reordering
 
 - Users can grab any todo and drag it to a new position in the list.
 - While dragging, a visual indicator shows the insertion point (e.g., a line between items, or a placeholder).
@@ -89,14 +122,14 @@ Each todo has one of four mutually exclusive states, controlled by a `<select>` 
 - Must work with mouse. Touch support (mobile drag) is a stretch goal — document trade-offs if omitted.
 - Implementation: use the **HTML5 Drag and Drop API** (`draggable`, `dragstart`, `dragover`, `drop` events). No external libraries.
 
-### 4.5 "Clear Finished" Button
+### 4.6 "Clear Finished" Button
 
 - A single button labeled **"Clear finished"**.
 - Clicking it removes **all** todos with status `done` or `cancelled` (both are terminal states).
 - The button is **disabled** when there are zero done + zero cancelled todos.
 - No confirmation dialog — the action is low-risk since these items are already terminal.
 
-### 4.6 Persistence (localStorage)
+### 4.7 Persistence (localStorage)
 
 - The full todo list (text, done state, order) is saved to `localStorage` on every mutation (add, delete, toggle, reorder, clear done).
 - On page load, the app reads from `localStorage` and restores the list.
@@ -106,14 +139,15 @@ Each todo has one of four mutually exclusive states, controlled by a `<select>` 
   [
     { "id": "abc123", "text": "Buy milk", "status": "active" },
     { "id": "def456", "text": "Walk dog", "status": "done" },
-    { "id": "ghi789", "text": "Old task", "status": "cancelled" }
+    { "id": "ghi789", "text": "Old task", "status": "cancelled" },
+    { "id": "jkl012", "text": "Deploy app", "status": "blocked", "blockedBy": ["abc123"] }
   ]
   ```
-- **Migration:** On load, if a todo has the legacy `{ done: bool }` format and no `status` field, it is automatically migrated: `done: true` → `status: "done"`, `done: false` → `status: "active"`. The `done` field is removed and the migrated data is saved back immediately.
+- **Migration:** On load, if a todo has the legacy `{ done: bool }` format and no `status` field, it is automatically migrated: `done: true` → `status: "done"`, `done: false` → `status: "active"`. The `done` field is removed and the migrated data is saved back immediately. If a todo has `status: "blocked"` but no `blockedBy` field, set `blockedBy: []`. When saving, omit `blockedBy` for non-blocked todos to keep stored JSON clean.
 - Each todo gets a unique `id` (e.g., `Date.now().toString(36)` + random suffix). IDs are stable across reorders.
 - `localStorage` key: `"todos"` (simple, no prefix needed for a single-page app).
 
-### 4.7 Empty State
+### 4.8 Empty State
 
 - When the list has zero todos, display a short message (e.g., "No todos yet. Add one above!").
 - The empty state message disappears as soon as the first todo is added.
@@ -203,6 +237,12 @@ The app is **done** when all of the following pass in Chrome and Firefox (latest
 | AC10 | With zero todos, an empty state message is displayed. |
 | AC11 | The layout is usable at 320px wide (mobile) and 1440px wide (desktop) without horizontal scroll. |
 | AC12 | All interactive elements are keyboard-accessible (Tab, Enter, Space). |
+| AC13 | Setting a todo's status to "blocked" reveals an inline panel with checkboxes for other active/blocked tasks. Checking a box adds it as a blocker; unchecking removes it. |
+| AC14 | A blocked todo with blockers displays a "Blocked by: ..." subtitle showing blocker task names, truncated appropriately. |
+| AC15 | Deleting or completing/cancelling a blocker task removes it from all `blockedBy` arrays. If a blocked todo's last blocker is removed, its status auto-reverts to "active". |
+| AC16 | Changing a todo's status away from "blocked" clears its `blockedBy` array. |
+| AC17 | Unchecking all blockers in the picker auto-reverts the todo's status to "active" and hides the picker. |
+| AC18 | `blockedBy` data persists across page reloads via `localStorage`. |
 
 ---
 
