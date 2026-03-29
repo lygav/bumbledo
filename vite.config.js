@@ -2,5 +2,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: '.',
-  server: { open: true }
+  server: { open: true },
+  test: {
+    include: ['src/**/*.test.js']
+  }
 });
