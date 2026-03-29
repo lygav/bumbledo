@@ -9,9 +9,13 @@ import {
   getActionableCount,
   getActionableTodos,
   hasDependencies,
+  loadBurndownData,
   loadTodos,
   saveTodos,
+  saveBurndownData,
   setStatus,
+  shouldSampleToday,
+  takeBurndownSample,
   toggleBlocker,
   updateTodoText
 } from './todo/model.js';
@@ -22,6 +26,99 @@ import {
 // - dag/view.js owns only SVG rendering inside #dependency-graph container
 
 const ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
+const BURNDOWN_STORAGE_KEY = 'todos_burndown';
+const BURNDOWN_TOTAL_COLOR = '#4a90d9';
+const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
+const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
+
+function parseBurndownDate(dateKey) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatBurndownDate(dateKey, options) {
+  return new Intl.DateTimeFormat(undefined, options).format(parseBurndownDate(dateKey));
+}
+
+function buildBurndownSeries(samples) {
+  let completedMax = 0;
+  let totalMax = 0;
+
+  return samples.map((sample) => {
+    const completed = sample.done + sample.cancelled;
+    completedMax = Math.max(completedMax, completed);
+    totalMax = Math.max(totalMax, sample.total, completedMax);
+
+    return {
+      ...sample,
+      completed: completedMax,
+      total: totalMax
+    };
+  });
+}
+
+function getBurndownSummary(series, todos = []) {
+  if (series.length === 0) {
+    const fallbackSample = takeBurndownSample(todos);
+    const completed = fallbackSample.done + fallbackSample.cancelled;
+    const remaining = Math.max(0, fallbackSample.total - completed);
+    const percent = fallbackSample.total === 0 ? 0 : Math.round((completed / fallbackSample.total) * 100);
+
+    return {
+      completed,
+      total: fallbackSample.total,
+      remaining,
+      percent,
+      deltaToday: 0,
+      hasDelta: false
+    };
+  }
+
+  const latest = series[series.length - 1];
+  const previous = series[series.length - 2] ?? null;
+  const remaining = Math.max(0, latest.total - latest.completed);
+  const percent = latest.total === 0 ? 0 : Math.round((latest.completed / latest.total) * 100);
+
+  return {
+    completed: latest.completed,
+    total: latest.total,
+    remaining,
+    percent,
+    deltaToday: previous ? latest.completed - previous.completed : latest.completed,
+    hasDelta: previous !== null
+  };
+}
+
+function buildBurndownCollapsedSummary(summary) {
+  const deltaText = summary.hasDelta
+    ? `${summary.deltaToday >= 0 ? '+' : ''}${summary.deltaToday} done today`
+    : 'First sample today';
+
+  return `${summary.completed} done · ${summary.remaining} remaining · ${deltaText}`;
+}
+
+function buildBurndownPath(points) {
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+}
+
+function buildBurndownAreaPath(upperPoints, lowerPoints) {
+  if (upperPoints.length === 0 || lowerPoints.length === 0) {
+    return '';
+  }
+
+  const start = `M ${upperPoints[0].x} ${upperPoints[0].y}`;
+  const upperPath = upperPoints.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ');
+  const lowerPath = [...lowerPoints].reverse().map(point => `L ${point.x} ${point.y}`).join(' ');
+  return `${start} ${upperPath} ${lowerPath} Z`;
+}
+
+function createSvgElement(tagName, attributes = {}) {
+  const element = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+  Object.entries(attributes).forEach(([key, value]) => {
+    element.setAttribute(key, String(value));
+  });
+  return element;
+}
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 479px)').matches;
@@ -72,6 +169,15 @@ if (typeof document !== 'undefined') {
     const actionableFilterToggle = document.getElementById('actionable-filter-toggle');
     const actionableSummary = document.getElementById('actionable-summary');
     const emptyState = document.getElementById('empty-state');
+    const burndownToggle = document.getElementById('burndown-toggle');
+    const burndownCollapsedSummary = document.getElementById('burndown-collapsed-summary');
+    const burndownPanel = document.getElementById('burndown-panel');
+    const burndownSummaryHeadline = document.getElementById('burndown-summary-headline');
+    const burndownSummaryDetail = document.getElementById('burndown-summary-detail');
+    const burndownEmptyState = document.getElementById('burndown-empty-state');
+    const burndownChart = document.getElementById('burndown-chart');
+    const burndownChartSvg = document.getElementById('burndown-chart-svg');
+    const burndownTooltip = document.getElementById('burndown-tooltip');
     const clearFinishedBtn = document.getElementById('clear-finished-btn');
     const dagSection = document.getElementById('dependency-graph-section');
     const dagContainer = document.getElementById('dependency-graph');
@@ -84,8 +190,10 @@ if (typeof document !== 'undefined') {
     const focusInputShortcut = document.getElementById('focus-input-shortcut');
 
     let todos = loadTodos();
+    let burndownData = loadBurndownData();
     let selectedTaskId = null;
     let filterActive = loadActionableFilterPreference();
+    let burndownExpanded = false;
     let dagExpanded = !isMobileViewport() && hasDependencies(todos);
     let dagToggleTouched = false;
     let flashTimeoutId = null;
@@ -98,6 +206,10 @@ if (typeof document !== 'undefined') {
     const unblockedHighlightTimeoutIds = new Map();
 
     const prefersMacKeys = isMacPlatform();
+
+    if (shouldSampleToday(burndownData)) {
+      burndownData = saveBurndownData([...burndownData, takeBurndownSample(todos)], undefined, BURNDOWN_STORAGE_KEY);
+    }
 
     if (focusInputShortcut) {
       focusInputShortcut.innerHTML = prefersMacKeys
@@ -392,6 +504,209 @@ if (typeof document !== 'undefined') {
       }
     }
 
+    function hideBurndownTooltip() {
+      burndownTooltip.hidden = true;
+      burndownTooltip.textContent = '';
+      burndownTooltip.style.left = '';
+      burndownTooltip.style.top = '';
+    }
+
+    function showBurndownTooltip(point, viewBoxWidth, viewBoxHeight) {
+      burndownTooltip.innerHTML = `
+        <strong>${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+        <div>Completed: ${point.completed}</div>
+        <div>Total: ${point.total}</div>
+      `;
+      burndownTooltip.hidden = false;
+
+      const chartRect = burndownChart.getBoundingClientRect();
+      const x = (point.x / viewBoxWidth) * chartRect.width;
+      const y = (Math.min(point.completedY, point.totalY) / viewBoxHeight) * chartRect.height;
+
+      const tooltipWidth = burndownTooltip.offsetWidth;
+      const tooltipHeight = burndownTooltip.offsetHeight;
+      const left = Math.max(8, Math.min(chartRect.width - tooltipWidth - 8, x - (tooltipWidth / 2)));
+      const top = Math.max(8, y - tooltipHeight - 12);
+
+      burndownTooltip.style.left = `${left}px`;
+      burndownTooltip.style.top = `${top}px`;
+    }
+
+    function renderBurndownChart(series) {
+      const mobile = isMobileViewport();
+      const width = 640;
+      const height = mobile ? 220 : 280;
+      const margin = mobile
+        ? { top: 20, right: 12, bottom: 34, left: 34 }
+        : { top: 24, right: 20, bottom: 40, left: 42 };
+      const chartWidth = width - margin.left - margin.right;
+      const chartHeight = height - margin.top - margin.bottom;
+      const maxY = Math.max(1, ...series.map(point => point.total));
+      const tickCount = maxY >= 6 ? 4 : 3;
+      const yTicks = [...new Set(
+        Array.from({ length: tickCount }, (_, index) => Math.round((maxY / (tickCount - 1)) * index))
+      )];
+      const xLabelEvery = Math.max(1, Math.ceil(series.length / (mobile ? 3 : 6)));
+      const shouldShowXAxisLabel = (index) => (
+        index === 0
+        || index === series.length - 1
+        || index % xLabelEvery === 0
+      );
+      const getX = (index) => (
+        series.length === 1
+          ? margin.left + (chartWidth / 2)
+          : margin.left + ((chartWidth * index) / (series.length - 1))
+      );
+      const getY = (value) => margin.top + chartHeight - ((value / maxY) * chartHeight);
+
+      const totalPoints = series.map((point, index) => ({
+        ...point,
+        x: getX(index),
+        y: getY(point.total)
+      }));
+      const completedPoints = series.map((point, index) => ({
+        ...point,
+        x: getX(index),
+        y: getY(point.completed)
+      }));
+
+      burndownChartSvg.innerHTML = '';
+      burndownChartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      burndownChartSvg.setAttribute('role', 'img');
+      burndownChartSvg.setAttribute('aria-label', 'Burndown chart showing completed work versus total work over time');
+
+      yTicks.forEach((tick) => {
+        const y = getY(tick);
+        burndownChartSvg.appendChild(createSvgElement('line', {
+          x1: margin.left,
+          y1: y,
+          x2: width - margin.right,
+          y2: y,
+          stroke: '#e3e8ef',
+          'stroke-width': 1
+        }));
+
+        const tickLabel = createSvgElement('text', {
+          x: margin.left - 8,
+          y: y + 4,
+          'text-anchor': 'end',
+          fill: '#7c8798',
+          'font-size': mobile ? 10 : 11
+        });
+        tickLabel.textContent = String(tick);
+        burndownChartSvg.appendChild(tickLabel);
+      });
+
+      const gapArea = createSvgElement('path', {
+        d: buildBurndownAreaPath(totalPoints, completedPoints),
+        fill: BURNDOWN_GAP_COLOR,
+        stroke: 'none'
+      });
+      burndownChartSvg.appendChild(gapArea);
+
+      const totalLine = createSvgElement('path', {
+        d: buildBurndownPath(totalPoints),
+        fill: 'none',
+        stroke: BURNDOWN_TOTAL_COLOR,
+        'stroke-width': 2.5,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round'
+      });
+      burndownChartSvg.appendChild(totalLine);
+
+      const completedLine = createSvgElement('path', {
+        d: buildBurndownPath(completedPoints),
+        fill: 'none',
+        stroke: BURNDOWN_COMPLETED_COLOR,
+        'stroke-width': 2.5,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round'
+      });
+      burndownChartSvg.appendChild(completedLine);
+
+      totalPoints.forEach((point, index) => {
+        const completedPoint = completedPoints[index];
+
+        burndownChartSvg.appendChild(createSvgElement('circle', {
+          cx: point.x,
+          cy: point.y,
+          r: 3.5,
+          fill: '#fff',
+          stroke: BURNDOWN_TOTAL_COLOR,
+          'stroke-width': 2
+        }));
+
+        burndownChartSvg.appendChild(createSvgElement('circle', {
+          cx: completedPoint.x,
+          cy: completedPoint.y,
+          r: 3.5,
+          fill: '#fff',
+          stroke: BURNDOWN_COMPLETED_COLOR,
+          'stroke-width': 2
+        }));
+
+        if (shouldShowXAxisLabel(index)) {
+          const xAxisLabel = createSvgElement('text', {
+            x: point.x,
+            y: height - 10,
+            'text-anchor': 'middle',
+            fill: '#7c8798',
+            'font-size': mobile ? 10 : 11
+          });
+          xAxisLabel.textContent = formatBurndownDate(point.date, mobile
+            ? { month: 'numeric', day: 'numeric' }
+            : { month: 'short', day: 'numeric' });
+          burndownChartSvg.appendChild(xAxisLabel);
+        }
+
+        const hitTarget = createSvgElement('rect', {
+          x: point.x - Math.max(18, chartWidth / Math.max(8, series.length * 2)),
+          y: margin.top,
+          width: Math.max(36, chartWidth / Math.max(4, series.length)),
+          height: chartHeight,
+          fill: 'transparent',
+          tabindex: 0,
+          'aria-label': `${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}: ${completedPoint.completed} completed, ${point.total} total`
+        });
+
+        const tooltipPoint = {
+          ...point,
+          completed: completedPoint.completed,
+          completedY: completedPoint.y,
+          totalY: point.y
+        };
+
+        hitTarget.addEventListener('mouseenter', () => showBurndownTooltip(tooltipPoint, width, height));
+        hitTarget.addEventListener('focus', () => showBurndownTooltip(tooltipPoint, width, height));
+        hitTarget.addEventListener('mouseleave', hideBurndownTooltip);
+        hitTarget.addEventListener('blur', hideBurndownTooltip);
+        burndownChartSvg.appendChild(hitTarget);
+      });
+    }
+
+    function syncBurndownState() {
+      const series = buildBurndownSeries(burndownData);
+      const summary = getBurndownSummary(series, todos);
+
+      burndownToggle.setAttribute('aria-expanded', String(burndownExpanded));
+      burndownCollapsedSummary.textContent = buildBurndownCollapsedSummary(summary);
+      burndownCollapsedSummary.hidden = burndownExpanded;
+      burndownPanel.hidden = !burndownExpanded;
+      burndownSummaryHeadline.textContent = `${summary.completed} of ${summary.total} done (${summary.percent}%)`;
+      burndownSummaryDetail.textContent = `${summary.remaining} remaining`;
+
+      const hasEnoughData = series.length >= 3;
+      burndownEmptyState.hidden = hasEnoughData;
+      burndownChart.hidden = !hasEnoughData;
+
+      if (burndownExpanded && hasEnoughData) {
+        renderBurndownChart(series);
+      } else {
+        burndownChartSvg.innerHTML = '';
+        hideBurndownTooltip();
+      }
+    }
+
     function syncDagState() {
       const { hasDependencies: dependencyState, stats } = buildDependencyGraph(todos);
 
@@ -662,6 +977,7 @@ if (typeof document !== 'undefined') {
       });
 
       syncTaskRowSelection();
+      syncBurndownState();
       syncDagState();
     }
 
@@ -695,6 +1011,11 @@ if (typeof document !== 'undefined') {
       render();
     });
 
+    burndownToggle.addEventListener('click', () => {
+      burndownExpanded = !burndownExpanded;
+      syncBurndownState();
+    });
+
     dagToggle.addEventListener('click', () => {
       if (!hasDependencies(todos)) {
         return;
@@ -705,11 +1026,14 @@ if (typeof document !== 'undefined') {
     });
 
     window.addEventListener('resize', () => {
+      syncBurndownState();
       if (!dagToggleTouched) {
         dagExpanded = hasDependencies(todos) && !isMobileViewport();
       }
       syncDagState();
     });
+
+    burndownChartSvg.addEventListener('mouseleave', hideBurndownTooltip);
 
     shortcutsHelpBtn.addEventListener('click', () => {
       if (helpModalOpen) {

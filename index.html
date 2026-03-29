@@ -381,6 +381,174 @@
       font-size: 1rem;
     }
 
+    #burndown-section {
+      margin: 1rem 0 1.5rem;
+      padding: 1rem;
+      background: #fbfcfe;
+      border: 1px solid #e3e8ef;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .burndown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .burndown-title-group h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .burndown-helper {
+      margin-top: 0.125rem;
+      font-size: 0.875rem;
+      color: #667085;
+    }
+
+    #burndown-toggle {
+      padding: 0.5rem 0.85rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      font-weight: 600;
+      color: #4a90d9;
+      background: #fff;
+      border: 1px solid #cfe0f5;
+      border-radius: 999px;
+      cursor: pointer;
+      min-height: 40px;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    #burndown-toggle:hover {
+      background: #f4f8fd;
+      border-color: #4a90d9;
+    }
+
+    #burndown-toggle:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    #burndown-collapsed-summary {
+      color: #4f5d75;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    #burndown-panel[hidden] {
+      display: none;
+    }
+
+    .burndown-summary {
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    #burndown-summary-headline {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.2;
+    }
+
+    #burndown-summary-detail {
+      margin-top: 0.2rem;
+      color: #667085;
+      font-size: 0.95rem;
+    }
+
+    .burndown-legend {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+      color: #667085;
+      font-size: 0.8125rem;
+    }
+
+    .burndown-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .burndown-legend-swatch {
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .burndown-legend-swatch.is-completed {
+      background: #2f8f63;
+    }
+
+    .burndown-legend-swatch.is-total {
+      background: #4a90d9;
+    }
+
+    #burndown-empty-state {
+      min-height: 96px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px dashed #d9dfe8;
+      border-radius: 10px;
+      color: #667085;
+      font-size: 0.9375rem;
+      text-align: center;
+    }
+
+    #burndown-empty-state[hidden] {
+      display: none;
+    }
+
+    #burndown-chart {
+      position: relative;
+      background: #fff;
+      border: 1px solid #e5eaf1;
+      border-radius: 10px;
+      padding: 0.25rem;
+      overflow: hidden;
+    }
+
+    #burndown-chart[hidden] {
+      display: none;
+    }
+
+    #burndown-chart-svg {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+
+    .burndown-tooltip {
+      position: absolute;
+      z-index: 2;
+      min-width: 152px;
+      padding: 0.5rem 0.625rem;
+      background: rgba(17, 24, 39, 0.96);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      pointer-events: none;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+    }
+
+    .burndown-tooltip strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.875rem;
+    }
+
     /* Footer */
     footer {
       text-align: center;
@@ -920,6 +1088,32 @@
         width: 100%;
       }
 
+      #burndown-section {
+        padding: 0.875rem;
+      }
+
+      .burndown-header {
+        align-items: flex-start;
+      }
+
+      .burndown-helper {
+        display: none;
+      }
+
+      #burndown-summary-headline {
+        font-size: 1.125rem;
+      }
+
+      #burndown-summary-detail,
+      #burndown-collapsed-summary,
+      .burndown-legend {
+        font-size: 0.8125rem;
+      }
+
+      #burndown-chart-svg {
+        height: 220px;
+      }
+
       #dependency-graph-section {
         width: calc(100vw - 1rem);
       }
@@ -1004,6 +1198,43 @@
       <p id="empty-state" role="status">No todos yet. Add one above!</p>
 
       <ul id="todo-list" aria-label="Todo list" tabindex="-1"></ul>
+
+      <section id="burndown-section" aria-labelledby="burndown-title">
+        <div class="burndown-header">
+          <div class="burndown-title-group">
+            <h2 id="burndown-title">Burndown</h2>
+            <p class="burndown-helper">Completed versus total tasks over the last 30 days</p>
+          </div>
+          <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
+        </div>
+
+        <p id="burndown-collapsed-summary" role="status">0 done · 0 remaining · First sample today</p>
+
+        <div id="burndown-panel" hidden>
+          <div class="burndown-summary">
+            <p id="burndown-summary-headline">0 of 0 done (0%)</p>
+            <p id="burndown-summary-detail">0 remaining</p>
+          </div>
+
+          <div class="burndown-legend" aria-hidden="true">
+            <span class="burndown-legend-item">
+              <span class="burndown-legend-swatch is-completed"></span>
+              Completed
+            </span>
+            <span class="burndown-legend-item">
+              <span class="burndown-legend-swatch is-total"></span>
+              Total
+            </span>
+          </div>
+
+          <p id="burndown-empty-state" role="status" hidden>Not enough data yet. Come back in a few days!</p>
+
+          <div id="burndown-chart" hidden>
+            <svg id="burndown-chart-svg"></svg>
+            <div id="burndown-tooltip" class="burndown-tooltip" hidden></div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>

@@ -8,6 +8,89 @@ const defaultStorage = {
   setItem: (key, value) => localStorage.setItem(key, value)
 };
 
+const BURNDOWN_STORAGE_KEY = 'todos_burndown';
+const BURNDOWN_RETENTION_DAYS = 30;
+
+function padDatePart(value) {
+  return String(value).padStart(2, '0');
+}
+
+function getLocalDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+function parseDateKey(dateKey) {
+  if (typeof dateKey !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return null;
+  }
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year
+    || parsed.getMonth() !== month - 1
+    || parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getBurndownCutoffDate(now = new Date()) {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - BURNDOWN_RETENTION_DAYS);
+}
+
+function normalizeBurndownEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const parsedDate = parseDateKey(entry.date);
+  if (!parsedDate) {
+    return null;
+  }
+
+  const done = Number.isFinite(entry.done) ? Math.max(0, Math.floor(entry.done)) : 0;
+  const cancelled = Number.isFinite(entry.cancelled) ? Math.max(0, Math.floor(entry.cancelled)) : 0;
+  const active = Number.isFinite(entry.active) ? Math.max(0, Math.floor(entry.active)) : 0;
+  const fallbackTotal = done + cancelled + active;
+  const total = Number.isFinite(entry.total) ? Math.max(0, Math.floor(entry.total)) : fallbackTotal;
+
+  return {
+    date: getLocalDateKey(parsedDate),
+    done,
+    cancelled,
+    active,
+    total
+  };
+}
+
+export function pruneBurndownData(data, now = new Date()) {
+  const cutoff = getBurndownCutoffDate(now);
+  const seenDates = new Set();
+  const normalized = data.map(normalizeBurndownEntry);
+  const pruned = [];
+
+  for (let index = normalized.length - 1; index >= 0; index -= 1) {
+    const entry = normalized[index];
+    if (!entry || seenDates.has(entry.date)) {
+      continue;
+    }
+
+    const parsedDate = parseDateKey(entry.date);
+    if (!parsedDate || parsedDate < cutoff) {
+      continue;
+    }
+
+    seenDates.add(entry.date);
+    pruned.unshift(entry);
+  }
+
+  return pruned;
+}
+
 // Pure logic functions - exported for testing
 
 export function generateId() {
@@ -49,6 +132,41 @@ export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 't
     return obj;
   });
   storage.setItem(storageKey, JSON.stringify(clean));
+}
+
+export function takeBurndownSample(todos, now = new Date()) {
+  const done = todos.filter(todo => todo.status === 'done').length;
+  const cancelled = todos.filter(todo => todo.status === 'cancelled').length;
+  const active = todos.filter(todo => todo.status === 'active' || todo.status === 'blocked').length;
+
+  return {
+    date: getLocalDateKey(now),
+    done,
+    cancelled,
+    active,
+    total: done + cancelled + active
+  };
+}
+
+export function loadBurndownData(storage = defaultStorage, storageKey = BURNDOWN_STORAGE_KEY) {
+  try {
+    const data = storage.getItem(storageKey);
+    const parsed = data ? JSON.parse(data) : [];
+    return pruneBurndownData(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return [];
+  }
+}
+
+export function saveBurndownData(data, storage = defaultStorage, storageKey = BURNDOWN_STORAGE_KEY, now = new Date()) {
+  const clean = pruneBurndownData(Array.isArray(data) ? data : [], now);
+  storage.setItem(storageKey, JSON.stringify(clean));
+  return clean;
+}
+
+export function shouldSampleToday(data, now = new Date()) {
+  const today = getLocalDateKey(now);
+  return !pruneBurndownData(Array.isArray(data) ? data : [], now).some(entry => entry.date === today);
 }
 
 export function addTodo(todos, text) {
