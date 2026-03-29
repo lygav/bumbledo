@@ -117,3 +117,26 @@ The project has implicitly chosen **scalable single-page app** over **zero-setup
 - Cross-agent history updated
 
 **Status:** ✅ Complete. Ready for feature development and deployment.
+
+### 2026-03-29: Tess Delivers Three Feature PRDs
+
+**Findings:**
+Tess has completed market research and authored three feature PRDs based on competitive landscape analysis:
+
+1. **Smart Blocked Alerts** — Proactive notifications when blockers resolve, reducing context loss
+2. **Keyboard Shortcuts** — 6 core shortcuts for power users, enabling rapid task manipulation
+3. **Burndown View** — 30-day burndown tracking for progress visibility
+
+**Impact:**
+- All three features align with bumbledo's "trust-first planning for makers" positioning
+- All work with existing dependency DAG, respect localStorage-only constraint
+- Ready for technical feasibility review
+- Next: Team prioritization and breakdown into implementable tickets
+
+**Files:**
+- PRD-smart-blocked-alerts.md
+- PRD-keyboard-shortcuts.md
+- PRD-burndown-view.md
+
+**Action:** Review for technical feasibility and document architecture/design approach.
+

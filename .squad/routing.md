@@ -23,3 +23,6 @@
 | Documentation, README, guides | Basher | — |
 | Release notes, changelogs | Basher | Danny |
 | In-app copy, help text | Basher | Rusty |
+| Feature ideation, user research | Tess | — |
+| PRD authoring, feature specs | Tess | Danny |
+| Prioritization, roadmap | Tess | Danny |
