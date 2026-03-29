@@ -685,7 +685,9 @@ if (typeof document !== 'undefined') {
     });
 
     clearFinishedBtn.addEventListener('click', () => {
+      const todosBefore = todos;
       todos = clearFinished(todos);
+      surfaceUnblockedTodos(todosBefore, todos);
       if (!todos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
       }

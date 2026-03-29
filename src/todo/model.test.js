@@ -580,6 +580,40 @@ describe('detectUnblockedTodos', () => {
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual(['1']);
   });
+
+  it('catches unblocks caused by clearFinished', () => {
+    const before = [
+      { id: 'a', text: 'done blocker', status: 'done' },
+      { id: 'b', text: 'blocked task', status: 'blocked', blockedBy: ['a'] },
+      { id: 'c', text: 'active task', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, 'a');
+
+    expect(after).toEqual([
+      { id: 'b', text: 'blocked task', status: 'active' },
+      { id: 'c', text: 'active task', status: 'active' }
+    ]);
+    expect(model.detectUnblockedTodos(before, after)).toEqual(['b']);
+  });
+
+  it('returns empty when clearFinished removes done todos that were not blockers', () => {
+    const before = [
+      { id: 'a', text: 'done task', status: 'done' },
+      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
+      { id: 'c', text: 'active blocker', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, 'a');
+
+    expect(after).toEqual([
+      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
+      { id: 'c', text: 'active blocker', status: 'active' }
+    ]);
+    expect(model.detectUnblockedTodos(before, after)).toEqual([]);
+  });
 });
 
 describe('deleteTodo', () => {
@@ -692,6 +726,22 @@ describe('clearFinished', () => {
     const result = clearFinished(todos);
     expect(result[0].status).toBe('active');
     expect(result[0].blockedBy).toBeUndefined();
+  });
+
+  it('removes done blockers from blockedBy during clearFinished flow', () => {
+    const before = [
+      { id: '1', text: 'done blocker', status: 'done' },
+      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['1', '3'] },
+      { id: '3', text: 'active blocker', status: 'active' }
+    ];
+
+    const cleared = clearFinished(before);
+    const after = cleanupBlockedBy(cleared, '1');
+
+    expect(after).toEqual([
+      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['3'] },
+      { id: '3', text: 'active blocker', status: 'active' }
+    ]);
   });
 
   it('handles empty array', () => {

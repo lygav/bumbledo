@@ -131,3 +131,14 @@
 - Todo shortcuts only fire when the user is not typing in an editable field; `Escape` and the input-focus shortcut still work globally.
 - Todo rows are keyboard-focusable and selection follows both click and focus so ArrowUp/ArrowDown navigation has a stable anchor.
 - Keyboard navigation operates on the visible list, so the actionable filter and selection state stay aligned.
+
+### 2026-03-29: Smart Blocked Alerts
+
+**What I implemented:**
+- Added `detectUnblockedTodos()` in `src/todo/model.js` so unblock detection stays pure and testable against before/after todo snapshots.
+- Added a dismissible status notification below the add form plus transient yellow highlight treatment for newly unblocked rows.
+- Wired unblock surfacing into both mouse and keyboard flows for completion/cancellation and deletion paths.
+
+**Interaction rules to preserve:**
+- Unblock highlights live only in memory, expire after 3 seconds, and are cleared immediately by clicking the row or dismissing the alert.
+- The alert auto-hides after 5 seconds, announces task names for screen readers, and does not change persisted todo data.
