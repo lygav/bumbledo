@@ -64,3 +64,22 @@
 - Linus (me): 65+ test suite covering all logic
 
 **Status:** ✅ Complete. Project has testable architecture, working infrastructure, and comprehensive test coverage. Ready for feature development.
+
+### 2026-03-29: DAG graph derivation contract tests
+
+**What I delivered:**
+- Added `dag.test.js` covering the pure `buildDependencyGraph()` contract from Danny's DAG ADR
+- Focused on graph derivation outputs only: nodes, edges, dependency presence, cycle detection, and summary stats
+- Deliberately did not run the tests because `dag.js` is still being implemented in parallel
+
+**Coverage focus:**
+- Node mapping from todo shape to graph node shape, including `orderIndex`
+- Edge derivation from `blockedBy`, including multiple blockers and isolated tasks
+- `hasDependencies` behavior for populated, empty, and missing `blockedBy`
+- Cycle detection for self-cycles, two-node cycles, three-node cycles, and partial cycles
+- Stats validation for node, edge, and cycle counts on small and larger graphs
+
+**Testing posture:**
+- Contract-first assertions based on the ADR, not internal algorithm choices
+- Included one compatibility test for missing blocker IDs so Rusty can either omit or retain dangling edges without breaking the suite
+- Avoided DOM and layout concerns; this suite targets derivation logic only
