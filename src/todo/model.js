@@ -150,6 +150,14 @@ export function cleanupBlockedBy(todos, removedId) {
   });
 }
 
+export function detectUnblockedTodos(todosBefore, todosAfter) {
+  const beforeById = new Map(todosBefore.map(todo => [todo.id, todo]));
+
+  return todosAfter
+    .filter(todo => beforeById.get(todo.id)?.status === 'blocked' && todo.status === 'active')
+    .map(todo => todo.id);
+}
+
 export function deleteTodo(todos, id) {
   const filtered = todos.filter(t => t.id !== id);
   return cleanupBlockedBy(filtered, id);
