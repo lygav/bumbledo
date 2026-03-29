@@ -1,4 +1,4 @@
-import { createDagView } from './dag.js';
+import { buildDependencyGraph, createDagView } from './dag.js';
 
 // Storage interface - injectable for testing
 const defaultStorage = {
@@ -138,6 +138,7 @@ if (typeof document !== 'undefined') {
     const clearFinishedBtn = document.getElementById('clear-finished-btn');
     const dagSection = document.getElementById('dependency-graph-section');
     const dagContainer = document.getElementById('dependency-graph');
+    const dagSummary = document.getElementById('dag-summary');
     const dagEmptyState = document.getElementById('dag-empty-state');
     const dagToggle = document.getElementById('dag-toggle');
 
@@ -196,7 +197,7 @@ if (typeof document !== 'undefined') {
     }
 
     function syncDagState() {
-      const dependencyState = hasDependencies(todos);
+      const { hasDependencies: dependencyState, stats } = buildDependencyGraph(todos);
 
       if (!dagToggleTouched) {
         dagExpanded = dependencyState && !isMobileViewport();
@@ -211,7 +212,9 @@ if (typeof document !== 'undefined') {
       dagToggle.textContent = dagExpanded ? 'Hide' : 'Show graph';
       dagToggle.setAttribute('aria-expanded', String(dependencyState && dagExpanded));
       dagContainer.hidden = !dependencyState || !dagExpanded;
-      dagEmptyState.hidden = dependencyState;
+      dagSummary.textContent = `${stats.nodeCount} tasks · ${stats.edgeCount} dependencies`;
+      dagSummary.hidden = dagExpanded || !dependencyState;
+      dagEmptyState.hidden = dependencyState || dagExpanded;
 
       if (dependencyState && dagExpanded) {
         dagView.update({ todos, selectedTaskId });
