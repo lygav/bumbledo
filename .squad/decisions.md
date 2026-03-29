@@ -1551,3 +1551,27 @@ The implementation honors the core PRD specification (all 10 user stories, task 
 
 ---
 
+
+---
+
+## 2026-03-29T16:47:46Z: User directive — Saul reviews Rusty's work
+
+**By:** Vladi Lyga (via Copilot)
+
+**What:** Saul must review all of Rusty's implementation plans BEFORE implementation begins, and also review the code AFTER it is written. Two-gate review process for Rusty's work.
+
+**Why:** User request — captured for team memory
+
+**Status:** Active
+
+---
+
+## 2026-03-29T16:47:46Z: User directive — Branch & PR workflow
+
+**By:** Vladi Lyga (via Copilot)
+
+**What:** Every code change, feature, or bug fix must be done in a new branch and pushed via PR. No direct commits to main.
+
+**Why:** User request — captured for team memory
+
+**Status:** Active
