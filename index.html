@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+    /* Input area */
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-row label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    #todo-input {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      font-size: 1rem;
+      font-family: inherit;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      color: #1a1a1a;
+      transition: border-color 0.15s;
+    }
+
+    #todo-input:focus {
+      outline: none;
+      border-color: #4a90d9;
+      box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.25);
+    }
+
+    #add-btn {
+      padding: 0.625rem 1.25rem;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      transition: background 0.15s;
+    }
+
+    #add-btn:hover {
+      background: #3a7bc8;
+    }
+
+    #add-btn:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    /* Todo list */
+    #todo-list {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+
+    #todo-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fff;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 0.375rem;
+      border: 1px solid #e0e0e0;
+      transition: box-shadow 0.15s, opacity 0.15s;
+    }
+
+    #todo-list li:hover {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      cursor: grab;
+      color: #bbb;
+      font-size: 1.125rem;
+      line-height: 1;
+      padding: 0.25rem;
+      user-select: none;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .drag-handle:hover {
+      color: #888;
+    }
+
+    /* Checkbox */
+    .todo-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      min-width: 44px;
+      min-height: 44px;
+      border: 2px solid #bbb;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      transition: border-color 0.15s, background 0.15s;
+      background-clip: content-box;
+      padding: 12px;
+    }
+
+    .todo-checkbox:checked {
+      border-color: #4a90d9;
+      background-color: #4a90d9;
+      background-clip: content-box;
+      padding: 12px;
+    }
+
+    .todo-checkbox:checked::after {
+      content: "✓";
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      position: absolute;
+    }
+
+    .todo-checkbox {
+      position: relative;
+    }
+
+    .todo-checkbox:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    .todo-checkbox:hover {
+      border-color: #888;
+    }
+
+    /* Todo text */
+    .todo-text {
+      flex: 1;
+      font-size: 1rem;
+      word-break: break-word;
+    }
+
+    /* Done state */
+    li.done .todo-text {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    li.done {
+      opacity: 0.7;
+    }
+
+    /* Delete button */
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 1.25rem;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+
+    .delete-btn:hover {
+      color: #e74c3c;
+      background: rgba(231, 76, 60, 0.08);
+    }
+
+    .delete-btn:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+      color: #e74c3c;
+    }
+
+    #todo-list li:hover .delete-btn,
+    #todo-list li:focus-within .delete-btn {
+      color: #999;
+    }
+
+    #todo-list li:hover .delete-btn:hover {
+      color: #e74c3c;
+    }
+
+    /* Empty state */
+    #empty-state {
+      text-align: center;
+      color: #888;
+      padding: 2rem 1rem;
+      font-size: 1rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+    }
+
+    #clear-done-btn {
+      padding: 0.5rem 1.25rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      font-weight: 600;
+      background: #fff;
+      color: #555;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    #clear-done-btn:hover:not(:disabled) {
+      background: #f0f0f0;
+      border-color: #999;
+      color: #333;
+    }
+
+    #clear-done-btn:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
+    #clear-done-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Drag-and-drop states */
+    #todo-list li.dragging {
+      opacity: 0.4;
+    }
+
+    #todo-list li.drag-over-above {
+      box-shadow: 0 -2px 0 0 #4a90d9;
+    }
+
+    #todo-list li.drag-over-below {
+      box-shadow: 0 2px 0 0 #4a90d9;
+    }
+
+    body.is-dragging * {
+      cursor: grabbing !important;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Todos</h1>
+    </header>
+
+    <main>
+      <form class="input-row" id="add-form" aria-label="Add a new todo">
+        <label for="todo-input">New todo</label>
+        <input
+          type="text"
+          id="todo-input"
+          placeholder="What needs to be done?"
+          autocomplete="off"
+        >
+        <button type="submit" id="add-btn">Add</button>
+      </form>
+
+      <p id="empty-state" role="status">No todos yet. Add one above!</p>
+
+      <ul id="todo-list" aria-label="Todo list"></ul>
+    </main>
+
+    <footer>
+      <button type="button" id="clear-done-btn" disabled>Clear done</button>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'todos';
+      const todoList = document.getElementById('todo-list');
+      const todoInput = document.getElementById('todo-input');
+      const addForm = document.getElementById('add-form');
+      const emptyState = document.getElementById('empty-state');
+      const clearDoneBtn = document.getElementById('clear-done-btn');
+
+      function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      }
+
+      function loadTodos() {
+        try {
+          const data = localStorage.getItem(STORAGE_KEY);
+          return data ? JSON.parse(data) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveTodos(todos) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+      }
+
+      let todos = loadTodos();
+
+      function render() {
+        todoList.innerHTML = '';
+
+        const hasDone = todos.some(t => t.done);
+        clearDoneBtn.disabled = !hasDone;
+        emptyState.hidden = todos.length > 0;
+
+        todos.forEach(todo => {
+          const li = document.createElement('li');
+          li.draggable = true;
+          li.dataset.id = todo.id;
+          if (todo.done) li.classList.add('done');
+
+          const handle = document.createElement('span');
+          handle.className = 'drag-handle';
+          handle.setAttribute('aria-hidden', 'true');
+          handle.textContent = '⠿';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'todo-checkbox';
+          checkbox.checked = todo.done;
+          checkbox.setAttribute('aria-label', `Mark "${todo.text}" as ${todo.done ? 'not done' : 'done'}`);
+          checkbox.addEventListener('change', () => toggleTodo(todo.id));
+
+          const text = document.createElement('span');
+          text.className = 'todo-text';
+          text.textContent = todo.text;
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.className = 'delete-btn';
+          deleteBtn.setAttribute('aria-label', `Delete "${todo.text}"`);
+          deleteBtn.textContent = '×';
+          deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
+
+          li.append(handle, checkbox, text, deleteBtn);
+          todoList.appendChild(li);
+        });
+      }
+
+      function addTodo(text) {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        todos.push({ id: generateId(), text: trimmed, done: false });
+        saveTodos(todos);
+        render();
+      }
+
+      function toggleTodo(id) {
+        const todo = todos.find(t => t.id === id);
+        if (todo) {
+          todo.done = !todo.done;
+          saveTodos(todos);
+          render();
+        }
+      }
+
+      function deleteTodo(id) {
+        todos = todos.filter(t => t.id !== id);
+        saveTodos(todos);
+        render();
+      }
+
+      function clearDone() {
+        todos = todos.filter(t => !t.done);
+        saveTodos(todos);
+        render();
+      }
+
+      addForm.addEventListener('submit', e => {
+        e.preventDefault();
+        addTodo(todoInput.value);
+        todoInput.value = '';
+        todoInput.focus();
+      });
+
+      clearDoneBtn.addEventListener('click', clearDone);
+
+      /* --- Drag-and-drop reordering --- */
+      let draggedId = null;
+
+      todoList.addEventListener('dragstart', e => {
+        const li = e.target.closest('li[data-id]');
+        if (!li) return;
+        draggedId = li.dataset.id;
+        li.classList.add('dragging');
+        document.body.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedId);
+      });
+
+      todoList.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const li = e.target.closest('li[data-id]');
+        if (!li || li.dataset.id === draggedId) return;
+
+        // Clear previous indicators
+        todoList.querySelectorAll('.drag-over-above, .drag-over-below').forEach(el => {
+          el.classList.remove('drag-over-above', 'drag-over-below');
+        });
+
+        // Determine if cursor is in top or bottom half
+        const rect = li.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          li.classList.add('drag-over-above');
+        } else {
+          li.classList.add('drag-over-below');
+        }
+      });
+
+      todoList.addEventListener('dragleave', e => {
+        const li = e.target.closest('li[data-id]');
+        if (li && !li.contains(e.relatedTarget)) {
+          li.classList.remove('drag-over-above', 'drag-over-below');
+        }
+      });
+
+      todoList.addEventListener('drop', e => {
+        e.preventDefault();
+        const targetLi = e.target.closest('li[data-id]');
+        if (!targetLi || !draggedId) return;
+
+        const fromIndex = todos.findIndex(t => t.id === draggedId);
+        const targetId = targetLi.dataset.id;
+        if (draggedId === targetId) return;
+
+        // Determine insertion above or below target
+        const rect = targetLi.getBoundingClientRect();
+        const insertAfter = e.clientY >= rect.top + rect.height / 2;
+
+        // Remove dragged item
+        const [moved] = todos.splice(fromIndex, 1);
+
+        // Find new target index (may have shifted after splice)
+        let toIndex = todos.findIndex(t => t.id === targetId);
+        if (insertAfter) toIndex += 1;
+
+        todos.splice(toIndex, 0, moved);
+        saveTodos(todos);
+        render();
+      });
+
+      todoList.addEventListener('dragend', () => {
+        draggedId = null;
+        document.body.classList.remove('is-dragging');
+        todoList.querySelectorAll('.dragging, .drag-over-above, .drag-over-below').forEach(el => {
+          el.classList.remove('dragging', 'drag-over-above', 'drag-over-below');
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
