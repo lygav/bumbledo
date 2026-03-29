@@ -1012,6 +1012,9 @@ if (typeof document !== 'undefined') {
 
           const picker = document.createElement('div');
           picker.className = 'blocker-picker';
+          picker.addEventListener('click', (event) => {
+            event.stopPropagation();
+          });
 
           const pickerTitle = document.createElement('div');
           pickerTitle.className = 'blocker-picker-title';
@@ -1028,7 +1031,10 @@ if (typeof document !== 'undefined') {
           } else {
             eligible.forEach(t => {
               const label = document.createElement('label');
+              const checkboxId = `blocker-${todo.id}-${t.id}`;
+              label.htmlFor = checkboxId;
               const cb = document.createElement('input');
+              cb.id = checkboxId;
               cb.type = 'checkbox';
               cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
               cb.addEventListener('change', () => {
