@@ -205,3 +205,20 @@
 **Interaction rules to preserve:**
 - Burndown samples are taken only on first load of a local calendar day; chart data is historical and does not live-update with in-session edits.
 - The chart summary uses monotonic rendered series so completed/total lines never visually move backward, even if users later clear finished tasks from the live list.
+
+### 2026-03-30: Shared Constants Module Extraction
+
+**What I extracted:**
+- Centralized todo status vocabulary, status labels, status cycles, DAG status palette, shared app palette tokens, and localStorage keys into `src/app/constants.js`.
+- Rewired `src/main.js`, `src/todo/model.js`, and `src/dag/view.js` to import status/storage/palette constants instead of repeating strings and color maps inline.
+
+**Key exports:**
+- `TODO_STATUS`, `TODO_STATUS_VALUES`, `TODO_STATUS_META`, `TODO_STATUS_OPTIONS`
+- `ACTIONABLE_TODO_STATUSES`, `EDITABLE_TODO_STATUSES`, `TERMINAL_TODO_STATUSES`, `TOGGLEABLE_TODO_STATUSES`, `BLOCKER_SOURCE_TODO_STATUSES`, `TODO_STATUS_CYCLE`
+- `TODO_STATUS_PALETTE`, `APP_PALETTE`, `APP_STORAGE_KEYS`
+
+**Files changed:**
+- `src/app/constants.js`
+- `src/main.js`
+- `src/todo/model.js`
+- `src/dag/view.js`

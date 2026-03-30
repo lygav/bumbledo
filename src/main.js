@@ -1,5 +1,19 @@
 import { createDagView } from './dag/view.js';
 import { buildDependencyGraph } from './dag/graph.js';
+import {
+  ACTIONABLE_TODO_STATUSES,
+  ACTIONABLE_TODO_STATUS_SUMMARY_LABEL,
+  APP_PALETTE,
+  APP_STORAGE_KEYS,
+  BLOCKER_SOURCE_TODO_STATUSES,
+  EDITABLE_TODO_STATUSES,
+  TERMINAL_TODO_STATUSES,
+  TODO_STATUS,
+  TODO_STATUS_CYCLE,
+  TODO_STATUS_META,
+  TODO_STATUS_OPTIONS,
+  TOGGLEABLE_TODO_STATUSES
+} from './app/constants.js';
 import { createNotificationController } from './todo/notification.js';
 import {
   addTodo,
@@ -31,14 +45,6 @@ import {
 // - Owns: #dag-toggle, #dag-summary, #dag-empty-state, #dependency-graph-section
 // - dag/view.js owns only SVG rendering inside #dependency-graph container
 
-const READY_FILTER_STORAGE_KEY = 'bumbledo_filter_ready';
-const LEGACY_ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
-const BURNDOWN_STORAGE_KEY = 'todos_burndown';
-const SHORTCUTS_TIP_STORAGE_KEY = 'bumbledo_tip_shortcuts_dismissed';
-const REORDER_TIP_STORAGE_KEY = 'bumbledo_tip_reorder_dismissed';
-const BURNDOWN_TOTAL_COLOR = '#4a90d9';
-const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
-const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
 const CYCLE_TOOLTIP_MESSAGE = 'Can\'t add — would create a circular dependency';
 const CYCLE_TOOLTIP_CLEAR_MS = 2000;
 const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
@@ -55,13 +61,18 @@ const STATUS_PILL_TONE_CLASS = {
   'trend-up': 'is-trend-up',
   'trend-down': 'is-trend-down'
 };
+const ACTIONABLE_STATUS_SET = new Set(ACTIONABLE_TODO_STATUSES);
+const EDITABLE_STATUS_SET = new Set(EDITABLE_TODO_STATUSES);
+const TERMINAL_STATUS_SET = new Set(TERMINAL_TODO_STATUSES);
+const TOGGLEABLE_STATUS_SET = new Set(TOGGLEABLE_TODO_STATUSES);
+const BLOCKER_SOURCE_STATUS_SET = new Set(BLOCKER_SOURCE_TODO_STATUSES);
 
 function isActionableStatus(status) {
-  return status === 'todo' || status === 'inprogress';
+  return ACTIONABLE_STATUS_SET.has(status);
 }
 
 function canEditTodoStatus(status) {
-  return status === 'todo' || status === 'inprogress' || status === 'blocked';
+  return EDITABLE_STATUS_SET.has(status);
 }
 
 function parseBurndownDate(dateKey) {
@@ -92,9 +103,9 @@ function buildBurndownSeries(samples) {
 
 function getLiveProgressCounts(todos) {
   const total = todos.length;
-  const todo = todos.filter(item => item.status === 'todo').length;
-  const inProgress = todos.filter(item => item.status === 'inprogress').length;
-  const blocked = todos.filter(item => item.status === 'blocked').length;
+  const todo = todos.filter(item => item.status === TODO_STATUS.TODO).length;
+  const inProgress = todos.filter(item => item.status === TODO_STATUS.IN_PROGRESS).length;
+  const blocked = todos.filter(item => item.status === TODO_STATUS.BLOCKED).length;
   const sample = takeBurndownSample(todos);
   const done = sample.done + sample.cancelled;
   const actionable = todo + inProgress;
@@ -140,10 +151,10 @@ function buildStatusMetricItems(progress, { includeTotal = false, trend = null }
   }
 
   items.push(
-    { count: progress.todo, label: 'To Do', tone: 'ready' },
-    { count: progress.inProgress, label: 'In Progress', tone: 'inprogress' },
-    { count: progress.blocked, label: 'blocked', tone: 'blocked' },
-    { count: progress.done, label: 'done', tone: 'done' }
+    { count: progress.todo, label: TODO_STATUS_META[TODO_STATUS.TODO].metricLabel, tone: 'ready' },
+    { count: progress.inProgress, label: TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].metricLabel, tone: 'inprogress' },
+    { count: progress.blocked, label: TODO_STATUS_META[TODO_STATUS.BLOCKED].metricLabel, tone: 'blocked' },
+    { count: progress.done, label: TODO_STATUS_META[TODO_STATUS.DONE].metricLabel, tone: 'done' }
   );
 
   if (trend) {
@@ -233,16 +244,16 @@ function isMobileViewport() {
 
 function loadReadyFilterPreference() {
   try {
-    const storedPreference = localStorage.getItem(READY_FILTER_STORAGE_KEY);
+    const storedPreference = localStorage.getItem(APP_STORAGE_KEYS.READY_FILTER);
     if (storedPreference !== null) {
       return storedPreference === 'true';
     }
 
-    const legacyPreference = localStorage.getItem(LEGACY_ACTIONABLE_FILTER_STORAGE_KEY);
+    const legacyPreference = localStorage.getItem(APP_STORAGE_KEYS.LEGACY_ACTIONABLE_FILTER);
     if (legacyPreference !== null) {
       try {
-        localStorage.setItem(READY_FILTER_STORAGE_KEY, legacyPreference);
-        localStorage.removeItem(LEGACY_ACTIONABLE_FILTER_STORAGE_KEY);
+        localStorage.setItem(APP_STORAGE_KEYS.READY_FILTER, legacyPreference);
+        localStorage.removeItem(APP_STORAGE_KEYS.LEGACY_ACTIONABLE_FILTER);
       } catch {
         // Ignore storage migration failures so the UI stays usable.
       }
@@ -258,7 +269,7 @@ function loadReadyFilterPreference() {
 
 function saveReadyFilterPreference(isActive) {
   try {
-    localStorage.setItem(READY_FILTER_STORAGE_KEY, String(isActive));
+    localStorage.setItem(APP_STORAGE_KEYS.READY_FILTER, String(isActive));
   } catch {
     // Ignore storage write failures so the UI stays usable.
   }
@@ -368,8 +379,8 @@ if (typeof document !== 'undefined') {
     let helpModalReturnFocusEl = null;
     let blockedCompletionModalOpen = false;
     let blockedCompletionReturnFocusEl = null;
-    let shortcutsTipDismissed = loadTipDismissed(SHORTCUTS_TIP_STORAGE_KEY);
-    let reorderTipDismissed = loadTipDismissed(REORDER_TIP_STORAGE_KEY);
+    let shortcutsTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED);
+    let reorderTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED);
     let shortcutsTipShownThisSession = false;
     let reorderTipShownThisSession = false;
 
@@ -377,7 +388,7 @@ if (typeof document !== 'undefined') {
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     if (shouldSampleToday(burndownData)) {
-      burndownData = saveBurndownData([...burndownData, takeBurndownSample(todos)], undefined, BURNDOWN_STORAGE_KEY);
+      burndownData = saveBurndownData([...burndownData, takeBurndownSample(todos)], undefined, APP_STORAGE_KEYS.BURNDOWN);
     }
 
     if (focusInputShortcut) {
@@ -437,7 +448,7 @@ if (typeof document !== 'undefined') {
     function dismissShortcutsTip() {
       if (shortcutsTipDismissed) return;
       shortcutsTipDismissed = true;
-      dismissTip(SHORTCUTS_TIP_STORAGE_KEY);
+      dismissTip(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED);
       if (shortcutsTip) {
         shortcutsTip.hidden = true;
       }
@@ -446,7 +457,7 @@ if (typeof document !== 'undefined') {
     function dismissReorderTip() {
       if (reorderTipDismissed) return;
       reorderTipDismissed = true;
-      dismissTip(REORDER_TIP_STORAGE_KEY);
+      dismissTip(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED);
       if (reorderTip) {
         reorderTip.hidden = true;
       }
@@ -751,23 +762,19 @@ if (typeof document !== 'undefined') {
     function toggleSelectedTodoStatus() {
       const selectedTodo = todos.find(todo => todo.id === selectedTaskId);
       if (!selectedTodo) return;
-      if (!['todo', 'inprogress', 'done'].includes(selectedTodo.status)) return;
+      if (!TOGGLEABLE_STATUS_SET.has(selectedTodo.status)) return;
 
       const visibleTodos = getVisibleTodos();
       const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
-      const nextStatus = selectedTodo.status === 'todo'
-        ? 'inprogress'
-        : selectedTodo.status === 'inprogress'
-          ? 'done'
-          : 'todo';
+      const nextStatus = TODO_STATUS_CYCLE[selectedTodo.status];
       const todosBefore = todos;
       todos = cycleStatus(todos, selectedTodo.id);
-      if (nextStatus === 'done') {
+      if (nextStatus === TODO_STATUS.DONE) {
         todos = cleanupBlockedBy(todos, selectedTodo.id);
         surfaceUnblockedTodos(todosBefore, todos);
       }
       saveTodos(todos);
-      if (nextStatus === 'done') {
+      if (nextStatus === TODO_STATUS.DONE) {
         fireConfetti();
       }
       render();
@@ -904,7 +911,7 @@ if (typeof document !== 'undefined') {
 
       const gapArea = createSvgElement('path', {
         d: buildBurndownAreaPath(totalPoints, completedPoints),
-        fill: BURNDOWN_GAP_COLOR,
+        fill: APP_PALETTE.BURNDOWN_GAP,
         stroke: 'none'
       });
       burndownChartSvg.appendChild(gapArea);
@@ -912,7 +919,7 @@ if (typeof document !== 'undefined') {
       const totalLine = createSvgElement('path', {
         d: buildBurndownPath(totalPoints),
         fill: 'none',
-        stroke: BURNDOWN_TOTAL_COLOR,
+        stroke: APP_PALETTE.BURNDOWN_TOTAL,
         'stroke-width': 2.5,
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round'
@@ -922,7 +929,7 @@ if (typeof document !== 'undefined') {
       const completedLine = createSvgElement('path', {
         d: buildBurndownPath(completedPoints),
         fill: 'none',
-        stroke: BURNDOWN_COMPLETED_COLOR,
+        stroke: APP_PALETTE.BURNDOWN_COMPLETED,
         'stroke-width': 2.5,
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round'
@@ -937,7 +944,7 @@ if (typeof document !== 'undefined') {
           cy: point.y,
           r: 3.5,
           fill: '#fff',
-          stroke: BURNDOWN_TOTAL_COLOR,
+          stroke: APP_PALETTE.BURNDOWN_TOTAL,
           'stroke-width': 2
         }));
 
@@ -946,7 +953,7 @@ if (typeof document !== 'undefined') {
           cy: completedPoint.y,
           r: 3.5,
           fill: '#fff',
-          stroke: BURNDOWN_COMPLETED_COLOR,
+          stroke: APP_PALETTE.BURNDOWN_COMPLETED,
           'stroke-width': 2
         }));
 
@@ -1228,16 +1235,16 @@ if (typeof document !== 'undefined') {
 
       todoList.innerHTML = '';
 
-      const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
+      const hasFinished = todos.some(t => TERMINAL_STATUS_SET.has(t.status));
       clearFinishedBtn.disabled = !hasFinished;
       readyFilterToggle.classList.toggle('is-active', filterActive);
       readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      readySummary.textContent = `${progress.actionable} of ${progress.total} tasks are ready (To Do or In Progress)`;
+      readySummary.textContent = `${progress.actionable} of ${progress.total} tasks are ready (${ACTIONABLE_TODO_STATUS_SUMMARY_LABEL})`;
       renderStatusMetricLine(taskProgressSummary, buildStatusMetricItems(progress));
       taskProgressBar.setAttribute('aria-valuenow', String(progress.completionPercentRounded));
       taskProgressBar.setAttribute(
         'aria-valuetext',
-        `${progress.done} done, ${progress.blocked} blocked, ${progress.todo} in To Do, ${progress.inProgress} in Progress out of ${progress.total} total`
+        `${progress.done} done, ${progress.blocked} blocked, ${progress.todo} in ${TODO_STATUS_META[TODO_STATUS.TODO].label}, ${progress.inProgress} in ${TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].label} out of ${progress.total} total`
       );
       taskProgressBar.style.setProperty('--task-progress-done', `${progress.completionPercent.toFixed(2)}%`);
       taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
@@ -1252,7 +1259,7 @@ if (typeof document !== 'undefined') {
         li.draggable = true;
         li.tabIndex = 0;
         li.dataset.id = todo.id;
-        if (todo.status !== 'todo') li.classList.add('status-' + todo.status);
+        if (todo.status !== TODO_STATUS.TODO) li.classList.add('status-' + todo.status);
         if (todo.id === selectedTaskId) li.classList.add('task-row-selected');
 
         const remainingMs = notificationController.getHighlightRemainingMs(todo.id);
@@ -1272,14 +1279,7 @@ if (typeof document !== 'undefined') {
         const select = document.createElement('select');
         select.className = 'todo-status';
         select.setAttribute('aria-label', `Status for "${todo.text}"`);
-        const statusOptions = [
-          { value: 'todo', label: 'To Do' },
-          { value: 'inprogress', label: 'In Progress' },
-          { value: 'done', label: 'Done' },
-          { value: 'cancelled', label: 'Cancelled' },
-          { value: 'blocked', label: 'Blocked' }
-        ];
-        statusOptions.forEach(s => {
+        TODO_STATUS_OPTIONS.forEach(s => {
           const opt = document.createElement('option');
           opt.value = s.value;
           opt.textContent = s.label;
@@ -1291,8 +1291,8 @@ if (typeof document !== 'undefined') {
           const nextStatus = select.value;
           const currentTodo = todos.find(item => item.id === todo.id);
           if (!currentTodo) return;
-          const isBlockedCompletionAttempt = currentTodo.status === 'blocked'
-            && (nextStatus === 'done' || nextStatus === 'cancelled')
+          const isBlockedCompletionAttempt = currentTodo.status === TODO_STATUS.BLOCKED
+            && TERMINAL_STATUS_SET.has(nextStatus)
             && Array.isArray(currentTodo.blockedBy)
             && currentTodo.blockedBy.length > 0
             && hasActiveBlockers(todos, currentTodo.id);
@@ -1305,12 +1305,12 @@ if (typeof document !== 'undefined') {
 
           const todosBefore = todos;
           todos = setStatus(todos, currentTodo.id, nextStatus);
-          if (nextStatus === 'done' || nextStatus === 'cancelled') {
+          if (TERMINAL_STATUS_SET.has(nextStatus)) {
             todos = cleanupBlockedBy(todos, currentTodo.id);
             surfaceUnblockedTodos(todosBefore, todos);
           }
           saveTodos(todos);
-          if (nextStatus === 'done') {
+          if (nextStatus === TODO_STATUS.DONE) {
             fireConfetti();
           }
           render();
@@ -1366,7 +1366,7 @@ if (typeof document !== 'undefined') {
           li.append(handle, select, text, deleteBtn);
         }
 
-        if (todo.status === 'blocked' && editingId !== todo.id) {
+        if (todo.status === TODO_STATUS.BLOCKED && editingId !== todo.id) {
           if (Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
             const blockerNames = todo.blockedBy
               .map(bid => {
@@ -1401,7 +1401,7 @@ if (typeof document !== 'undefined') {
           pickerTitle.textContent = 'Blocked by:';
           picker.appendChild(pickerTitle);
 
-          const eligible = todos.filter(t => t.id !== todo.id && (t.status === 'todo' || t.status === 'blocked'));
+          const eligible = todos.filter(t => t.id !== todo.id && BLOCKER_SOURCE_STATUS_SET.has(t.status));
 
           if (eligible.length === 0) {
             const msg = document.createElement('div');
