@@ -126,7 +126,7 @@ Works in all modern browsers (Chrome, Firefox, Safari). Keyboard navigation, ARI
 
 ## 📝 License
 
-ISC
+MIT
 
 ---
 
