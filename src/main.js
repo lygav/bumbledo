@@ -15,6 +15,7 @@ import {
   hasDependencies,
   loadBurndownData,
   loadTodos,
+  reorderTodos,
   saveTodos,
   saveBurndownData,
   setStatus,
@@ -845,17 +846,8 @@ if (typeof document !== 'undefined') {
     function reorderVisibleTodos(draggedId, targetId, insertAfter) {
       if (filterActive) {
         const visibleTodos = getActionableTodos(todos);
-        const draggedIndex = visibleTodos.findIndex(todo => todo.id === draggedId);
-        if (draggedIndex === -1) return todos;
-
-        const reorderedVisible = [...visibleTodos];
-        const [movedTodo] = reorderedVisible.splice(draggedIndex, 1);
-        let targetIndex = reorderedVisible.findIndex(todo => todo.id === targetId);
-
-        if (!movedTodo || targetIndex === -1) return todos;
-        if (insertAfter) targetIndex += 1;
-
-        reorderedVisible.splice(targetIndex, 0, movedTodo);
+        const reorderedVisible = reorderTodos(visibleTodos, draggedId, targetId, insertAfter);
+        if (reorderedVisible === visibleTodos) return todos;
 
         let visibleIndex = 0;
         return todos.map(todo => {
@@ -869,18 +861,7 @@ if (typeof document !== 'undefined') {
         });
       }
 
-      const reorderedTodos = [...todos];
-      const fromIndex = reorderedTodos.findIndex(todo => todo.id === draggedId);
-      if (fromIndex === -1) return todos;
-
-      const [movedTodo] = reorderedTodos.splice(fromIndex, 1);
-      let toIndex = reorderedTodos.findIndex(todo => todo.id === targetId);
-
-      if (!movedTodo || toIndex === -1) return todos;
-      if (insertAfter) toIndex += 1;
-
-      reorderedTodos.splice(toIndex, 0, movedTodo);
-      return reorderedTodos;
+      return reorderTodos(todos, draggedId, targetId, insertAfter);
     }
 
     function clearDragIndicators() {
@@ -962,9 +943,21 @@ if (typeof document !== 'undefined') {
       touchDragState.handle?.classList.remove('touch-armed');
     }
 
-    function resetTouchDragState() {
+    function resetTouchDragState({ suppressClick = false } = {}) {
+      const wasActive = touchDragState?.active ?? false;
+      const activeDraggedId = draggedId;
+
       clearTouchHold();
       touchDragState = null;
+
+      if (wasActive) {
+        if (suppressClick) {
+          suppressClickUntil = performance.now() + 400;
+        }
+        cleanupDragState();
+      }
+
+      return { wasActive, activeDraggedId };
     }
 
     function findTouchById(touchList, touchId) {
@@ -1515,6 +1508,10 @@ if (typeof document !== 'undefined') {
 
     document.addEventListener('touchmove', event => {
       if (!touchDragState) return;
+      if (event.touches.length > 1) {
+        resetTouchDragState({ suppressClick: true });
+        return;
+      }
 
       const touch = findTouchById(event.touches, touchDragState.touchId);
       if (!touch) return;
@@ -1534,6 +1531,8 @@ if (typeof document !== 'undefined') {
         return;
       }
 
+      if (!draggedId || !draggedElement) return;
+
       event.preventDefault();
       updateTouchDragPosition(touch.clientX, touch.clientY);
       getDragTargetFromPoint(touch.clientX, touch.clientY);
@@ -1546,31 +1545,20 @@ if (typeof document !== 'undefined') {
       if (!touch) return;
 
       const activeState = touchDragState.active;
-      const activeDraggedId = draggedId;
       const dragTarget = activeState ? getDragTargetFromPoint(touch.clientX, touch.clientY) : null;
 
-      resetTouchDragState();
+      const { wasActive, activeDraggedId } = resetTouchDragState({ suppressClick: true });
       if (!activeState) return;
 
       event.preventDefault();
-      suppressClickUntil = performance.now() + 400;
-      cleanupDragState();
+      if (!wasActive) return;
       if (!dragTarget) return;
       commitReorder(activeDraggedId, dragTarget.targetId, dragTarget.insertAfter);
     }, { passive: false });
 
     document.addEventListener('touchcancel', event => {
       if (!touchDragState) return;
-
-      const touch = findTouchById(event.changedTouches, touchDragState.touchId);
-      if (!touch && event.changedTouches.length > 0) return;
-
-      const activeState = touchDragState.active;
-      resetTouchDragState();
-      if (!activeState) return;
-
-      suppressClickUntil = performance.now() + 400;
-      cleanupDragState();
+      resetTouchDragState({ suppressClick: true });
     });
 
     window.addEventListener('beforeunload', () => {
