@@ -8,6 +8,24 @@
 
 ## Learnings
 
+### 2026-03-30: Shared constants module contract tests
+
+**What I delivered:**
+- Added `src/app/constants.test.js` as a proactive TDD suite for Rusty's shared constants extraction in `src/app/constants.js`
+- Covered status vocabulary completeness, model/status consistency, per-status labels, per-status palette entries, and all localStorage keys
+- Kept the assertions contract-focused: the tests validate exported constants plus model-helper interoperability, without changing any production source
+
+**Expected constants shape:**
+- A shared status vocabulary export (accepted aliases in the test: `TODO_STATUS_VALUES`, `TODO_STATUS`, `STATUSES`, `STATUS_VALUES`, or `TODO_STATUSES`) containing `todo`, `inprogress`, `done`, `cancelled`, and `blocked`
+- A label export that resolves to the same display labels either as a direct map (`TODO_STATUS_LABELS` / `STATUS_LABELS`) or via richer metadata/options (`TODO_STATUS_META` / `TODO_STATUS_OPTIONS`)
+- A palette map export (`TODO_STATUS_PALETTE` or `STATUS_PALETTE`) keyed by status with the DAG node colors for `fill`, `border`, `accent`, `text`, `opacity`, and `strike`
+- A storage key map export (`APP_STORAGE_KEYS`, `STORAGE_KEYS`, or `LOCAL_STORAGE_KEYS`) covering `todos`, `bumbledo_filter_ready`, `bumbledo_filter_actionable`, `todos_burndown`, `bumbledo_tip_shortcuts_dismissed`, and `bumbledo_tip_reorder_dismissed`
+
+**Execution outcome:**
+- Baseline before changes: full Vitest suite was green (`193` tests passing)
+- After adding and refining the new contract suite against the landed constants module: full Vitest suite stayed green (`200` tests passing)
+- This locks issue `#59` behind a reproducible contract without forcing source edits from the test side
+
 ### 2026-03-30: Touch drag reorder model coverage
 
 **What I delivered:**
