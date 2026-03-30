@@ -2193,3 +2193,76 @@ Adopt ESLint flat config, Prettier formatter, and a simple GitHub Actions CI wor
 - Onboarding new contributors: "run `npm run format` before committing"
 
 - Work begins with Rusty on #59 (constants extraction)
+
+---
+
+## ADR-011: Blocked Status Finalization Semantics
+
+**Status:** Accepted  
+**Author:** Saul  
+**Date:** 2026-03-30T10:57:00Z
+
+### Summary
+
+Delegated focusout events in `src/todo/list-view.js` were resetting blocked status back to todo before the blocker picker could persist selections.
+
+### Problem
+
+After the delegation refactor, the shared focusout path began finalizing blocked status for rows that had just been switched from `todo` to `blocked`. The delegated handler read the latest store state instead of the DOM state that initiated the blur. When the status select rerendered the row, the blur from the old row observed the task as `blocked` and immediately normalized it back to `todo` because no blockers had been chosen yet.
+
+### Decision
+
+Keep delegated events, but preserve blocked-row semantics:
+1. Only run blocked finalization for rows already rendering `.blocker-picker`
+2. Defer the finalize check with `queueMicrotask()` and re-read current row/focus state after rerender
+
+### Rationale
+
+- **Event delegation is sound for steady-state interactions:** Durability across renders is valuable
+- **Blur/focus orchestration is timing-sensitive:** Rerender windows create state visibility gaps that must be bridged
+- **Microtask deferral is minimal:** Defers finalization to after browser paint; lets rerender complete before state checks
+- **Preserves picker semantics:** Only finalize blocked status if the picker is already visible, ensuring user has a chance to select blockers
+
+### Consequences
+
+- All blur/focus handlers must explicitly read DOM state after deferral to avoid stale state observations
+- Future extractions of row-local handlers need an explicit focus-semantics pass, not just event coverage
+- Delegated handlers remain simple and performant; complexity lives in the deferral points
+- Blocked-status regression is resolved; blocker picker can now persist selections safely
+
+---
+
+## ADR-012: Display Property [hidden] Attribute Pairing
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30T10:57:00Z
+
+### Summary
+
+After the shared status-pill refactor, burndown showed duplicate count badges when toggled hidden. The `.status-metric-line` class set `display: flex` but lacked a matching `[hidden]` rule.
+
+### Problem
+
+Burndown renders both metric rows and toggles them with the HTML `hidden` attribute, expecting CSS to respect it. The `.status-metric-line` class now set `display: flex` (from the refactor), but without a matching `[hidden]` rule, the collapsed summary remained visible when toggled hidden.
+
+### Decision
+
+Any reusable class that sets `display` should ship with a matching `[hidden]` rule when components depend on the HTML hidden attribute for visibility control.
+
+**Applied fix:** Added `.status-metric-line[hidden] { display: none; }` in `src/styles.css` and covered it with a regression test in `src/styles.test.js`.
+
+### Rationale
+
+- **Correctness:** HTML hidden attribute is a standard visibility API; CSS must respect it
+- **Component safety:** Classes can be reused in contexts that toggle hidden without breaking
+- **Regression prevention:** Explicit test coverage prevents future refactors from silently reintroducing the bug
+- **Low cost:** One CSS rule per display-setting class; declarative and obvious in code review
+
+### Consequences
+
+- All CSS classes that set `display` must include a matching `[hidden]` rule (or document why not)
+- Visibility logic is concentrated in CSS, not ad-hoc JavaScript toggles
+- Regression tests cover critical visibility scenarios
+- Burndown and other metric UIs now render consistently across show/hide cycles
+
