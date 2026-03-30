@@ -106,6 +106,38 @@ describe('createAppStore', () => {
     expect(storage.data.get(APP_STORAGE_KEYS.READY_FILTER)).toBe('true');
   });
 
+  it('unblocks dependent tasks when an in-progress blocker is completed', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          { id: 'a', text: 'Working blocker', status: TODO_STATUS.IN_PROGRESS },
+          {
+            id: 'b',
+            text: 'Blocked task',
+            status: TODO_STATUS.BLOCKED,
+            blockedBy: ['a'],
+          },
+        ],
+      }),
+    });
+
+    const event = store.setTaskStatus({
+      id: 'a',
+      nextStatus: TODO_STATUS.DONE,
+    });
+
+    expect(event.changed).toBe(true);
+    expect(event.meta).toMatchObject({
+      completedTaskId: 'a',
+      unblockedIds: ['b'],
+    });
+    expect(store.getState().todos).toEqual([
+      { id: 'a', text: 'Working blocker', status: TODO_STATUS.DONE },
+      { id: 'b', text: 'Blocked task', status: TODO_STATUS.TODO },
+    ]);
+  });
+
   it('loads tip dismissal preferences into store state', () => {
     const store = createAppStore({
       storage: createStorage({
