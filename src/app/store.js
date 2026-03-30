@@ -42,6 +42,28 @@ function loadBooleanPreference(storageKey, storage = defaultStorage) {
   }
 }
 
+function loadWelcomeTipPreference(
+  todos,
+  storageKey = APP_STORAGE_KEYS.WELCOME_TIP_DISMISSED,
+  storage = defaultStorage,
+) {
+  try {
+    const stored = storage.getItem(storageKey);
+    if (stored !== null) {
+      return stored === 'true';
+    }
+
+    if (todos.length > 0) {
+      saveBooleanPreference(storageKey, true, storage);
+      return true;
+    }
+
+    return false;
+  } catch {
+    return todos.length > 0;
+  }
+}
+
 function loadReadyFilterPreference(storage = defaultStorage) {
   try {
     const storedPreference = storage.getItem(APP_STORAGE_KEYS.READY_FILTER);
@@ -102,15 +124,18 @@ function reconcileSelection(state) {
 function buildInitialState({
   storage = defaultStorage,
   isMobileViewport = false,
-  } = {}) {
+} = {}) {
+  const todos = loadTodos(storage);
+
   return {
-    todos: loadTodos(storage),
+    todos,
     selectedTaskId: null,
     filterActive: loadReadyFilterPreference(storage),
     dagExpanded: !isMobileViewport,
     dagToggleTouched: false,
     editingId: null,
     isMobileViewport,
+    welcomeTipDismissed: loadWelcomeTipPreference(todos, undefined, storage),
     shortcutsTipDismissed: loadBooleanPreference(
       APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED,
       storage,
@@ -146,6 +171,16 @@ export function createAppStore(options = {}) {
         saveBooleanPreference(
           APP_STORAGE_KEYS.READY_FILTER,
           nextState.filterActive,
+          storage,
+        ),
+    },
+    {
+      shouldRun: (previousState, nextState) =>
+        previousState.welcomeTipDismissed !== nextState.welcomeTipDismissed,
+      run: (_previousState, nextState) =>
+        saveBooleanPreference(
+          APP_STORAGE_KEYS.WELCOME_TIP_DISMISSED,
+          nextState.welcomeTipDismissed,
           storage,
         ),
     },
@@ -190,6 +225,7 @@ export function createAppStore(options = {}) {
         ...currentState,
         todos: nextTodos,
         editingId: null,
+        welcomeTipDismissed: true,
       });
     },
     clearFinished(currentState) {
@@ -259,6 +295,13 @@ export function createAppStore(options = {}) {
       }
 
       return { ...currentState, shortcutsTipDismissed: true };
+    },
+    dismissWelcomeTip(currentState) {
+      if (currentState.welcomeTipDismissed) {
+        return currentState;
+      }
+
+      return { ...currentState, welcomeTipDismissed: true };
     },
     enterEditMode(currentState, payload = {}) {
       const todo = currentState.todos.find((item) => item.id === payload.id);

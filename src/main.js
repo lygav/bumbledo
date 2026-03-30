@@ -75,6 +75,8 @@ if (typeof document !== 'undefined') {
       'task-progress-summary',
     );
     const taskProgressBar = document.querySelector('.task-progress-bar');
+    const welcomeTip = document.getElementById('welcome-tip');
+    const welcomeTipDismiss = document.getElementById('welcome-tip-dismiss');
     const emptyState = document.getElementById('empty-state');
     const reorderTip = document.getElementById('reorder-tip');
     const reorderTipDismiss = document.getElementById('reorder-tip-dismiss');
@@ -104,6 +106,7 @@ if (typeof document !== 'undefined') {
     let filterActive = false;
     let dagExpanded = false;
     let editingId = null;
+    let welcomeTipDismissed = false;
     let shortcutsTipDismissed = false;
     let reorderTipDismissed = false;
 
@@ -116,6 +119,7 @@ if (typeof document !== 'undefined') {
         filterActive,
         dagExpanded,
         editingId,
+        welcomeTipDismissed,
         shortcutsTipDismissed,
         reorderTipDismissed,
       } = nextState);
@@ -277,11 +281,20 @@ if (typeof document !== 'undefined') {
       store.dismissShortcutsTip();
     }
 
+    function dismissWelcomeTip() {
+      store.dismissWelcomeTip();
+    }
+
     function dismissReorderTip() {
       store.dismissReorderTip();
     }
 
     function syncDiscoverabilityTips() {
+      if (welcomeTip) {
+        const shouldShowWelcomeTip = !welcomeTipDismissed && todos.length === 0;
+        welcomeTip.hidden = !shouldShowWelcomeTip;
+      }
+
       if (shortcutsTip) {
         const shouldShowShortcutsTip =
           !shortcutsTipDismissed && todos.length >= 3;
@@ -552,6 +565,10 @@ if (typeof document !== 'undefined') {
 
     shortcutsTipDismiss?.addEventListener('click', () => {
       dismissShortcutsTip();
+    });
+
+    welcomeTipDismiss?.addEventListener('click', () => {
+      dismissWelcomeTip();
     });
 
     reorderTipDismiss?.addEventListener('click', () => {

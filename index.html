@@ -115,6 +115,28 @@
             ></div>
           </div>
 
+          <div
+            id="welcome-tip"
+            class="discovery-tip discovery-tip-welcome"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <span class="discovery-tip-copy"
+              >👋 Welcome to Bumbledo! Your tasks live right here in your
+              browser — no accounts, no cloud, nothing leaves this device. Add
+              your first task to get started.</span
+            >
+            <button
+              type="button"
+              id="welcome-tip-dismiss"
+              class="discovery-tip-dismiss control-button control-button-icon control-button-quiet"
+              aria-label="Dismiss welcome tip"
+            >
+              ×
+            </button>
+          </div>
+
           <p id="empty-state" role="status">
             Your hive is empty — add a task to get buzzing 🐝
           </p>
@@ -187,6 +209,11 @@
           them.
         </p>
       </section>
+
+      <p class="privacy-note">
+        Everything stays in your browser. No accounts. No servers. Just your
+        tasks.
+      </p>
     </div>
 
     <div class="shortcut-help-modal" id="shortcuts-help-modal" hidden>

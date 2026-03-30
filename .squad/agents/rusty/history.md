@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Privacy Messaging + First-Run Ownership Hint
+
+**What I changed:**
+- Added a warm inline welcome hint near the empty state, using the existing discoverability-tip pattern and a one-shot `localStorage` key so it only appears for true first-run/zero-task users.
+- Made the welcome hint dismissible and also auto-retired it once a user already has tasks, so returning users do not see onboarding copy after they have established local data.
+- Added a subtle footer privacy note at the bottom of the app using muted typography to reinforce the product promise without turning it into a legal disclaimer.
+
+**UI rules to preserve:**
+- Privacy/ownership messaging should feel calm and confidence-building: inline, brief, token-driven, and visually quieter than task controls.
+- First-run guidance belongs in the existing discoverability-tip system with centralized storage keys and persistent dismissal, not in a modal or ad-hoc banner.
+
 ### 2026-03-30: Burndown Removal + Header Metrics
 
 **What I changed:**
