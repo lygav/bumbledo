@@ -587,7 +587,11 @@
     #todo-list li.status-done .todo-text {
       text-decoration: line-through;
       color: #5f6f62;
+      cursor: default;
       text-decoration-color: rgba(95, 111, 98, 0.7);
+    }
+    #todo-list li.status-done .todo-text::after {
+      opacity: 0;
     }
     #todo-list li.status-done .todo-text::before {
       content: '✓';
@@ -604,6 +608,10 @@
     #todo-list li.status-cancelled .todo-text {
       text-decoration: line-through;
       color: #c0392b;
+      cursor: default;
+    }
+    #todo-list li.status-cancelled .todo-text::after {
+      opacity: 0;
     }
 
     /* Status: blocked */
