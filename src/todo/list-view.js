@@ -1,11 +1,11 @@
 import {
   BLOCKER_SOURCE_TODO_STATUSES,
   TODO_STATUS,
-  TODO_STATUS_OPTIONS
+  TODO_STATUS_OPTIONS,
 } from '../app/constants.js';
 
 const BLOCKER_SOURCE_STATUS_SET = new Set(BLOCKER_SOURCE_TODO_STATUSES);
-const CYCLE_TOOLTIP_MESSAGE = 'Can\'t add — would create a circular dependency';
+const CYCLE_TOOLTIP_MESSAGE = "Can't add — would create a circular dependency";
 const CYCLE_TOOLTIP_CLEAR_MS = 2000;
 
 function truncateText(text, limit) {
@@ -25,7 +25,7 @@ export function createTodoListView({
   onStatusChange,
   onToggleBlocker,
   onFinalizeBlockedStatus,
-  onClearHighlight
+  onClearHighlight,
 }) {
   let currentTodos = [];
   let currentVisibleTodos = [];
@@ -35,7 +35,11 @@ export function createTodoListView({
   const cycleClearTimeoutIds = new Set();
 
   function findTaskElement(id) {
-    return [...container.querySelectorAll('li[data-id]')].find((item) => item.dataset.id === id) ?? null;
+    return (
+      [...container.querySelectorAll('li[data-id]')].find(
+        (item) => item.dataset.id === id,
+      ) ?? null
+    );
   }
 
   function findTodo(id) {
@@ -66,7 +70,9 @@ export function createTodoListView({
   }
 
   function syncSelection(selectedTaskId = currentSelectedTaskId) {
-    currentSelectedTaskId = currentVisibleTodos.some((todo) => todo.id === selectedTaskId)
+    currentSelectedTaskId = currentVisibleTodos.some(
+      (todo) => todo.id === selectedTaskId,
+    )
       ? selectedTaskId
       : null;
 
@@ -82,7 +88,10 @@ export function createTodoListView({
       const remainingMs = getHighlightRemainingMs(taskElement.dataset.id);
       if (remainingMs !== null && remainingMs > 0) {
         taskElement.classList.add('task-row-unblocked');
-        taskElement.style.setProperty('--unblocked-delay', `${remainingMs - 3000}ms`);
+        taskElement.style.setProperty(
+          '--unblocked-delay',
+          `${remainingMs - 3000}ms`,
+        );
         return;
       }
 
@@ -139,9 +148,10 @@ export function createTodoListView({
 
     const subtitle = document.createElement('div');
     subtitle.className = 'blocked-by-text';
-    subtitle.textContent = blockerNames.length <= 3
-      ? `Blocked by: ${blockerNames.join(', ')}`
-      : `Blocked by: ${blockerNames.slice(0, 2).join(', ')} + ${blockerNames.length - 2} more`;
+    subtitle.textContent =
+      blockerNames.length <= 3
+        ? `Blocked by: ${blockerNames.join(', ')}`
+        : `Blocked by: ${blockerNames.slice(0, 2).join(', ')} + ${blockerNames.length - 2} more`;
     return subtitle;
   }
 
@@ -155,7 +165,8 @@ export function createTodoListView({
     picker.appendChild(pickerTitle);
 
     const eligibleTodos = currentTodos.filter(
-      (item) => item.id !== todo.id && BLOCKER_SOURCE_STATUS_SET.has(item.status)
+      (item) =>
+        item.id !== todo.id && BLOCKER_SOURCE_STATUS_SET.has(item.status),
     );
 
     if (eligibleTodos.length === 0) {
@@ -173,7 +184,8 @@ export function createTodoListView({
         checkbox.id = checkboxId;
         checkbox.type = 'checkbox';
         checkbox.dataset.blockerId = item.id;
-        checkbox.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(item.id);
+        checkbox.checked =
+          Array.isArray(todo.blockedBy) && todo.blockedBy.includes(item.id);
 
         const labelText = document.createElement('span');
         labelText.textContent = truncateText(item.text, 40);
@@ -295,15 +307,20 @@ export function createTodoListView({
       return;
     }
 
-    if (event.target instanceof HTMLSelectElement && event.target.classList.contains('todo-status')) {
-      onStatusChange(todoId, event.target.value, { returnFocusEl: event.target });
+    if (
+      event.target instanceof HTMLSelectElement &&
+      event.target.classList.contains('todo-status')
+    ) {
+      onStatusChange(todoId, event.target.value, {
+        returnFocusEl: event.target,
+      });
       return;
     }
 
     if (
-      event.target instanceof HTMLInputElement
-      && event.target.type === 'checkbox'
-      && event.target.closest('.blocker-picker')
+      event.target instanceof HTMLInputElement &&
+      event.target.type === 'checkbox' &&
+      event.target.closest('.blocker-picker')
     ) {
       const blockerId = event.target.dataset.blockerId;
       if (!blockerId) {
@@ -311,7 +328,10 @@ export function createTodoListView({
       }
 
       event.target.setCustomValidity('');
-      if (event.target.checked && wouldCreateCycle(currentTodos, todoId, blockerId)) {
+      if (
+        event.target.checked &&
+        wouldCreateCycle(currentTodos, todoId, blockerId)
+      ) {
         event.target.checked = false;
         event.target.setCustomValidity(CYCLE_TOOLTIP_MESSAGE);
         event.target.reportValidity();
@@ -329,7 +349,10 @@ export function createTodoListView({
   }
 
   function handleContainerDblClick(event) {
-    if (!(event.target instanceof Element) || !event.target.closest('.todo-text')) {
+    if (
+      !(event.target instanceof Element) ||
+      !event.target.closest('.todo-text')
+    ) {
       return;
     }
 
@@ -358,14 +381,20 @@ export function createTodoListView({
       return;
     }
 
-    if (event.target instanceof HTMLInputElement && event.target.classList.contains('edit-input')) {
+    if (
+      event.target instanceof HTMLInputElement &&
+      event.target.classList.contains('edit-input')
+    ) {
       if (currentEditingId === todoId) {
         onSaveEdit(event.target.value);
       }
       return;
     }
 
-    if (event.relatedTarget instanceof Node && row.contains(event.relatedTarget)) {
+    if (
+      event.relatedTarget instanceof Node &&
+      row.contains(event.relatedTarget)
+    ) {
       return;
     }
 
@@ -376,7 +405,10 @@ export function createTodoListView({
   }
 
   function handleContainerKeyDown(event) {
-    if (!(event.target instanceof HTMLInputElement) || !event.target.classList.contains('edit-input')) {
+    if (
+      !(event.target instanceof HTMLInputElement) ||
+      !event.target.classList.contains('edit-input')
+    ) {
       return;
     }
 
@@ -413,7 +445,9 @@ export function createTodoListView({
     syncSelection(selectedTaskId);
 
     if (currentEditingId) {
-      const input = container.querySelector(`li[data-id="${currentEditingId}"] .edit-input`);
+      const input = container.querySelector(
+        `li[data-id="${currentEditingId}"] .edit-input`,
+      );
       if (input instanceof HTMLInputElement) {
         input.focus();
         input.select();
@@ -438,6 +472,6 @@ export function createTodoListView({
     scrollTaskIntoView,
     syncSelection,
     syncUnblockedHighlights,
-    update
+    update,
   };
 }

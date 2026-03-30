@@ -7,7 +7,7 @@ export function createNotificationState() {
     message: '',
     detail: '',
     shownAt: null,
-    highlightExpiresAt: {}
+    highlightExpiresAt: {},
   };
 }
 
@@ -22,7 +22,9 @@ export function dismissNotification(state, { clearHighlights = false } = {}) {
     message: '',
     detail: '',
     shownAt: null,
-    highlightExpiresAt: clearHighlights ? {} : copyHighlightExpiresAt(state.highlightExpiresAt)
+    highlightExpiresAt: clearHighlights
+      ? {}
+      : copyHighlightExpiresAt(state.highlightExpiresAt),
   };
 }
 
@@ -33,9 +35,10 @@ export function showUnblockedNotification(state, taskNames, now = Date.now()) {
 
   const taskCount = taskNames.length;
   const taskLabel = taskCount === 1 ? 'task' : 'tasks';
-  const subject = taskCount === 1
-    ? `${taskCount} ${taskLabel}: ${taskNames[0]}`
-    : `${taskCount} ${taskLabel}: ${taskNames.join(', ')}`;
+  const subject =
+    taskCount === 1
+      ? `${taskCount} ${taskLabel}: ${taskNames[0]}`
+      : `${taskCount} ${taskLabel}: ${taskNames.join(', ')}`;
   const scrollTarget = taskCount === 1 ? 'it' : 'them';
 
   return {
@@ -44,7 +47,7 @@ export function showUnblockedNotification(state, taskNames, now = Date.now()) {
     message: `You've unblocked ${subject}. Scroll down to find ${scrollTarget}.`,
     detail: `Alert: You've unblocked ${taskCount} ${taskLabel}. ${taskNames.join(', ')}.`,
     shownAt: now,
-    highlightExpiresAt: copyHighlightExpiresAt(state.highlightExpiresAt)
+    highlightExpiresAt: copyHighlightExpiresAt(state.highlightExpiresAt),
   };
 }
 
@@ -57,7 +60,7 @@ export function highlightUnblockedTodos(state, ids, now = Date.now()) {
 
   return {
     ...state,
-    highlightExpiresAt
+    highlightExpiresAt,
   };
 }
 
@@ -71,7 +74,7 @@ export function clearUnblockedHighlight(state, id) {
 
   return {
     ...state,
-    highlightExpiresAt
+    highlightExpiresAt,
   };
 }
 
@@ -85,16 +88,18 @@ export function getHighlightRemainingMs(state, id, now = Date.now()) {
 }
 
 export function shouldAutoDismiss(state, now = Date.now()) {
-  return state.visible
-    && typeof state.shownAt === 'number'
-    && now - state.shownAt >= NOTIFICATION_AUTO_DISMISS_MS;
+  return (
+    state.visible &&
+    typeof state.shownAt === 'number' &&
+    now - state.shownAt >= NOTIFICATION_AUTO_DISMISS_MS
+  );
 }
 
 export function createNotificationController({
   now = () => Date.now(),
   onStateChange = () => {},
   setTimeoutFn = setTimeout,
-  clearTimeoutFn = clearTimeout
+  clearTimeoutFn = clearTimeout,
 } = {}) {
   let state = createNotificationState();
   let notificationTimeoutId = null;
@@ -103,7 +108,7 @@ export function createNotificationController({
   function getState() {
     return {
       ...state,
-      highlightExpiresAt: copyHighlightExpiresAt(state.highlightExpiresAt)
+      highlightExpiresAt: copyHighlightExpiresAt(state.highlightExpiresAt),
     };
   }
 
@@ -133,7 +138,7 @@ export function createNotificationController({
   }
 
   function clearAllHighlightTimeouts() {
-    [...highlightTimeoutIds.keys()].forEach(id => clearHighlightTimeout(id));
+    [...highlightTimeoutIds.keys()].forEach((id) => clearHighlightTimeout(id));
   }
 
   function dismiss({ clearHighlights = false } = {}) {
@@ -179,10 +184,10 @@ export function createNotificationController({
     }
 
     const timestamp = now();
-    const ids = unblockedItems.map(item => item.id);
-    const names = unblockedItems.map(item => item.name);
+    const ids = unblockedItems.map((item) => item.id);
+    const names = unblockedItems.map((item) => item.name);
 
-    ids.forEach(id => scheduleHighlight(id));
+    ids.forEach((id) => scheduleHighlight(id));
 
     state = highlightUnblockedTodos(state, ids, timestamp);
     state = showUnblockedNotification(state, names, timestamp);
@@ -196,6 +201,6 @@ export function createNotificationController({
     dismiss,
     getHighlightRemainingMs: (id) => getHighlightRemainingMs(state, id, now()),
     getState,
-    showUnblocked
+    showUnblocked,
   };
 }

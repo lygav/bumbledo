@@ -7,17 +7,23 @@ import {
   saveBurndownData,
   saveTodos,
   setStatus,
-  takeBurndownSample
+  takeBurndownSample,
 } from '../todo/model.js';
 
-const EXPECTED_STATUS_VALUES = ['todo', 'inprogress', 'done', 'cancelled', 'blocked'];
+const EXPECTED_STATUS_VALUES = [
+  'todo',
+  'inprogress',
+  'done',
+  'cancelled',
+  'blocked',
+];
 
 const EXPECTED_STATUS_LABELS = {
   todo: 'To Do',
   inprogress: 'In Progress',
   done: 'Done',
   cancelled: 'Cancelled',
-  blocked: 'Blocked'
+  blocked: 'Blocked',
 };
 
 const EXPECTED_STATUS_PALETTE = {
@@ -27,7 +33,7 @@ const EXPECTED_STATUS_PALETTE = {
     accent: null,
     text: '#1a1a1a',
     opacity: '1',
-    strike: null
+    strike: null,
   },
   inprogress: {
     fill: 'rgba(33, 150, 243, 0.08)',
@@ -35,7 +41,7 @@ const EXPECTED_STATUS_PALETTE = {
     accent: '#2196f3',
     text: '#1a1a1a',
     opacity: '1',
-    strike: null
+    strike: null,
   },
   done: {
     fill: 'rgba(76, 175, 80, 0.08)',
@@ -43,7 +49,7 @@ const EXPECTED_STATUS_PALETTE = {
     accent: '#4caf50',
     text: '#5f6f62',
     opacity: '1',
-    strike: 'rgba(95, 111, 98, 0.7)'
+    strike: 'rgba(95, 111, 98, 0.7)',
   },
   cancelled: {
     fill: 'rgba(192, 57, 43, 0.08)',
@@ -51,7 +57,7 @@ const EXPECTED_STATUS_PALETTE = {
     accent: '#c0392b',
     text: '#c0392b',
     opacity: '0.8',
-    strike: '#c0392b'
+    strike: '#c0392b',
   },
   blocked: {
     fill: '#fffbf0',
@@ -59,8 +65,8 @@ const EXPECTED_STATUS_PALETTE = {
     accent: '#e67e22',
     text: '#1a1a1a',
     opacity: '1',
-    strike: null
-  }
+    strike: null,
+  },
 };
 
 const EXPECTED_STORAGE_KEYS = {
@@ -69,7 +75,7 @@ const EXPECTED_STORAGE_KEYS = {
   LEGACY_ACTIONABLE_FILTER: 'bumbledo_filter_actionable',
   BURNDOWN: 'todos_burndown',
   SHORTCUTS_TIP_DISMISSED: 'bumbledo_tip_shortcuts_dismissed',
-  REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed'
+  REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed',
 };
 
 function resolveExport(candidateNames, description) {
@@ -79,13 +85,21 @@ function resolveExport(candidateNames, description) {
     }
   }
 
-  throw new Error(`constants.js must export ${description} (${candidateNames.join(' or ')})`);
+  throw new Error(
+    `constants.js must export ${description} (${candidateNames.join(' or ')})`,
+  );
 }
 
 function getStatusValues() {
   const exported = resolveExport(
-    ['TODO_STATUS_VALUES', 'TODO_STATUS', 'STATUSES', 'STATUS_VALUES', 'TODO_STATUSES'],
-    'a shared status vocabulary'
+    [
+      'TODO_STATUS_VALUES',
+      'TODO_STATUS',
+      'STATUSES',
+      'STATUS_VALUES',
+      'TODO_STATUSES',
+    ],
+    'a shared status vocabulary',
   );
 
   if (Array.isArray(exported)) {
@@ -96,24 +110,33 @@ function getStatusValues() {
     return Object.values(exported);
   }
 
-  throw new TypeError('The shared status vocabulary must be an array or object of string values.');
+  throw new TypeError(
+    'The shared status vocabulary must be an array or object of string values.',
+  );
 }
 
 function getStatusLabels() {
   const exported = resolveExport(
-    ['TODO_STATUS_LABELS', 'STATUS_LABELS', 'TODO_STATUS_META', 'TODO_STATUS_OPTIONS'],
-    'a status label map'
+    [
+      'TODO_STATUS_LABELS',
+      'STATUS_LABELS',
+      'TODO_STATUS_META',
+      'TODO_STATUS_OPTIONS',
+    ],
+    'a status label map',
   );
 
   if (Array.isArray(exported)) {
-    return Object.fromEntries(exported.map(({ value, label }) => [value, label]));
+    return Object.fromEntries(
+      exported.map(({ value, label }) => [value, label]),
+    );
   }
 
   if (exported && typeof exported === 'object') {
     const firstValue = Object.values(exported)[0];
     if (firstValue && typeof firstValue === 'object' && 'label' in firstValue) {
       return Object.fromEntries(
-        Object.entries(exported).map(([status, meta]) => [status, meta.label])
+        Object.entries(exported).map(([status, meta]) => [status, meta.label]),
       );
     }
   }
@@ -122,11 +145,17 @@ function getStatusLabels() {
 }
 
 function getStatusPalette() {
-  return resolveExport(['TODO_STATUS_PALETTE', 'STATUS_PALETTE'], 'a status palette map');
+  return resolveExport(
+    ['TODO_STATUS_PALETTE', 'STATUS_PALETTE'],
+    'a status palette map',
+  );
 }
 
 function getStorageKeys() {
-  return resolveExport(['APP_STORAGE_KEYS', 'STORAGE_KEYS', 'LOCAL_STORAGE_KEYS'], 'a storage key map');
+  return resolveExport(
+    ['APP_STORAGE_KEYS', 'STORAGE_KEYS', 'LOCAL_STORAGE_KEYS'],
+    'a storage key map',
+  );
 }
 
 describe('app constants contract', () => {
@@ -135,17 +164,29 @@ describe('app constants contract', () => {
       const statusValues = getStatusValues();
 
       expect(statusValues).toHaveLength(EXPECTED_STATUS_VALUES.length);
-      expect([...statusValues].sort()).toEqual([...EXPECTED_STATUS_VALUES].sort());
-      expect(statusValues.every((status) => typeof status === 'string')).toBe(true);
+      expect([...statusValues].sort()).toEqual(
+        [...EXPECTED_STATUS_VALUES].sort(),
+      );
+      expect(statusValues.every((status) => typeof status === 'string')).toBe(
+        true,
+      );
       expect(new Set(statusValues).size).toBe(statusValues.length);
     });
   });
 
   describe('status consistency with model.js', () => {
     it('uses the exported status vocabulary for model transitions and sampling', () => {
-      const [todoStatus, inProgressStatus, doneStatus, cancelledStatus, blockedStatus] = EXPECTED_STATUS_VALUES;
+      const [
+        todoStatus,
+        inProgressStatus,
+        doneStatus,
+        cancelledStatus,
+        blockedStatus,
+      ] = EXPECTED_STATUS_VALUES;
       const statusValues = getStatusValues();
-      const original = [{ id: 'task-1', text: 'Write constants tests', status: todoStatus }];
+      const original = [
+        { id: 'task-1', text: 'Write constants tests', status: todoStatus },
+      ];
 
       statusValues.forEach((status) => {
         const updated = setStatus(original, 'task-1', status);
@@ -154,27 +195,68 @@ describe('app constants contract', () => {
 
       expect(setStatus(original, 'task-1', 'active')).toBe(original);
 
-      expect(cycleStatus([{ id: 'todo', text: 'Todo task', status: todoStatus }], 'todo')[0].status).toBe(inProgressStatus);
-      expect(cycleStatus([{ id: 'doing', text: 'In progress task', status: inProgressStatus }], 'doing')[0].status).toBe(doneStatus);
-      expect(cycleStatus([{ id: 'done', text: 'Done task', status: doneStatus }], 'done')[0].status).toBe(todoStatus);
-      expect(cycleStatus([{ id: 'cancelled', text: 'Cancelled task', status: cancelledStatus }], 'cancelled')[0].status).toBe(todoStatus);
-      expect(cycleStatus([
-        { id: 'blocked', text: 'Blocked task', status: blockedStatus, blockedBy: ['blocker-1'] }
-      ], 'blocked')[0].status).toBe(blockedStatus);
+      expect(
+        cycleStatus(
+          [{ id: 'todo', text: 'Todo task', status: todoStatus }],
+          'todo',
+        )[0].status,
+      ).toBe(inProgressStatus);
+      expect(
+        cycleStatus(
+          [{ id: 'doing', text: 'In progress task', status: inProgressStatus }],
+          'doing',
+        )[0].status,
+      ).toBe(doneStatus);
+      expect(
+        cycleStatus(
+          [{ id: 'done', text: 'Done task', status: doneStatus }],
+          'done',
+        )[0].status,
+      ).toBe(todoStatus);
+      expect(
+        cycleStatus(
+          [
+            {
+              id: 'cancelled',
+              text: 'Cancelled task',
+              status: cancelledStatus,
+            },
+          ],
+          'cancelled',
+        )[0].status,
+      ).toBe(todoStatus);
+      expect(
+        cycleStatus(
+          [
+            {
+              id: 'blocked',
+              text: 'Blocked task',
+              status: blockedStatus,
+              blockedBy: ['blocker-1'],
+            },
+          ],
+          'blocked',
+        )[0].status,
+      ).toBe(blockedStatus);
 
       const sample = takeBurndownSample([
         { id: 'todo', text: 'Todo task', status: todoStatus },
         { id: 'doing', text: 'In progress task', status: inProgressStatus },
         { id: 'done', text: 'Done task', status: doneStatus },
         { id: 'cancelled', text: 'Cancelled task', status: cancelledStatus },
-        { id: 'blocked', text: 'Blocked task', status: blockedStatus, blockedBy: ['todo'] }
+        {
+          id: 'blocked',
+          text: 'Blocked task',
+          status: blockedStatus,
+          blockedBy: ['todo'],
+        },
       ]);
 
       expect(sample).toMatchObject({
         done: 1,
         cancelled: 1,
         todo: 2,
-        total: 5
+        total: 5,
       });
     });
   });
@@ -219,20 +301,28 @@ describe('app constants contract', () => {
       const storageKeys = getStorageKeys();
       const storage = {
         getItem: vi.fn().mockReturnValue('[]'),
-        setItem: vi.fn()
+        setItem: vi.fn(),
       };
 
       loadTodos(storage, storageKeys.TODOS);
-      saveTodos([{ id: 'task-1', text: 'Persist me', status: 'todo' }], storage, storageKeys.TODOS);
+      saveTodos(
+        [{ id: 'task-1', text: 'Persist me', status: 'todo' }],
+        storage,
+        storageKeys.TODOS,
+      );
       loadBurndownData(storage, storageKeys.BURNDOWN);
       saveBurndownData([], storage, storageKeys.BURNDOWN);
 
       expect(storage.getItem).toHaveBeenCalledWith(storageKeys.TODOS);
       expect(storage.getItem).toHaveBeenCalledWith(storageKeys.BURNDOWN);
-      expect(storage.setItem).toHaveBeenCalledWith(storageKeys.TODOS, JSON.stringify([
-        { id: 'task-1', text: 'Persist me', status: 'todo' }
-      ]));
-      expect(storage.setItem).toHaveBeenCalledWith(storageKeys.BURNDOWN, JSON.stringify([]));
+      expect(storage.setItem).toHaveBeenCalledWith(
+        storageKeys.TODOS,
+        JSON.stringify([{ id: 'task-1', text: 'Persist me', status: 'todo' }]),
+      );
+      expect(storage.setItem).toHaveBeenCalledWith(
+        storageKeys.BURNDOWN,
+        JSON.stringify([]),
+      );
     });
   });
 

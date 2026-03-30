@@ -9,12 +9,19 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier \"src/**/*.{js,css}\" \".github/workflows/ci.yml\" \"README.md\" \"index.html\" \"package.json\" \"package-lock.json\" \"vite.config.js\" \"eslint.config.js\" \".prettierrc\" --write",
+    "format:check": "prettier \"src/**/*.{js,css}\" \".github/workflows/ci.yml\" \"README.md\" \"index.html\" \"package.json\" \"package-lock.json\" \"vite.config.js\" \"eslint.config.js\" \".prettierrc\" --check"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
   },

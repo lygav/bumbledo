@@ -20,7 +20,7 @@ import {
   getActionableTodos,
   getActiveBlockerCount,
   hasActiveBlockers,
-  updateTodoText
+  updateTodoText,
 } from './model.js';
 
 describe('generateId', () => {
@@ -79,9 +79,16 @@ describe('migrateTodos', () => {
   });
 
   it('preserves blockedBy on blocked items that already have it', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = migrateTodos(todos);
-    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] });
+    expect(result[0]).toEqual({
+      id: '1',
+      text: 'task',
+      status: 'blocked',
+      blockedBy: ['2'],
+    });
   });
 
   it('migrates legacy active status values to todo', () => {
@@ -97,14 +104,14 @@ describe('loadTodos', () => {
   beforeEach(() => {
     mockStorage = {
       getItem: vi.fn(),
-      setItem: vi.fn()
+      setItem: vi.fn(),
     };
   });
 
   it('loads and parses from storage', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
     mockStorage.getItem.mockReturnValue(JSON.stringify(todos));
-    
+
     const result = loadTodos(mockStorage, 'testKey');
     expect(result).toEqual(todos);
     expect(mockStorage.getItem).toHaveBeenCalledWith('testKey');
@@ -126,7 +133,7 @@ describe('loadTodos', () => {
   it('applies migration to loaded data', () => {
     const old = [{ id: '1', text: 'task', done: true }];
     mockStorage.getItem.mockReturnValue(JSON.stringify(old));
-    
+
     const result = loadTodos(mockStorage);
     expect(result[0].status).toBe('done');
     expect(result[0]).not.toHaveProperty('done');
@@ -139,7 +146,10 @@ describe('loadTodos', () => {
     const result = loadTodos(mockStorage);
 
     expect(result).toEqual([{ id: '1', text: 'task', status: 'todo' }]);
-    expect(mockStorage.setItem).toHaveBeenCalledWith('todos', JSON.stringify(result));
+    expect(mockStorage.setItem).toHaveBeenCalledWith(
+      'todos',
+      JSON.stringify(result),
+    );
   });
 
   it('uses default storage key when not provided', () => {
@@ -155,29 +165,34 @@ describe('saveTodos', () => {
   beforeEach(() => {
     mockStorage = {
       getItem: vi.fn(),
-      setItem: vi.fn()
+      setItem: vi.fn(),
     };
   });
 
   it('saves serialized todos to storage', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
     saveTodos(todos, mockStorage, 'testKey');
-    
-    expect(mockStorage.setItem).toHaveBeenCalledWith('testKey', JSON.stringify(todos));
+
+    expect(mockStorage.setItem).toHaveBeenCalledWith(
+      'testKey',
+      JSON.stringify(todos),
+    );
   });
 
   it('strips blockedBy from non-blocked items', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo', blockedBy: ['2'] }];
     saveTodos(todos, mockStorage);
-    
+
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0]).not.toHaveProperty('blockedBy');
   });
 
   it('preserves blockedBy for blocked items', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] },
+    ];
     saveTodos(todos, mockStorage);
-    
+
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0].blockedBy).toEqual(['2', '3']);
   });
@@ -185,7 +200,7 @@ describe('saveTodos', () => {
   it('strips blockedBy from blocked items with empty array', () => {
     const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: [] }];
     saveTodos(todos, mockStorage);
-    
+
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0]).not.toHaveProperty('blockedBy');
   });
@@ -199,9 +214,11 @@ describe('saveTodos', () => {
   });
 
   it('only saves id, text, status, and blockedBy fields', () => {
-    const todos = [{ id: '1', text: 'task', status: 'done', extraField: 'ignored' }];
+    const todos = [
+      { id: '1', text: 'task', status: 'done', extraField: 'ignored' },
+    ];
     saveTodos(todos, mockStorage);
-    
+
     const saved = JSON.parse(mockStorage.setItem.mock.calls[0][1]);
     expect(saved[0]).toEqual({ id: '1', text: 'task', status: 'done' });
   });
@@ -213,18 +230,20 @@ describe('burndown helpers', () => {
   beforeEach(() => {
     mockStorage = {
       getItem: vi.fn(),
-      setItem: vi.fn()
+      setItem: vi.fn(),
     };
   });
 
   describe('loadBurndownData', () => {
     it('loads burndown samples from storage', () => {
-      mockStorage.getItem.mockReturnValue(JSON.stringify([
-        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 }
-      ]));
+      mockStorage.getItem.mockReturnValue(
+        JSON.stringify([
+          { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 },
+        ]),
+      );
 
       expect(loadBurndownData(mockStorage)).toEqual([
-        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 }
+        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 },
       ]);
       expect(mockStorage.getItem).toHaveBeenCalledWith('todos_burndown');
     });
@@ -235,23 +254,27 @@ describe('burndown helpers', () => {
     });
 
     it('drops invalid samples and keeps valid stored totals', () => {
-      mockStorage.getItem.mockReturnValue(JSON.stringify([
-        { date: 'bad-date', done: 2, cancelled: 0, todo: 1, total: 3 },
-        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 1 }
-      ]));
+      mockStorage.getItem.mockReturnValue(
+        JSON.stringify([
+          { date: 'bad-date', done: 2, cancelled: 0, todo: 1, total: 3 },
+          { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 1 },
+        ]),
+      );
 
       expect(loadBurndownData(mockStorage)).toEqual([
-        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 1 }
+        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 1 },
       ]);
     });
 
     it('migrates legacy active burndown counts to todo', () => {
-      mockStorage.getItem.mockReturnValue(JSON.stringify([
-        { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 6 }
-      ]));
+      mockStorage.getItem.mockReturnValue(
+        JSON.stringify([
+          { date: '2026-03-29', done: 2, cancelled: 1, active: 3, total: 6 },
+        ]),
+      );
 
       expect(loadBurndownData(mockStorage)).toEqual([
-        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 }
+        { date: '2026-03-29', done: 2, cancelled: 1, todo: 3, total: 6 },
       ]);
     });
   });
@@ -261,26 +284,39 @@ describe('burndown helpers', () => {
       const samples = [
         { date: '2026-02-26', done: 1, cancelled: 0, todo: 1, total: 2 },
         { date: '2026-03-01', done: 2, cancelled: 0, todo: 1, total: 3 },
-        { date: '2026-03-29', done: 3, cancelled: 1, todo: 1, total: 5 }
+        { date: '2026-03-29', done: 3, cancelled: 1, todo: 1, total: 5 },
       ];
 
-      const result = saveBurndownData(samples, mockStorage, 'todos_burndown', new Date(2026, 2, 29, 8, 0));
+      const result = saveBurndownData(
+        samples,
+        mockStorage,
+        'todos_burndown',
+        new Date(2026, 2, 29, 8, 0),
+      );
 
       expect(result).toEqual([
         { date: '2026-03-01', done: 2, cancelled: 0, todo: 1, total: 3 },
-        { date: '2026-03-29', done: 3, cancelled: 1, todo: 1, total: 5 }
+        { date: '2026-03-29', done: 3, cancelled: 1, todo: 1, total: 5 },
       ]);
-      expect(mockStorage.setItem).toHaveBeenCalledWith('todos_burndown', JSON.stringify(result));
+      expect(mockStorage.setItem).toHaveBeenCalledWith(
+        'todos_burndown',
+        JSON.stringify(result),
+      );
     });
 
     it('keeps only the latest sample for a duplicate date', () => {
-      const result = saveBurndownData([
-        { date: '2026-03-29', done: 1, cancelled: 0, todo: 2, total: 3 },
-        { date: '2026-03-29', done: 2, cancelled: 0, todo: 2, total: 4 }
-      ], mockStorage, 'todos_burndown', new Date(2026, 2, 29, 8, 0));
+      const result = saveBurndownData(
+        [
+          { date: '2026-03-29', done: 1, cancelled: 0, todo: 2, total: 3 },
+          { date: '2026-03-29', done: 2, cancelled: 0, todo: 2, total: 4 },
+        ],
+        mockStorage,
+        'todos_burndown',
+        new Date(2026, 2, 29, 8, 0),
+      );
 
       expect(result).toEqual([
-        { date: '2026-03-29', done: 2, cancelled: 0, todo: 2, total: 4 }
+        { date: '2026-03-29', done: 2, cancelled: 0, todo: 2, total: 4 },
       ]);
     });
   });
@@ -292,7 +328,7 @@ describe('addTodo', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       text: 'New task',
-      status: 'todo'
+      status: 'todo',
     });
     expect(result[0].id).toBeDefined();
   });
@@ -360,14 +396,18 @@ describe('setStatus', () => {
   });
 
   it('removes blockedBy when changing from blocked to todo', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = setStatus(todos, '1', 'todo');
     expect(result[0]).not.toHaveProperty('blockedBy');
     expect(result[0].status).toBe('todo');
   });
 
   it('removes blockedBy when changing from blocked to done', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = setStatus(todos, '1', 'done');
     expect(result[0]).not.toHaveProperty('blockedBy');
   });
@@ -381,7 +421,7 @@ describe('setStatus', () => {
   it('leaves other todos unchanged', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = setStatus(todos, '1', 'done');
     expect(result[1]).toEqual(todos[1]);
@@ -394,7 +434,9 @@ describe('setStatus', () => {
   });
 
   it('preserves existing blockedBy when setting to blocked', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = setStatus(todos, '1', 'blocked');
     expect(result[0].blockedBy).toEqual(['2']);
   });
@@ -404,7 +446,7 @@ describe('hasActiveBlockers', () => {
   it('returns true when a blocker is still todo', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
-      { id: '2', text: 'upstream task', status: 'todo' }
+      { id: '2', text: 'upstream task', status: 'todo' },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(true);
@@ -414,7 +456,7 @@ describe('hasActiveBlockers', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
       { id: '2', text: 'upstream task', status: 'blocked', blockedBy: ['3'] },
-      { id: '3', text: 'another task', status: 'todo' }
+      { id: '3', text: 'another task', status: 'todo' },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(true);
@@ -423,7 +465,7 @@ describe('hasActiveBlockers', () => {
   it('returns true when a blocker is already in progress', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
-      { id: '2', text: 'upstream task', status: 'inprogress' }
+      { id: '2', text: 'upstream task', status: 'inprogress' },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(true);
@@ -431,7 +473,7 @@ describe('hasActiveBlockers', () => {
 
   it('returns false when the only blocker is the todo itself', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(false);
@@ -440,7 +482,7 @@ describe('hasActiveBlockers', () => {
   it('returns false when blockers only loop back to the current todo', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
-      { id: '2', text: 'upstream task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'upstream task', status: 'blocked', blockedBy: ['1'] },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(false);
@@ -448,9 +490,14 @@ describe('hasActiveBlockers', () => {
 
   it('returns false when blockers are already finished', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3'] },
+      {
+        id: '1',
+        text: 'blocked task',
+        status: 'blocked',
+        blockedBy: ['2', '3'],
+      },
       { id: '2', text: 'done task', status: 'done' },
-      { id: '3', text: 'cancelled task', status: 'cancelled' }
+      { id: '3', text: 'cancelled task', status: 'cancelled' },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(false);
@@ -458,7 +505,7 @@ describe('hasActiveBlockers', () => {
 
   it('returns false when blockers were deleted or missing', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] }
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
     ];
 
     expect(hasActiveBlockers(todos, '1')).toBe(false);
@@ -468,12 +515,17 @@ describe('hasActiveBlockers', () => {
 describe('getActiveBlockerCount', () => {
   it('counts todo and blocked direct blockers', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3', '4', '6'] },
+      {
+        id: '1',
+        text: 'blocked task',
+        status: 'blocked',
+        blockedBy: ['2', '3', '4', '6'],
+      },
       { id: '2', text: 'todo blocker', status: 'todo' },
       { id: '3', text: 'blocked blocker', status: 'blocked', blockedBy: ['5'] },
       { id: '4', text: 'done blocker', status: 'done' },
       { id: '5', text: 'nested blocker', status: 'todo' },
-      { id: '6', text: 'working blocker', status: 'inprogress' }
+      { id: '6', text: 'working blocker', status: 'inprogress' },
     ];
 
     expect(getActiveBlockerCount(todos, '1')).toBe(3);
@@ -481,9 +533,14 @@ describe('getActiveBlockerCount', () => {
 
   it('ignores self references, missing blockers, and finished blockers', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1', '2', '3'] },
+      {
+        id: '1',
+        text: 'blocked task',
+        status: 'blocked',
+        blockedBy: ['1', '2', '3'],
+      },
       { id: '2', text: 'done blocker', status: 'done' },
-      { id: '3', text: 'cancelled blocker', status: 'cancelled' }
+      { id: '3', text: 'cancelled blocker', status: 'cancelled' },
     ];
 
     expect(getActiveBlockerCount(todos, '1')).toBe(0);
@@ -516,9 +573,16 @@ describe('cycleStatus', () => {
   });
 
   it('does not cycle blocked todos with blockers', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = model.cycleStatus(todos, '1');
-    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] });
+    expect(result[0]).toEqual({
+      id: '1',
+      text: 'task',
+      status: 'blocked',
+      blockedBy: ['2'],
+    });
   });
 });
 
@@ -527,7 +591,7 @@ describe('getNextTodoId', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = model.getNextTodoId(todos, '2');
     expect(result).toBe('3');
@@ -537,7 +601,7 @@ describe('getNextTodoId', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = model.getNextTodoId(todos, '3');
     expect(result).toBe('1');
@@ -552,7 +616,7 @@ describe('getNextTodoId', () => {
   it('returns the first todo id when current id is not found', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = model.getNextTodoId(todos, 'missing');
     expect(result).toBe('1');
@@ -569,7 +633,7 @@ describe('getPrevTodoId', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = model.getPrevTodoId(todos, '2');
     expect(result).toBe('1');
@@ -579,7 +643,7 @@ describe('getPrevTodoId', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = model.getPrevTodoId(todos, '1');
     expect(result).toBe('3');
@@ -594,7 +658,7 @@ describe('getPrevTodoId', () => {
   it('returns the first todo id when current id is not found', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = model.getPrevTodoId(todos, 'missing');
     expect(result).toBe('1');
@@ -607,21 +671,21 @@ describe('getPrevTodoId', () => {
 });
 
 describe('reorderTodos', () => {
-  const makeTodos = () => ([
+  const makeTodos = () => [
     { id: 'a', text: 'first', status: 'todo' },
     { id: 'b', text: 'second', status: 'todo' },
     { id: 'c', text: 'third', status: 'todo' },
-    { id: 'd', text: 'fourth', status: 'todo' }
-  ]);
+    { id: 'd', text: 'fourth', status: 'todo' },
+  ];
 
   it('moves an item from position 0 to position 2', () => {
     const result = reorderTodos(makeTodos(), 'a', 'c', false);
-    expect(result.map(todo => todo.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(result.map((todo) => todo.id)).toEqual(['b', 'a', 'c', 'd']);
   });
 
   it('moves an item from position 2 to position 0', () => {
     const result = reorderTodos(makeTodos(), 'c', 'a', false);
-    expect(result.map(todo => todo.id)).toEqual(['c', 'a', 'b', 'd']);
+    expect(result.map((todo) => todo.id)).toEqual(['c', 'a', 'b', 'd']);
   });
 
   it('returns the original array when moving to the same position', () => {
@@ -629,7 +693,7 @@ describe('reorderTodos', () => {
     const result = reorderTodos(todos, 'b', 'b', false);
 
     expect(result).toBe(todos);
-    expect(result.map(todo => todo.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.map((todo) => todo.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 
   it('returns the original array for a single-item list', () => {
@@ -642,12 +706,12 @@ describe('reorderTodos', () => {
 
   it('moves an item to the end of the list', () => {
     const result = reorderTodos(makeTodos(), 'b', 'd', true);
-    expect(result.map(todo => todo.id)).toEqual(['a', 'c', 'd', 'b']);
+    expect(result.map((todo) => todo.id)).toEqual(['a', 'c', 'd', 'b']);
   });
 
   it('moves an item to the beginning of the list', () => {
     const result = reorderTodos(makeTodos(), 'd', 'a', false);
-    expect(result.map(todo => todo.id)).toEqual(['d', 'a', 'b', 'c']);
+    expect(result.map((todo) => todo.id)).toEqual(['d', 'a', 'b', 'c']);
   });
 
   it('returns the original array when the dragged id is not found', () => {
@@ -667,13 +731,17 @@ describe('toggleBlocker', () => {
   });
 
   it('removes an existing blocker', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] },
+    ];
     const result = toggleBlocker(todos, '1', '2');
     expect(result[0].blockedBy).toEqual(['3']);
   });
 
   it('reverts to todo when last blocker is removed', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = toggleBlocker(todos, '1', '2');
     expect(result[0].status).toBe('todo');
     expect(result[0].blockedBy).toBeUndefined();
@@ -686,7 +754,9 @@ describe('toggleBlocker', () => {
   });
 
   it('returns NEW array', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = toggleBlocker(todos, '1', '3');
     expect(result).not.toBe(todos);
   });
@@ -700,7 +770,7 @@ describe('toggleBlocker', () => {
   it('leaves other todos unchanged', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'blocked', blockedBy: [] },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'todo' },
     ];
     const result = toggleBlocker(todos, '1', '3');
     expect(result[1]).toEqual(todos[1]);
@@ -711,7 +781,7 @@ describe('wouldCreateCycle', () => {
   it('returns true for a direct cycle', () => {
     const todos = [
       { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
-      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] }
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] },
     ];
 
     expect(wouldCreateCycle(todos, 'b', 'a')).toBe(true);
@@ -721,7 +791,7 @@ describe('wouldCreateCycle', () => {
     const todos = [
       { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
       { id: 'b', text: 'Task B', status: 'blocked', blockedBy: ['c'] },
-      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] }
+      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] },
     ];
 
     expect(wouldCreateCycle(todos, 'c', 'a')).toBe(true);
@@ -731,14 +801,16 @@ describe('wouldCreateCycle', () => {
     const todos = [
       { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
       { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] },
-      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] }
+      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] },
     ];
 
     expect(wouldCreateCycle(todos, 'c', 'a')).toBe(false);
   });
 
   it('returns true for a self-reference', () => {
-    const todos = [{ id: 'a', text: 'Task A', status: 'blocked', blockedBy: [] }];
+    const todos = [
+      { id: 'a', text: 'Task A', status: 'blocked', blockedBy: [] },
+    ];
 
     expect(wouldCreateCycle(todos, 'a', 'a')).toBe(true);
   });
@@ -746,7 +818,7 @@ describe('wouldCreateCycle', () => {
   it('returns false when the blocker has no blockers', () => {
     const todos = [
       { id: 'a', text: 'Task A', status: 'blocked', blockedBy: [] },
-      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] }
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] },
     ];
 
     expect(wouldCreateCycle(todos, 'b', 'a')).toBe(false);
@@ -758,7 +830,7 @@ describe('cleanupBlockedBy', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'blocked', blockedBy: ['2', '3'] },
       { id: '2', text: 'task2', status: 'todo' },
-      { id: '3', text: 'task3', status: 'blocked', blockedBy: ['2'] }
+      { id: '3', text: 'task3', status: 'blocked', blockedBy: ['2'] },
     ];
     const result = cleanupBlockedBy(todos, '2');
     expect(result[0].blockedBy).toEqual(['3']);
@@ -767,7 +839,9 @@ describe('cleanupBlockedBy', () => {
   });
 
   it('reverts blocked todos to todo when their last blocker is removed', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = cleanupBlockedBy(todos, '2');
     expect(result[0].status).toBe('todo');
     expect(result[0].blockedBy).toBeUndefined();
@@ -776,32 +850,36 @@ describe('cleanupBlockedBy', () => {
   it('handles todos with no blockedBy array', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'blocked' },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'todo' },
     ];
     const result = cleanupBlockedBy(todos, '3');
     expect(result).toEqual([
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'todo' },
     ]);
   });
 
   it('leaves non-blocked todos unchanged', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = cleanupBlockedBy(todos, '3');
     expect(result).toEqual(todos);
   });
 
   it('does nothing when removed ID is not in any blockedBy array', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = cleanupBlockedBy(todos, '99');
     expect(result).toEqual(todos);
   });
 
   it('returns NEW array', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = cleanupBlockedBy(todos, '2');
     expect(result).not.toBe(todos);
   });
@@ -816,7 +894,9 @@ describe('finalizeBlockedStatus', () => {
   });
 
   it('keeps blocked todos with blockers unchanged', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = finalizeBlockedStatus(todos, '1');
 
     expect(result).toBe(todos);
@@ -827,11 +907,11 @@ describe('detectUnblockedTodos', () => {
   it('returns the ID when one todo changes from blocked to todo', () => {
     const before = [
       { id: '1', text: 'blocker', status: 'done' },
-      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const after = [
       { id: '1', text: 'blocker', status: 'done' },
-      { id: '2', text: 'blocked task', status: 'todo' }
+      { id: '2', text: 'blocked task', status: 'todo' },
     ];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual(['2']);
@@ -840,13 +920,23 @@ describe('detectUnblockedTodos', () => {
   it('returns both IDs when multiple todos change from blocked to todo', () => {
     const before = [
       { id: '1', text: 'done blocker', status: 'done' },
-      { id: '2', text: 'first blocked task', status: 'blocked', blockedBy: ['1'] },
-      { id: '3', text: 'second blocked task', status: 'blocked', blockedBy: ['1'] }
+      {
+        id: '2',
+        text: 'first blocked task',
+        status: 'blocked',
+        blockedBy: ['1'],
+      },
+      {
+        id: '3',
+        text: 'second blocked task',
+        status: 'blocked',
+        blockedBy: ['1'],
+      },
     ];
     const after = [
       { id: '1', text: 'done blocker', status: 'done' },
       { id: '2', text: 'first blocked task', status: 'todo' },
-      { id: '3', text: 'second blocked task', status: 'todo' }
+      { id: '3', text: 'second blocked task', status: 'todo' },
     ];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual(['2', '3']);
@@ -855,11 +945,11 @@ describe('detectUnblockedTodos', () => {
   it('returns an empty array when statuses are unchanged', () => {
     const before = [
       { id: '1', text: 'todo task', status: 'todo' },
-      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const after = [
       { id: '1', text: 'todo task', status: 'todo' },
-      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual([]);
@@ -873,14 +963,20 @@ describe('detectUnblockedTodos', () => {
   });
 
   it('does not include todos that stay blocked', () => {
-    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
-    const after = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const before = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
+    const after = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual([]);
   });
 
   it('does not include todos that change from blocked to done', () => {
-    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const before = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const after = [{ id: '1', text: 'task', status: 'done' }];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual([]);
@@ -892,7 +988,9 @@ describe('detectUnblockedTodos', () => {
   });
 
   it('does not include todos that are deleted between snapshots', () => {
-    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] }];
+    const before = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
     const after = [];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual([]);
@@ -906,7 +1004,9 @@ describe('detectUnblockedTodos', () => {
   });
 
   it('detects unblock transitions even when blockedBy was populated before cleanup', () => {
-    const before = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const before = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] },
+    ];
     const after = [{ id: '1', text: 'task', status: 'todo' }];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual(['1']);
@@ -916,7 +1016,7 @@ describe('detectUnblockedTodos', () => {
     const before = [
       { id: 'a', text: 'done blocker', status: 'done' },
       { id: 'b', text: 'blocked task', status: 'blocked', blockedBy: ['a'] },
-      { id: 'c', text: 'todo task', status: 'todo' }
+      { id: 'c', text: 'todo task', status: 'todo' },
     ];
 
     const cleared = clearFinished(before);
@@ -924,7 +1024,7 @@ describe('detectUnblockedTodos', () => {
 
     expect(after).toEqual([
       { id: 'b', text: 'blocked task', status: 'todo' },
-      { id: 'c', text: 'todo task', status: 'todo' }
+      { id: 'c', text: 'todo task', status: 'todo' },
     ]);
     expect(model.detectUnblockedTodos(before, after)).toEqual(['b']);
   });
@@ -932,16 +1032,26 @@ describe('detectUnblockedTodos', () => {
   it('returns empty when clearFinished removes done todos that were not blockers', () => {
     const before = [
       { id: 'a', text: 'done task', status: 'done' },
-      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
-      { id: 'c', text: 'todo blocker', status: 'todo' }
+      {
+        id: 'b',
+        text: 'still blocked task',
+        status: 'blocked',
+        blockedBy: ['c'],
+      },
+      { id: 'c', text: 'todo blocker', status: 'todo' },
     ];
 
     const cleared = clearFinished(before);
     const after = cleanupBlockedBy(cleared, 'a');
 
     expect(after).toEqual([
-      { id: 'b', text: 'still blocked task', status: 'blocked', blockedBy: ['c'] },
-      { id: 'c', text: 'todo blocker', status: 'todo' }
+      {
+        id: 'b',
+        text: 'still blocked task',
+        status: 'blocked',
+        blockedBy: ['c'],
+      },
+      { id: 'c', text: 'todo blocker', status: 'todo' },
     ]);
     expect(model.detectUnblockedTodos(before, after)).toEqual([]);
   });
@@ -951,23 +1061,25 @@ describe('detectUnblockedTodos', () => {
       { id: 'a', text: 'A', status: 'todo' },
       { id: 'b', text: 'B', status: 'blocked', blockedBy: ['a'] },
       { id: 'c', text: 'C', status: 'todo' },
-      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] }
+      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] },
     ];
     const afterCompletingA = [
       { id: 'a', text: 'A', status: 'done' },
       { id: 'b', text: 'B', status: 'todo' },
       { id: 'c', text: 'C', status: 'todo' },
-      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] }
+      { id: 'd', text: 'D', status: 'blocked', blockedBy: ['c'] },
     ];
     const afterCompletingC = [
       { id: 'a', text: 'A', status: 'done' },
       { id: 'b', text: 'B', status: 'todo' },
       { id: 'c', text: 'C', status: 'done' },
-      { id: 'd', text: 'D', status: 'todo' }
+      { id: 'd', text: 'D', status: 'todo' },
     ];
 
     expect(model.detectUnblockedTodos(before, afterCompletingA)).toEqual(['b']);
-    expect(model.detectUnblockedTodos(afterCompletingA, afterCompletingC)).toEqual(['d']);
+    expect(
+      model.detectUnblockedTodos(afterCompletingA, afterCompletingC),
+    ).toEqual(['d']);
   });
 });
 
@@ -975,7 +1087,7 @@ describe('deleteTodo', () => {
   it('removes the todo from the array', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = deleteTodo(todos, '1');
     expect(result).toHaveLength(1);
@@ -985,7 +1097,7 @@ describe('deleteTodo', () => {
   it('cleans up blockedBy references in other todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1', '3'] }
+      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1', '3'] },
     ];
     const result = deleteTodo(todos, '1');
     expect(result[0].blockedBy).toEqual(['3']);
@@ -1006,7 +1118,7 @@ describe('deleteTodo', () => {
   it('reverts blocked todos to todo when deleted todo was their last blocker', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = deleteTodo(todos, '1');
     expect(result[0].status).toBe('todo');
@@ -1024,7 +1136,7 @@ describe('clearFinished', () => {
   it('removes done todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'done' },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'todo' },
     ];
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
@@ -1034,7 +1146,7 @@ describe('clearFinished', () => {
   it('removes cancelled todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'cancelled' },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'todo' },
     ];
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
@@ -1044,7 +1156,7 @@ describe('clearFinished', () => {
   it('keeps todo todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
@@ -1055,19 +1167,19 @@ describe('clearFinished', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'blocked', blockedBy: ['3'] },
       { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = clearFinished(todos);
     expect(result).toHaveLength(2);
-    expect(result.map(t => t.id)).toContain('1');
-    expect(result.map(t => t.id)).toContain('3');
+    expect(result.map((t) => t.id)).toContain('1');
+    expect(result.map((t) => t.id)).toContain('3');
   });
 
   it('cleans up blockedBy references to removed todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'done' },
       { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1', '3'] },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = clearFinished(todos);
     expect(result[0].blockedBy).toEqual(['3']);
@@ -1076,7 +1188,7 @@ describe('clearFinished', () => {
   it('reverts blocked todos to todo when all their blockers are removed', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'done' },
-      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = clearFinished(todos);
     expect(result[0].status).toBe('todo');
@@ -1086,16 +1198,26 @@ describe('clearFinished', () => {
   it('removes done blockers from blockedBy during clearFinished flow', () => {
     const before = [
       { id: '1', text: 'done blocker', status: 'done' },
-      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['1', '3'] },
-      { id: '3', text: 'todo blocker', status: 'todo' }
+      {
+        id: '2',
+        text: 'still blocked task',
+        status: 'blocked',
+        blockedBy: ['1', '3'],
+      },
+      { id: '3', text: 'todo blocker', status: 'todo' },
     ];
 
     const cleared = clearFinished(before);
     const after = cleanupBlockedBy(cleared, '1');
 
     expect(after).toEqual([
-      { id: '2', text: 'still blocked task', status: 'blocked', blockedBy: ['3'] },
-      { id: '3', text: 'todo blocker', status: 'todo' }
+      {
+        id: '2',
+        text: 'still blocked task',
+        status: 'blocked',
+        blockedBy: ['3'],
+      },
+      { id: '3', text: 'todo blocker', status: 'todo' },
     ]);
   });
 
@@ -1107,7 +1229,7 @@ describe('clearFinished', () => {
   it('returns unchanged array when no finished todos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'task2', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = clearFinished(todos);
     expect(result).toEqual(todos);
@@ -1124,7 +1246,7 @@ describe('clearFinished', () => {
       { id: '1', text: 'task1', status: 'done' },
       { id: '2', text: 'task2', status: 'cancelled' },
       { id: '3', text: 'task3', status: 'done' },
-      { id: '4', text: 'task4', status: 'todo' }
+      { id: '4', text: 'task4', status: 'todo' },
     ];
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
@@ -1139,12 +1261,12 @@ describe('getActionableTodos', () => {
       { id: '2', text: 'working task', status: 'inprogress' },
       { id: '3', text: 'done task', status: 'done' },
       { id: '4', text: 'cancelled task', status: 'cancelled' },
-      { id: '5', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '5', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual([
       { id: '1', text: 'todo task', status: 'todo' },
-      { id: '2', text: 'working task', status: 'inprogress' }
+      { id: '2', text: 'working task', status: 'inprogress' },
     ]);
   });
 
@@ -1152,7 +1274,7 @@ describe('getActionableTodos', () => {
     const todos = [
       { id: '1', text: 'done task', status: 'done' },
       { id: '2', text: 'cancelled task', status: 'cancelled' },
-      { id: '3', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '3', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual([]);
@@ -1162,7 +1284,7 @@ describe('getActionableTodos', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'inprogress' },
-      { id: '3', text: 'task3', status: 'todo' }
+      { id: '3', text: 'task3', status: 'todo' },
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual(todos);
@@ -1175,13 +1297,13 @@ describe('getActionableTodos', () => {
       { id: '3', text: 'todo two', status: 'todo' },
       { id: '4', text: 'working task', status: 'inprogress' },
       { id: '5', text: 'cancelled task', status: 'cancelled' },
-      { id: '6', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '6', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual([
       { id: '1', text: 'todo one', status: 'todo' },
       { id: '3', text: 'todo two', status: 'todo' },
-      { id: '4', text: 'working task', status: 'inprogress' }
+      { id: '4', text: 'working task', status: 'inprogress' },
     ]);
   });
 
@@ -1197,20 +1319,20 @@ describe('getActionableTodos', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       text: 'new actionable task',
-      status: 'todo'
+      status: 'todo',
     });
   });
 
   it('includes a task after it auto-unblocks back to todo', () => {
     const todos = [
       { id: '1', text: 'blocker', status: 'todo' },
-      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
     const updated = cleanupBlockedBy(todos, '1');
     const result = getActionableTodos(updated);
     expect(result).toEqual([
       { id: '1', text: 'blocker', status: 'todo' },
-      { id: '2', text: 'blocked task', status: 'todo' }
+      { id: '2', text: 'blocked task', status: 'todo' },
     ]);
   });
 
@@ -1218,11 +1340,16 @@ describe('getActionableTodos', () => {
     const todos = [
       { id: '1', text: 'todo task', status: 'todo' },
       { id: '2', text: 'needs blockers', status: 'blocked', blockedBy: [] },
-      { id: '3', text: 'actually blocked', status: 'blocked', blockedBy: ['1'] }
+      {
+        id: '3',
+        text: 'actually blocked',
+        status: 'blocked',
+        blockedBy: ['1'],
+      },
     ];
 
     expect(getActionableTodos(todos)).toEqual([
-      { id: '1', text: 'todo task', status: 'todo' }
+      { id: '1', text: 'todo task', status: 'todo' },
     ]);
   });
 });
@@ -1234,7 +1361,7 @@ describe('getActionableCount', () => {
       { id: '2', text: 'task2', status: 'inprogress' },
       { id: '3', text: 'task3', status: 'done' },
       { id: '4', text: 'task4', status: 'todo' },
-      { id: '5', text: 'task5', status: 'cancelled' }
+      { id: '5', text: 'task5', status: 'cancelled' },
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 3, total: 5 });
@@ -1243,7 +1370,7 @@ describe('getActionableCount', () => {
   it('returns matching actionable and total counts when all tasks are ready', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'inprogress' }
+      { id: '2', text: 'task2', status: 'inprogress' },
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 2, total: 2 });
@@ -1253,7 +1380,7 @@ describe('getActionableCount', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'done' },
       { id: '2', text: 'task2', status: 'cancelled' },
-      { id: '3', text: 'task3', status: 'blocked', blockedBy: ['1'] }
+      { id: '3', text: 'task3', status: 'blocked', blockedBy: ['1'] },
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 0, total: 3 });
@@ -1263,7 +1390,7 @@ describe('getActionableCount', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
       { id: '2', text: 'task2', status: 'inprogress' },
-      { id: '3', text: 'task3', status: 'blocked', blockedBy: [] }
+      { id: '3', text: 'task3', status: 'blocked', blockedBy: [] },
     ];
 
     expect(getActionableCount(todos)).toEqual({ actionable: 2, total: 3 });
@@ -1279,7 +1406,7 @@ describe('updateTodoText', () => {
   it('updates the text of an existing todo', () => {
     const todos = [
       { id: '1', text: 'Buy milk', status: 'todo' },
-      { id: '2', text: 'Walk dog', status: 'done' }
+      { id: '2', text: 'Walk dog', status: 'done' },
     ];
     const result = updateTodoText(todos, '1', 'Buy oat milk');
     expect(result[0].text).toBe('Buy oat milk');
@@ -1335,7 +1462,9 @@ describe('updateTodoText', () => {
   });
 
   it('does not change blockedBy on a blocked todo', () => {
-    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] }];
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] },
+    ];
     const result = updateTodoText(todos, '1', 'updated task');
     expect(result[0].status).toBe('blocked');
     expect(result[0].blockedBy).toEqual(['2', '3']);
@@ -1345,7 +1474,7 @@ describe('updateTodoText', () => {
     const todos = [
       { id: '1', text: 'first', status: 'todo' },
       { id: '2', text: 'second', status: 'todo' },
-      { id: '3', text: 'third', status: 'todo' }
+      { id: '3', text: 'third', status: 'todo' },
     ];
     const result = updateTodoText(todos, '2', 'edited second');
     expect(result[0].id).toBe('1');
@@ -1357,7 +1486,7 @@ describe('updateTodoText', () => {
   it('leaves other todos unchanged', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' }
+      { id: '2', text: 'task2', status: 'done' },
     ];
     const result = updateTodoText(todos, '1', 'updated');
     expect(result[1]).toEqual(todos[1]);
@@ -1418,7 +1547,7 @@ describe('takeBurndownSample', () => {
       { id: '4', text: 'todo one', status: 'todo' },
       { id: '5', text: 'working task', status: 'inprogress' },
       { id: '6', text: 'todo two', status: 'todo' },
-      { id: '7', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '7', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
     ];
 
     expect(model.takeBurndownSample(todos)).toEqual({
@@ -1426,7 +1555,7 @@ describe('takeBurndownSample', () => {
       done: 2,
       cancelled: 1,
       todo: 3,
-      total: 7
+      total: 7,
     });
   });
 
@@ -1434,7 +1563,7 @@ describe('takeBurndownSample', () => {
     const todos = [
       { id: '1', text: 'task one', status: 'todo' },
       { id: '2', text: 'task two', status: 'todo' },
-      { id: '3', text: 'task three', status: 'todo' }
+      { id: '3', text: 'task three', status: 'todo' },
     ];
 
     expect(model.takeBurndownSample(todos)).toEqual({
@@ -1442,7 +1571,7 @@ describe('takeBurndownSample', () => {
       done: 0,
       cancelled: 0,
       todo: 3,
-      total: 3
+      total: 3,
     });
   });
 
@@ -1450,7 +1579,7 @@ describe('takeBurndownSample', () => {
     const todos = [
       { id: '1', text: 'task one', status: 'done' },
       { id: '2', text: 'task two', status: 'done' },
-      { id: '3', text: 'task three', status: 'done' }
+      { id: '3', text: 'task three', status: 'done' },
     ];
 
     expect(model.takeBurndownSample(todos)).toEqual({
@@ -1458,7 +1587,7 @@ describe('takeBurndownSample', () => {
       done: 3,
       cancelled: 0,
       todo: 0,
-      total: 3
+      total: 3,
     });
   });
 
@@ -1468,7 +1597,7 @@ describe('takeBurndownSample', () => {
       done: 0,
       cancelled: 0,
       todo: 0,
-      total: 0
+      total: 0,
     });
   });
 
@@ -1497,7 +1626,7 @@ describe('shouldSampleToday', () => {
 
   it('returns false when today already has a sample', () => {
     const data = [
-      { date: formatDate(stableNow), done: 2, cancelled: 1, todo: 3, total: 6 }
+      { date: formatDate(stableNow), done: 2, cancelled: 1, todo: 3, total: 6 },
     ];
 
     expect(model.shouldSampleToday(data)).toBe(false);
@@ -1505,7 +1634,13 @@ describe('shouldSampleToday', () => {
 
   it('returns true when only yesterday has a sample', () => {
     const data = [
-      { date: formatDate(shiftDays(stableNow, -1)), done: 2, cancelled: 1, todo: 3, total: 6 }
+      {
+        date: formatDate(shiftDays(stableNow, -1)),
+        done: 2,
+        cancelled: 1,
+        todo: 3,
+        total: 6,
+      },
     ];
 
     expect(model.shouldSampleToday(data)).toBe(true);
@@ -1513,9 +1648,27 @@ describe('shouldSampleToday', () => {
 
   it('returns true when multiple samples exist but none are from today', () => {
     const data = [
-      { date: formatDate(shiftDays(stableNow, -2)), done: 1, cancelled: 0, todo: 4, total: 5 },
-      { date: formatDate(shiftDays(stableNow, -7)), done: 3, cancelled: 1, todo: 2, total: 6 },
-      { date: formatDate(shiftDays(stableNow, -30)), done: 4, cancelled: 1, todo: 1, total: 6 }
+      {
+        date: formatDate(shiftDays(stableNow, -2)),
+        done: 1,
+        cancelled: 0,
+        todo: 4,
+        total: 5,
+      },
+      {
+        date: formatDate(shiftDays(stableNow, -7)),
+        done: 3,
+        cancelled: 1,
+        todo: 2,
+        total: 6,
+      },
+      {
+        date: formatDate(shiftDays(stableNow, -30)),
+        done: 4,
+        cancelled: 1,
+        todo: 1,
+        total: 6,
+      },
     ];
 
     expect(model.shouldSampleToday(data)).toBe(true);
@@ -1531,7 +1684,7 @@ describe('pruneBurndownData', () => {
     cancelled: 0,
     todo: 2,
     total: 3,
-    ...overrides
+    ...overrides,
   });
 
   beforeEach(() => {

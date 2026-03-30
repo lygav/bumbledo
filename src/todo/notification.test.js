@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   NOTIFICATION_AUTO_DISMISS_MS,
   UNBLOCKED_HIGHLIGHT_MS,
-  createNotificationController
+  createNotificationController,
 } from './notification.js';
 
 describe('createNotificationController', () => {
@@ -37,13 +37,15 @@ describe('createNotificationController', () => {
 
     controller.showUnblocked([
       { id: 'b', name: 'Second follow-up' },
-      { id: 'c', name: 'Third follow-up' }
+      { id: 'c', name: 'Third follow-up' },
     ]);
 
     expect(controller.getState()).toMatchObject({
       visible: true,
-      message: "You've unblocked 2 tasks: Second follow-up, Third follow-up. Scroll down to find them.",
-      detail: "Alert: You've unblocked 2 tasks. Second follow-up, Third follow-up."
+      message:
+        "You've unblocked 2 tasks: Second follow-up, Third follow-up. Scroll down to find them.",
+      detail:
+        "Alert: You've unblocked 2 tasks. Second follow-up, Third follow-up.",
     });
 
     vi.advanceTimersByTime(1000);
@@ -61,11 +63,15 @@ describe('createNotificationController', () => {
 
     controller.showUnblocked([
       { id: 'a', name: 'First follow-up' },
-      { id: 'b', name: 'Second follow-up' }
+      { id: 'b', name: 'Second follow-up' },
     ]);
 
-    expect(controller.getHighlightRemainingMs('a')).toBe(UNBLOCKED_HIGHLIGHT_MS);
-    expect(controller.getHighlightRemainingMs('b')).toBe(UNBLOCKED_HIGHLIGHT_MS);
+    expect(controller.getHighlightRemainingMs('a')).toBe(
+      UNBLOCKED_HIGHLIGHT_MS,
+    );
+    expect(controller.getHighlightRemainingMs('b')).toBe(
+      UNBLOCKED_HIGHLIGHT_MS,
+    );
 
     controller.dismiss({ clearHighlights: true });
 
@@ -73,7 +79,7 @@ describe('createNotificationController', () => {
       visible: false,
       message: '',
       detail: '',
-      highlightExpiresAt: {}
+      highlightExpiresAt: {},
     });
     expect(controller.getHighlightRemainingMs('a')).toBeNull();
     expect(controller.getHighlightRemainingMs('b')).toBeNull();

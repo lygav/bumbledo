@@ -10,6 +10,13 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Tooling Guardrails for Post-refactor Stability
+
+**What I learned:**
+- This codebase is now mature enough for lightweight guardrails: ESLint flat config plus Prettier gives consistency without pulling in framework-specific or style-heavy tooling.
+- Scoping formatter targets matters. A broad `prettier .` sweep reached operational files outside the app surface, so the durable choice is to format the app, root config/docs, and CI workflow explicitly while excluding `.squad/`, `.worktrees/`, and `.copilot/`.
+- Fresh refactors can still hide useful lint signals. The only code fixes required were true-unused state locals in `src/main.js` and repeated blocked-field stripping in `src/todo/model.js`, which is exactly the kind of low-noise feedback this level of tooling should provide.
+
 ### 2026-03-29: PR #11 Smart Blocked Alerts Review
 
 **Verdict:** Reject pending integration coverage fix.

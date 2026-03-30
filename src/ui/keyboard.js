@@ -3,7 +3,9 @@ function isMacPlatform(navigatorLike = globalThis.navigator) {
     return false;
   }
 
-  return /Mac|iPhone|iPad|iPod/i.test(navigatorLike.platform || navigatorLike.userAgent || '');
+  return /Mac|iPhone|iPad|iPod/i.test(
+    navigatorLike.platform || navigatorLike.userAgent || '',
+  );
 }
 
 function isEditableTarget(target) {
@@ -12,8 +14,8 @@ function isEditableTarget(target) {
   }
 
   return Boolean(
-    target.closest('input, textarea, select, [contenteditable="true"]')
-      || target.isContentEditable
+    target.closest('input, textarea, select, [contenteditable="true"]') ||
+    target.isContentEditable,
   );
 }
 
@@ -62,7 +64,9 @@ export function createKeyboardController({ document, getState, actions }) {
       return;
     }
 
-    const modifierPressed = prefersMacKeys ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+    const modifierPressed = prefersMacKeys
+      ? event.metaKey && !event.ctrlKey
+      : event.ctrlKey && !event.metaKey;
 
     if (modifierPressed && event.shiftKey && event.key.toLowerCase() === 'a') {
       event.preventDefault();
@@ -84,7 +88,10 @@ export function createKeyboardController({ document, getState, actions }) {
       return;
     }
 
-    if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && state.canNavigate) {
+    if (
+      (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
+      state.canNavigate
+    ) {
       event.preventDefault();
       actions.moveSelection(event.key === 'ArrowDown' ? 1 : -1);
       return;
@@ -117,6 +124,6 @@ export function createKeyboardController({ document, getState, actions }) {
       return prefersMacKeys
         ? '<kbd>Cmd</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>A</kbd>'
         : '<kbd>Ctrl</kbd> <span>+</span> <kbd>Shift</kbd> <span>+</span> <kbd>A</kbd>';
-    }
+    },
   };
 }

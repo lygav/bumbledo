@@ -1,0 +1,5 @@
+.squad/
+.worktrees/
+.copilot/
+dist/
+node_modules/

@@ -6,7 +6,7 @@ import {
   selectHasFinishedTodos,
   selectProgress,
   selectShowReadyEmptyState,
-  selectVisibleTodos
+  selectVisibleTodos,
 } from './app/selectors.js';
 import { createBurndownView } from './burndown/view.js';
 import { createDagView } from './dag/view.js';
@@ -21,14 +21,23 @@ import { createKeyboardController } from './ui/keyboard.js';
 import { createModals } from './ui/modals.js';
 import {
   buildStatusMetricItems,
-  renderStatusMetricLine
+  renderStatusMetricLine,
 } from './ui/status-metrics.js';
 import { createTodoListView } from './todo/list-view.js';
 import { createNotificationController } from './todo/notification.js';
 import { createTodoReorderController } from './todo/reorder.js';
 import { reorderTodos, wouldCreateCycle } from './todo/model.js';
 
-const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
+const CONFETTI_COLORS = [
+  '#4a90d9',
+  '#2f8f63',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#14b8a6',
+  '#f97316',
+  '#ec4899',
+];
 const CONFETTI_COUNT = 52;
 const CONFETTI_MIN_DURATION_MS = 2000;
 const CONFETTI_MAX_DURATION_MS = 3000;
@@ -53,22 +62,38 @@ if (typeof document !== 'undefined') {
     const todoInput = document.getElementById('todo-input');
     const addForm = document.getElementById('add-form');
     const shortcutsTip = document.getElementById('shortcuts-tip');
-    const shortcutsTipDismiss = document.getElementById('shortcuts-tip-dismiss');
-    const unblockedNotification = document.getElementById('unblocked-notification');
-    const unblockedNotificationMessage = document.getElementById('unblocked-notification-message');
-    const unblockedNotificationDetail = document.getElementById('unblocked-notification-detail');
-    const unblockedNotificationDismiss = document.getElementById('unblocked-notification-dismiss');
+    const shortcutsTipDismiss = document.getElementById(
+      'shortcuts-tip-dismiss',
+    );
+    const unblockedNotification = document.getElementById(
+      'unblocked-notification',
+    );
+    const unblockedNotificationMessage = document.getElementById(
+      'unblocked-notification-message',
+    );
+    const unblockedNotificationDetail = document.getElementById(
+      'unblocked-notification-detail',
+    );
+    const unblockedNotificationDismiss = document.getElementById(
+      'unblocked-notification-dismiss',
+    );
     const readyFilterToggle = document.getElementById('ready-filter-toggle');
     const readySummary = document.getElementById('ready-summary');
-    const taskProgressSummary = document.getElementById('task-progress-summary');
+    const taskProgressSummary = document.getElementById(
+      'task-progress-summary',
+    );
     const taskProgressBar = document.querySelector('.task-progress-bar');
     const emptyState = document.getElementById('empty-state');
     const reorderTip = document.getElementById('reorder-tip');
     const reorderTipDismiss = document.getElementById('reorder-tip-dismiss');
     const burndownToggle = document.getElementById('burndown-toggle');
-    const burndownCollapsedSummary = document.getElementById('burndown-collapsed-summary');
+    const burndownCollapsedSummary = document.getElementById(
+      'burndown-collapsed-summary',
+    );
     const burndownPanel = document.getElementById('burndown-panel');
-    const burndownSummaryHeadline = document.getElementById('burndown-summary-headline');
+    const burndownSummaryHeadline = document.getElementById(
+      'burndown-summary-headline',
+    );
     const burndownEmptyState = document.getElementById('burndown-empty-state');
     const burndownChart = document.getElementById('burndown-chart');
     const burndownChartSvg = document.getElementById('burndown-chart-svg');
@@ -83,35 +108,36 @@ if (typeof document !== 'undefined') {
     const shortcutsHelpModal = document.getElementById('shortcuts-help-modal');
     const shortcutsHelpClose = document.getElementById('shortcuts-help-close');
     const focusInputShortcut = document.getElementById('focus-input-shortcut');
-    const blockedCompletionModal = document.getElementById('blocked-completion-modal');
-    const blockedCompletionMessage = document.getElementById('blocked-completion-message');
-    const blockedCompletionDismiss = document.getElementById('blocked-completion-dismiss');
+    const blockedCompletionModal = document.getElementById(
+      'blocked-completion-modal',
+    );
+    const blockedCompletionMessage = document.getElementById(
+      'blocked-completion-message',
+    );
+    const blockedCompletionDismiss = document.getElementById(
+      'blocked-completion-dismiss',
+    );
 
     const store = createAppStore({ isMobileViewport: isMobileViewport() });
     let todos = [];
-    let burndownData = [];
     let selectedTaskId = null;
     let filterActive = false;
-    let burndownExpanded = false;
     let dagExpanded = false;
     let editingId = null;
     let shortcutsTipDismissed = false;
     let reorderTipDismissed = false;
-    let shortcutsTipShownThisSession = false;
-    let reorderTipShownThisSession = false;
 
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouchDevice =
+      'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const syncStoreState = (nextState) => {
       ({
         todos,
-        burndownData,
         selectedTaskId,
         filterActive,
-        burndownExpanded,
         dagExpanded,
         editingId,
         shortcutsTipDismissed,
-        reorderTipDismissed
+        reorderTipDismissed,
       } = nextState);
     };
     syncStoreState(store.getState());
@@ -122,15 +148,17 @@ if (typeof document !== 'undefined') {
       helpCloseButton: shortcutsHelpClose,
       blockedCompletionModal,
       blockedCompletionMessage,
-      blockedCompletionDismissButton: blockedCompletionDismiss
+      blockedCompletionDismissButton: blockedCompletionDismiss,
     });
 
     let notificationController;
     const listView = createTodoListView({
       container: todoList,
-      getHighlightRemainingMs: (id) => notificationController.getHighlightRemainingMs(id),
+      getHighlightRemainingMs: (id) =>
+        notificationController.getHighlightRemainingMs(id),
       canEditTodoStatus,
-      wouldCreateCycle: (allTodos, todoId, blockerId) => wouldCreateCycle(allTodos, todoId, blockerId),
+      wouldCreateCycle: (allTodos, todoId, blockerId) =>
+        wouldCreateCycle(allTodos, todoId, blockerId),
       onSelectTask: (id) => {
         store.selectTask({ id });
       },
@@ -157,7 +185,7 @@ if (typeof document !== 'undefined') {
       },
       onClearHighlight: (id) => {
         notificationController.clearHighlight(id);
-      }
+      },
     });
 
     let burndownView;
@@ -173,7 +201,7 @@ if (typeof document !== 'undefined') {
       isMobileViewport,
       onToggle: () => {
         store.toggleBurndownExpanded();
-      }
+      },
     });
 
     const dagView = createDagView({
@@ -183,14 +211,14 @@ if (typeof document !== 'undefined') {
         if (store.getState().selectedTaskId === id) {
           listView.scrollTaskIntoView(id, { flash: true });
         }
-      }
+      },
     });
 
     notificationController = createNotificationController({
       onStateChange: () => {
         applyNotificationState();
         listView.syncUnblockedHighlights();
-      }
+      },
     });
 
     const keyboardController = createKeyboardController({
@@ -200,7 +228,10 @@ if (typeof document !== 'undefined') {
         helpModalOpen: modals.isHelpOpen(),
         editing: editingId !== null,
         selectedTaskId,
-        canNavigate: selectedTaskId !== null || document.activeElement === todoList || todoList.contains(document.activeElement)
+        canNavigate:
+          selectedTaskId !== null ||
+          document.activeElement === todoList ||
+          todoList.contains(document.activeElement),
       }),
       actions: {
         cancelEdit: () => {
@@ -236,12 +267,13 @@ if (typeof document !== 'undefined') {
         toggleSelectedTodoStatus: () => {
           store.toggleSelectedTaskStatus();
         },
-        trapBlockedModalFocus: (event) => modals.trapBlockedFocus(event)
-      }
+        trapBlockedModalFocus: (event) => modals.trapBlockedFocus(event),
+      },
     });
 
     if (focusInputShortcut) {
-      focusInputShortcut.innerHTML = keyboardController.getFocusInputShortcutMarkup();
+      focusInputShortcut.innerHTML =
+        keyboardController.getFocusInputShortcutMarkup();
     }
 
     keyboardController.attach();
@@ -258,7 +290,7 @@ if (typeof document !== 'undefined') {
       },
       onDismissReorderTip: () => {
         dismissReorderTip();
-      }
+      },
     });
     reorderController.attach();
 
@@ -287,39 +319,38 @@ if (typeof document !== 'undefined') {
 
     function syncDiscoverabilityTips() {
       if (shortcutsTip) {
-        const shouldShowShortcutsTip = !shortcutsTipDismissed && todos.length >= 3;
+        const shouldShowShortcutsTip =
+          !shortcutsTipDismissed && todos.length >= 3;
         shortcutsTip.hidden = !shouldShowShortcutsTip;
-        if (shouldShowShortcutsTip) {
-          shortcutsTipShownThisSession = true;
-        }
       }
 
       if (reorderTip) {
-        const shouldShowReorderTip = !reorderTipDismissed
-          && isTouchDevice
-          && isMobileViewport()
-          && todos.length > 0;
+        const shouldShowReorderTip =
+          !reorderTipDismissed &&
+          isTouchDevice &&
+          isMobileViewport() &&
+          todos.length > 0;
         reorderTip.hidden = !shouldShowReorderTip;
-        if (shouldShowReorderTip) {
-          reorderTipShownThisSession = true;
-        }
       }
     }
 
     function getBlockedCompletionMessage(activeBlockerCount) {
-      const dependencyLabel = activeBlockerCount === 1 ? 'dependency' : 'dependencies';
+      const dependencyLabel =
+        activeBlockerCount === 1 ? 'dependency' : 'dependencies';
       return `Can't complete — this task has ${activeBlockerCount} ${dependencyLabel} remaining.`;
     }
 
-    function showBlockedCompletionNotification(activeBlockerCount, returnFocusEl = null) {
+    function showBlockedCompletionNotification(
+      activeBlockerCount,
+      returnFocusEl = null,
+    ) {
       if (activeBlockerCount === 0) {
         return;
       }
 
-      modals.openBlocked(
-        getBlockedCompletionMessage(activeBlockerCount),
-        { returnFocusEl }
-      );
+      modals.openBlocked(getBlockedCompletionMessage(activeBlockerCount), {
+        returnFocusEl,
+      });
     }
 
     function surfaceUnblockedTodos(unblockedIds) {
@@ -329,8 +360,11 @@ if (typeof document !== 'undefined') {
 
       notificationController.showUnblocked(
         unblockedIds
-          .map(id => ({ id, name: todos.find(todo => todo.id === id)?.text }))
-          .filter(item => item.name)
+          .map((id) => ({
+            id,
+            name: todos.find((todo) => todo.id === id)?.text,
+          }))
+          .filter((item) => item.name),
       );
     }
 
@@ -340,28 +374,48 @@ if (typeof document !== 'undefined') {
       readyFilterToggle.classList.toggle('is-active', filterActive);
       readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
       readySummary.textContent = `${progress.actionable} of ${progress.total} tasks are ready (${ACTIONABLE_TODO_STATUS_SUMMARY_LABEL})`;
-      renderStatusMetricLine(taskProgressSummary, buildStatusMetricItems(progress));
-      taskProgressBar.setAttribute('aria-valuenow', String(progress.completionPercentRounded));
+      renderStatusMetricLine(
+        taskProgressSummary,
+        buildStatusMetricItems(progress),
+      );
+      taskProgressBar.setAttribute(
+        'aria-valuenow',
+        String(progress.completionPercentRounded),
+      );
       taskProgressBar.setAttribute(
         'aria-valuetext',
-        `${progress.done} done, ${progress.blocked} blocked, ${progress.todo} in ${TODO_STATUS_META[TODO_STATUS.TODO].label}, ${progress.inProgress} in ${TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].label} out of ${progress.total} total`
+        `${progress.done} done, ${progress.blocked} blocked, ${progress.todo} in ${TODO_STATUS_META[TODO_STATUS.TODO].label}, ${progress.inProgress} in ${TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].label} out of ${progress.total} total`,
       );
-      taskProgressBar.style.setProperty('--task-progress-done', `${progress.completionPercent.toFixed(2)}%`);
-      taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
+      taskProgressBar.style.setProperty(
+        '--task-progress-done',
+        `${progress.completionPercent.toFixed(2)}%`,
+      );
+      taskProgressBar.style.setProperty(
+        '--task-progress-blocked',
+        `${progress.blockedPercent.toFixed(2)}%`,
+      );
       emptyState.hidden = progress.total > 0 ? !showReadyEmptyState : false;
-      emptyState.textContent = progress.total === 0
-        ? 'Your hive is empty — add a task to get buzzing 🐝'
-        : 'All caught up! Nothing ready to work on right now. 🍯';
+      emptyState.textContent =
+        progress.total === 0
+          ? 'Your hive is empty — add a task to get buzzing 🐝'
+          : 'All caught up! Nothing ready to work on right now. 🍯';
     }
 
     function syncDagState() {
-      const { hasDependencies: dependencyState, stats, expanded } = selectDagViewModel(store.getState());
+      const {
+        hasDependencies: dependencyState,
+        stats,
+        expanded,
+      } = selectDagViewModel(store.getState());
       dagExpanded = expanded;
 
       dagSection.classList.toggle('is-empty', !dependencyState);
       dagToggle.disabled = !dependencyState;
       dagToggle.textContent = dagExpanded ? 'Hide' : 'Show graph';
-      dagToggle.setAttribute('aria-expanded', String(dependencyState && dagExpanded));
+      dagToggle.setAttribute(
+        'aria-expanded',
+        String(dependencyState && dagExpanded),
+      );
       dagContainer.hidden = !dependencyState || !dagExpanded;
       dagSummary.textContent = `${stats.nodeCount} tasks · ${stats.edgeCount} dependencies`;
       dagSummary.hidden = dagExpanded || !dependencyState;
@@ -378,7 +432,10 @@ if (typeof document !== 'undefined') {
       const storeState = store.getState();
       const progress = selectProgress(storeState);
       const visibleTodos = selectVisibleTodos(storeState);
-      const showReadyEmptyState = selectShowReadyEmptyState(storeState, progress);
+      const showReadyEmptyState = selectShowReadyEmptyState(
+        storeState,
+        progress,
+      );
 
       renderTaskSummary(progress, showReadyEmptyState);
       syncDiscoverabilityTips();
@@ -386,7 +443,7 @@ if (typeof document !== 'undefined') {
         todos,
         visibleTodos,
         selectedTaskId,
-        editingId
+        editingId,
       });
       burndownView.update(selectBurndownViewModel(storeState));
       syncDagState();
@@ -415,7 +472,10 @@ if (typeof document !== 'undefined') {
       }
 
       burst.addEventListener('animationend', (event) => {
-        if (!(event.target instanceof HTMLElement) || !event.target.classList.contains('confetti-piece')) {
+        if (
+          !(event.target instanceof HTMLElement) ||
+          !event.target.classList.contains('confetti-piece')
+        ) {
           return;
         }
 
@@ -442,10 +502,17 @@ if (typeof document !== 'undefined') {
         const startRotation = Math.round((Math.random() - 0.5) * 90);
         const midRotation = Math.round(startRotation + baseRotation * 0.45);
         const midRotationTwo = Math.round(startRotation + baseRotation * 0.8);
-        const endRotation = Math.round(startRotation + baseRotation * (1.2 + Math.random() * 0.5));
-        const durationMs = Math.round(CONFETTI_MIN_DURATION_MS + Math.random() * (CONFETTI_MAX_DURATION_MS - CONFETTI_MIN_DURATION_MS));
+        const endRotation = Math.round(
+          startRotation + baseRotation * (1.2 + Math.random() * 0.5),
+        );
+        const durationMs = Math.round(
+          CONFETTI_MIN_DURATION_MS +
+            Math.random() *
+              (CONFETTI_MAX_DURATION_MS - CONFETTI_MIN_DURATION_MS),
+        );
         const delayMs = Math.round(Math.random() * 220);
-        const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+        const color =
+          CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
         const scale = (0.85 + Math.random() * 0.45).toFixed(2);
         const entryOffset = Math.round(18 + Math.random() * 36);
 
@@ -464,9 +531,15 @@ if (typeof document !== 'undefined') {
         piece.style.setProperty('--confetti-sway-y-two', `${swayYTwo}px`);
         piece.style.setProperty('--confetti-end-x', `${endX}px`);
         piece.style.setProperty('--confetti-end-y', `${endY}px`);
-        piece.style.setProperty('--confetti-start-rotate', `${startRotation}deg`);
+        piece.style.setProperty(
+          '--confetti-start-rotate',
+          `${startRotation}deg`,
+        );
         piece.style.setProperty('--confetti-mid-rotate', `${midRotation}deg`);
-        piece.style.setProperty('--confetti-mid-rotate-two', `${midRotationTwo}deg`);
+        piece.style.setProperty(
+          '--confetti-mid-rotate-two',
+          `${midRotationTwo}deg`,
+        );
         piece.style.setProperty('--confetti-end-rotate', `${endRotation}deg`);
         piece.style.setProperty('--confetti-duration', `${durationMs}ms`);
         piece.style.animationDelay = `${delayMs}ms`;
@@ -474,7 +547,10 @@ if (typeof document !== 'undefined') {
       }
 
       document.body.appendChild(burst);
-      cleanupTimeoutId = window.setTimeout(cleanupConfetti, longestAnimationMs + 120);
+      cleanupTimeoutId = window.setTimeout(
+        cleanupConfetti,
+        longestAnimationMs + 120,
+      );
     }
 
     addForm.addEventListener('submit', (event) => {
@@ -517,15 +593,19 @@ if (typeof document !== 'undefined') {
       dismissReorderTip();
     });
 
-    window.addEventListener('beforeunload', () => {
-      dismissUnblockedNotification({ clearHighlights: true });
-      keyboardController.detach();
-      reorderController.detach();
-      burndownView.destroy();
-      modals.destroy();
-      listView.destroy();
-      dagView.destroy();
-    }, { once: true });
+    window.addEventListener(
+      'beforeunload',
+      () => {
+        dismissUnblockedNotification({ clearHighlights: true });
+        keyboardController.detach();
+        reorderController.detach();
+        burndownView.destroy();
+        modals.destroy();
+        listView.destroy();
+        dagView.destroy();
+      },
+      { once: true },
+    );
 
     store.subscribe((event) => {
       if (!event.changed && !event.meta.blockedCompletionAttempt) {
@@ -543,7 +623,10 @@ if (typeof document !== 'undefined') {
       }
 
       if (event.meta.blockedCompletionAttempt) {
-        showBlockedCompletionNotification(event.meta.activeBlockerCount, event.meta.returnFocusEl);
+        showBlockedCompletionNotification(
+          event.meta.activeBlockerCount,
+          event.meta.returnFocusEl,
+        );
       }
 
       if (event.meta.completedTaskId) {

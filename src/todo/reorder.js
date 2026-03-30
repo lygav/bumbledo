@@ -6,7 +6,7 @@ export function createTodoReorderController({
   isReorderableTodo,
   reorderTodos,
   onReorder,
-  onDismissReorderTip = () => {}
+  onDismissReorderTip = () => {},
 }) {
   let draggedId = null;
   let draggedElement = null;
@@ -20,7 +20,12 @@ export function createTodoReorderController({
     const todos = getTodos();
     if (isFiltered()) {
       const visibleTodos = getVisibleTodos();
-      const reorderedVisible = reorderTodos(visibleTodos, activeDraggedId, targetId, insertAfter);
+      const reorderedVisible = reorderTodos(
+        visibleTodos,
+        activeDraggedId,
+        targetId,
+        insertAfter,
+      );
       if (reorderedVisible === visibleTodos) {
         return todos;
       }
@@ -41,9 +46,11 @@ export function createTodoReorderController({
   }
 
   function clearDragIndicators() {
-    listEl.querySelectorAll('.drag-over-above, .drag-over-below').forEach((element) => {
-      element.classList.remove('drag-over-above', 'drag-over-below');
-    });
+    listEl
+      .querySelectorAll('.drag-over-above, .drag-over-below')
+      .forEach((element) => {
+        element.classList.remove('drag-over-above', 'drag-over-below');
+      });
   }
 
   function resetDraggedElementStyles() {
@@ -99,7 +106,11 @@ export function createTodoReorderController({
       return false;
     }
 
-    const nextTodos = reorderVisibleTodos(activeDraggedId, targetId, insertAfter);
+    const nextTodos = reorderVisibleTodos(
+      activeDraggedId,
+      targetId,
+      insertAfter,
+    );
     if (nextTodos === getTodos()) {
       return false;
     }
@@ -138,7 +149,7 @@ export function createTodoReorderController({
   }
 
   function findTouchById(touchList, touchId) {
-    return [...touchList].find(touch => touch.identifier === touchId) ?? null;
+    return [...touchList].find((touch) => touch.identifier === touchId) ?? null;
   }
 
   function updateTouchDragPosition(clientX, clientY) {
@@ -146,8 +157,14 @@ export function createTodoReorderController({
       return;
     }
 
-    draggedElement.style.setProperty('--touch-drag-x', `${clientX - touchDragState.startX}px`);
-    draggedElement.style.setProperty('--touch-drag-y', `${clientY - touchDragState.startY}px`);
+    draggedElement.style.setProperty(
+      '--touch-drag-x',
+      `${clientX - touchDragState.startX}px`,
+    );
+    draggedElement.style.setProperty(
+      '--touch-drag-y',
+      `${clientY - touchDragState.startY}px`,
+    );
   }
 
   function beginTouchDrag() {
@@ -168,7 +185,10 @@ export function createTodoReorderController({
       return;
     }
 
-    const handle = event.target instanceof Element ? event.target.closest('.drag-handle') : null;
+    const handle =
+      event.target instanceof Element
+        ? event.target.closest('.drag-handle')
+        : null;
     if (!(handle instanceof HTMLElement)) {
       return;
     }
@@ -194,12 +214,15 @@ export function createTodoReorderController({
       timerId: window.setTimeout(() => {
         beginTouchDrag();
       }, TOUCH_DRAG_HOLD_MS),
-      touchId: touch.identifier
+      touchId: touch.identifier,
     };
   }
 
   function handleDragStart(event) {
-    const item = event.target instanceof Element ? event.target.closest('li[data-id]') : null;
+    const item =
+      event.target instanceof Element
+        ? event.target.closest('li[data-id]')
+        : null;
     if (!(item instanceof HTMLElement)) {
       return;
     }
@@ -217,12 +240,18 @@ export function createTodoReorderController({
       event.dataTransfer.dropEffect = 'move';
     }
 
-    const item = event.target instanceof Element ? event.target.closest('li[data-id]') : null;
+    const item =
+      event.target instanceof Element
+        ? event.target.closest('li[data-id]')
+        : null;
     getDragTarget(item, event.clientY);
   }
 
   function handleDragLeave(event) {
-    const item = event.target instanceof Element ? event.target.closest('li[data-id]') : null;
+    const item =
+      event.target instanceof Element
+        ? event.target.closest('li[data-id]')
+        : null;
     if (item && !item.contains(event.relatedTarget)) {
       item.classList.remove('drag-over-above', 'drag-over-below');
     }
@@ -230,7 +259,10 @@ export function createTodoReorderController({
 
   function handleDrop(event) {
     event.preventDefault();
-    const targetItem = event.target instanceof Element ? event.target.closest('li[data-id]') : null;
+    const targetItem =
+      event.target instanceof Element
+        ? event.target.closest('li[data-id]')
+        : null;
     if (!(targetItem instanceof HTMLElement) || !draggedId) {
       return;
     }
@@ -280,7 +312,7 @@ export function createTodoReorderController({
     if (!touchDragState.active) {
       const travelDistance = Math.hypot(
         touch.clientX - touchDragState.startX,
-        touch.clientY - touchDragState.startY
+        touch.clientY - touchDragState.startY,
       );
 
       if (travelDistance > TOUCH_DRAG_CANCEL_DISTANCE) {
@@ -309,9 +341,13 @@ export function createTodoReorderController({
     }
 
     const activeState = touchDragState.active;
-    const dragTarget = activeState ? getDragTargetFromPoint(touch.clientX, touch.clientY) : null;
+    const dragTarget = activeState
+      ? getDragTargetFromPoint(touch.clientX, touch.clientY)
+      : null;
 
-    const { wasActive, activeDraggedId } = resetTouchDragState({ suppressClick: true });
+    const { wasActive, activeDraggedId } = resetTouchDragState({
+      suppressClick: true,
+    });
     if (!activeState) {
       return;
     }
@@ -321,7 +357,11 @@ export function createTodoReorderController({
       return;
     }
 
-    const reordered = commitReorder(activeDraggedId, dragTarget.targetId, dragTarget.insertAfter);
+    const reordered = commitReorder(
+      activeDraggedId,
+      dragTarget.targetId,
+      dragTarget.insertAfter,
+    );
     if (reordered) {
       onDismissReorderTip();
     }
@@ -343,8 +383,12 @@ export function createTodoReorderController({
       listEl.addEventListener('drop', handleDrop);
       listEl.addEventListener('dragend', handleDragEnd);
       listEl.addEventListener('click', handleClickCapture, true);
-      listEl.addEventListener('touchstart', handleTouchStart, { passive: true });
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      listEl.addEventListener('touchstart', handleTouchStart, {
+        passive: true,
+      });
+      document.addEventListener('touchmove', handleTouchMove, {
+        passive: false,
+      });
       document.addEventListener('touchend', handleTouchEnd, { passive: false });
       document.addEventListener('touchcancel', handleTouchCancel);
     },
@@ -367,6 +411,6 @@ export function createTodoReorderController({
       if (draggedId === null) {
         document.body.classList.remove('is-dragging');
       }
-    }
+    },
   };
 }

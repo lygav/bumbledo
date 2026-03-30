@@ -6,7 +6,7 @@ import {
   selectProgress,
   selectShowReadyEmptyState,
   selectToggleStatusTarget,
-  selectVisibleTodos
+  selectVisibleTodos,
 } from './selectors.js';
 
 function createState(overrides = {}) {
@@ -20,7 +20,7 @@ function createState(overrides = {}) {
     dagToggleTouched: false,
     editingId: null,
     isMobileViewport: false,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -31,8 +31,13 @@ describe('selectors', () => {
         { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
         { id: 'b', text: 'Doing', status: TODO_STATUS.IN_PROGRESS },
         { id: 'c', text: 'Done', status: TODO_STATUS.DONE },
-        { id: 'd', text: 'Blocked', status: TODO_STATUS.BLOCKED, blockedBy: ['a'] }
-      ]
+        {
+          id: 'd',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+      ],
     });
 
     expect(selectProgress(state)).toMatchObject({
@@ -42,17 +47,19 @@ describe('selectors', () => {
       actionable: 2,
       blocked: 1,
       done: 1,
-      completionPercentRounded: 25
+      completionPercentRounded: 25,
     });
   });
 
   it('returns actionable todos when ready filter is active', () => {
     const todos = [
       { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
-      { id: 'b', text: 'Done', status: TODO_STATUS.DONE }
+      { id: 'b', text: 'Done', status: TODO_STATUS.DONE },
     ];
 
-    expect(selectVisibleTodos(createState({ todos, filterActive: true }))).toEqual([todos[0]]);
+    expect(
+      selectVisibleTodos(createState({ todos, filterActive: true })),
+    ).toEqual([todos[0]]);
   });
 
   it('flags ready empty state when all work is finished or blocked', () => {
@@ -60,8 +67,13 @@ describe('selectors', () => {
       filterActive: true,
       todos: [
         { id: 'a', text: 'Done', status: TODO_STATUS.DONE },
-        { id: 'b', text: 'Blocked', status: TODO_STATUS.BLOCKED, blockedBy: ['c'] }
-      ]
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['c'],
+        },
+      ],
     });
 
     expect(selectShowReadyEmptyState(state)).toBe(true);
@@ -71,37 +83,60 @@ describe('selectors', () => {
     const state = createState({
       todos: [
         { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
-        { id: 'b', text: 'Blocked', status: TODO_STATUS.BLOCKED, blockedBy: ['a'] }
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
       ],
       dagExpanded: false,
       dagToggleTouched: false,
-      isMobileViewport: false
+      isMobileViewport: false,
     });
 
-    expect(selectDagViewModel(state)).toMatchObject({ hasDependencies: true, expanded: true });
-    expect(selectDagViewModel({ ...state, dagToggleTouched: true, dagExpanded: false })).toMatchObject({ expanded: false });
+    expect(selectDagViewModel(state)).toMatchObject({
+      hasDependencies: true,
+      expanded: true,
+    });
+    expect(
+      selectDagViewModel({
+        ...state,
+        dagToggleTouched: true,
+        dagExpanded: false,
+      }),
+    ).toMatchObject({ expanded: false });
   });
 
   it('surfaces blocked completion attempts for blocked tasks with active blockers', () => {
     const state = createState({
       todos: [
         { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
-        { id: 'b', text: 'Blocked', status: TODO_STATUS.BLOCKED, blockedBy: ['a'] }
-      ]
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+      ],
     });
 
-    expect(selectBlockedStatusChange(state, 'b', TODO_STATUS.DONE)).toMatchObject({
+    expect(
+      selectBlockedStatusChange(state, 'b', TODO_STATUS.DONE),
+    ).toMatchObject({
       blockedCompletionAttempt: true,
-      activeBlockerCount: 1
+      activeBlockerCount: 1,
     });
   });
 
   it('returns selected toggle target details when selection is actionable', () => {
     const state = createState({
       selectedTaskId: 'a',
-      todos: [{ id: 'a', text: 'Todo', status: TODO_STATUS.TODO }]
+      todos: [{ id: 'a', text: 'Todo', status: TODO_STATUS.TODO }],
     });
 
-    expect(selectToggleStatusTarget(state)).toMatchObject({ nextStatus: TODO_STATUS.IN_PROGRESS });
+    expect(selectToggleStatusTarget(state)).toMatchObject({
+      nextStatus: TODO_STATUS.IN_PROGRESS,
+    });
   });
 });
