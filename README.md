@@ -12,9 +12,9 @@ A lightweight, zero-friction browser-based todo app built with vanilla JavaScrip
 
 - **📝 Quick capture, mouse or keyboard** — Add tasks instantly, then fly with shortcuts
 - **🎯 Four-state tracking** — Mark tasks as Active, Done, Cancelled, or Blocked
-- **✅ Actionable focus** — Toggle **Actionable** to show only ready work, with a persisted “N of M tasks are actionable” summary
+- **✅ Ready filter** — Toggle **Ready** to show only ready work, with a persisted “N of M tasks are ready” summary
 - **🔗 Dependency tracking** — Block tasks, pick blockers, and prevent premature completion when dependencies remain
-- **🔔 Smart unblock alerts** — Get a notification when finishing one task unlocks others, plus a brief highlight on newly actionable rows
+- **🔔 Smart unblock alerts** — Get a notification when finishing one task unlocks others, plus a brief highlight on newly ready rows
 - **📈 Burndown progress** — Track completed vs total tasks in a 30-day rolling chart inside the collapsible **Progress** section
 - **📊 Dependency graph** — Visualize task dependencies with status-aware colors in an interactive DAG
 - **🎉 Delightful feedback** — Done tasks get a green success state and a confetti burst
@@ -75,7 +75,7 @@ npm test:watch
 - **Change status fast:** Press **Enter** to cycle a selected task between Active and Done, or use the status dropdown
 - **Delete quickly:** Press **Delete** or **Backspace** on a selected todo
 - **Block tasks:** Mark as Blocked and check which tasks are blocking it
-- **Focus:** Toggle **Actionable** to hide work that isn’t ready yet and keep that preference between visits
+- **Focus:** Toggle **Ready** to hide work that isn’t ready yet and keep that preference between visits
 - **Track momentum:** Open **Progress** to see the burndown chart for the last 30 days
 - **Visualize:** Click "Dependencies" to see task blocking relationships in a graph
 - **Learn shortcuts:** Press **?** for the help modal, and **Escape** to close dialogs or clear selection
@@ -146,7 +146,7 @@ No cross-device sync, no undo, no search, no categories, no cloud backup. These 
 
 - **Rapid entry:** Press Enter repeatedly to add tasks quickly
 - **Shortcut memory:** `?` opens the keyboard cheat sheet anytime
-- **Stay focused:** Leave **Actionable** on to return to only ready work next time
+- **Stay focused:** Leave **Ready** on to return to only ready work next time
 - **Read progress at a glance:** The **Progress** sidebar shows burndown, while smart alerts call out newly unblocked tasks
 - **Offline:** Works with no internet—data lives on your device
 
