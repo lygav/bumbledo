@@ -316,6 +316,42 @@ export function toggleBlocker(todos, todoId, blockerId) {
   });
 }
 
+export function wouldCreateCycle(todos, taskId, blockerId) {
+  if (taskId === blockerId) {
+    return true;
+  }
+
+  const todosById = new Map(todos.map(todo => [todo.id, todo]));
+  const queue = [blockerId];
+  const visited = new Set();
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    if (currentId === taskId) {
+      return true;
+    }
+
+    if (visited.has(currentId)) {
+      continue;
+    }
+
+    visited.add(currentId);
+
+    const currentTodo = todosById.get(currentId);
+    if (!Array.isArray(currentTodo?.blockedBy) || currentTodo.blockedBy.length === 0) {
+      continue;
+    }
+
+    currentTodo.blockedBy.forEach((nextId) => {
+      if (!visited.has(nextId)) {
+        queue.push(nextId);
+      }
+    });
+  }
+
+  return false;
+}
+
 export function cleanupBlockedBy(todos, removedId) {
   return todos.map(t => {
     if (t.status !== 'blocked') return t;
