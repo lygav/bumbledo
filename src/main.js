@@ -117,6 +117,9 @@ if (typeof document !== 'undefined') {
     const blockedCompletionDismiss = document.getElementById(
       'blocked-completion-dismiss',
     );
+    const readyFilterToggleIcon = document.getElementById(
+      'ready-filter-toggle-icon',
+    );
 
     const store = createAppStore({ isMobileViewport: isMobileViewport() });
     let todos = [];
@@ -373,7 +376,10 @@ if (typeof document !== 'undefined') {
       clearFinishedBtn.disabled = !hasFinished;
       readyFilterToggle.classList.toggle('is-active', filterActive);
       readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      readySummary.textContent = `${progress.actionable} of ${progress.total} tasks are ready (${ACTIONABLE_TODO_STATUS_SUMMARY_LABEL})`;
+      readyFilterToggleIcon.textContent = filterActive ? '✓' : '';
+      readySummary.textContent = filterActive
+        ? `${progress.actionable} actionable tasks visible (${ACTIONABLE_TODO_STATUS_SUMMARY_LABEL})`
+        : `Showing all ${progress.total} tasks`;
       renderStatusMetricLine(
         taskProgressSummary,
         buildStatusMetricItems(progress),

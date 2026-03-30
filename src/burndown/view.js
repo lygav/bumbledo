@@ -104,6 +104,26 @@ export function createBurndownView({
   isMobileViewport,
   onToggle = () => {},
 }) {
+  const toggleChevronEl = toggleEl?.querySelector('#burndown-toggle-chevron');
+  const toggleLabelEl = toggleEl?.querySelector('#burndown-toggle-label');
+
+  function syncToggleState(expanded) {
+    if (!toggleEl) {
+      return;
+    }
+
+    toggleEl.setAttribute('aria-expanded', String(expanded));
+    toggleEl.classList.toggle('is-active', expanded);
+
+    if (toggleChevronEl) {
+      toggleChevronEl.textContent = expanded ? '▾' : '▸';
+    }
+
+    if (toggleLabelEl) {
+      toggleLabelEl.textContent = expanded ? 'Hide progress' : 'Show progress';
+    }
+  }
+
   function hideTooltip() {
     tooltipEl.hidden = true;
     tooltipEl.textContent = '';
@@ -317,7 +337,7 @@ export function createBurndownView({
     const trend = getBurndownTrend(burndownData, progress.done);
     const hasEnoughData = series.length >= 3;
 
-    toggleEl.setAttribute('aria-expanded', String(expanded));
+    syncToggleState(expanded);
     renderStatusMetricLine(
       collapsedSummaryEl,
       buildStatusMetricItems(progress, { trend }),
