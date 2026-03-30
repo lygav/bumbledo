@@ -301,8 +301,16 @@ describe('app constants contract', () => {
   });
 
   describe('blocker source statuses', () => {
-    it('allows todo, in-progress, and blocked tasks as blocker candidates', () => {
-      expect(getBlockerSourceStatuses()).toEqual(EXPECTED_BLOCKER_SOURCE_STATUSES);
+    it('includes in-progress tasks in blocker candidates', () => {
+      expect(getBlockerSourceStatuses()).toContain('inprogress');
+    });
+
+    it('excludes done and cancelled tasks from blocker candidates', () => {
+      const blockerStatuses = getBlockerSourceStatuses();
+
+      expect(blockerStatuses).toEqual(EXPECTED_BLOCKER_SOURCE_STATUSES);
+      expect(blockerStatuses).not.toContain('done');
+      expect(blockerStatuses).not.toContain('cancelled');
     });
   });
 

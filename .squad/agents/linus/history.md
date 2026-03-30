@@ -8,6 +8,24 @@
 
 ## Learnings
 
+### 2026-03-30: In-progress blocker model contracts
+
+**What I delivered:**
+- Added proactive blocker tests in `src/todo/model.test.js` for assigning in-progress blockers, clearing active blockers after completion, unblock detection, and cross-status dependency chains
+- Tightened `src/app/constants.test.js` so blocker candidate coverage explicitly requires `inprogress` and excludes `done`/`cancelled`
+- Kept the work test-only so Rusty can land the implementation independently without source edits from the test side
+
+**Coverage focus:**
+- Setting an in-progress task as a blocker and confirming it keeps the dependent task actively blocked
+- Detecting unblock transitions when an in-progress blocker moves to `done` and blocker cleanup runs
+- Verifying `hasActiveBlockers()` clears after completion and `wouldCreateCycle()` still walks chains spanning `blocked`, `inprogress`, and `todo`
+- Locking blocker-candidate filtering to include `todo` / `inprogress` / `blocked` and exclude finished tasks
+
+**Execution outcome:**
+- Baseline before changes: full suite, lint, and build were green (`195` tests passing)
+- After adding the new coverage: full suite, lint, and build stayed green (`203` tests passing)
+- This gives Rusty explicit regression protection around the in-progress blocker workflow without touching production code
+
 ### 2026-03-30: Shared Constants Module Contract Tests
 
 **What I delivered:**

@@ -371,6 +371,18 @@ describe('hasActiveBlockers', () => {
     expect(hasActiveBlockers(todos, '1')).toBe(true);
   });
 
+  it('returns false after an in-progress blocker is completed and cleaned up', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'upstream task', status: 'inprogress' },
+    ];
+
+    const completed = setStatus(todos, '2', 'done');
+    const afterCleanup = cleanupBlockedBy(completed, '2');
+
+    expect(hasActiveBlockers(afterCleanup, '1')).toBe(false);
+  });
+
   it('returns false when the only blocker is the todo itself', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
@@ -630,6 +642,18 @@ describe('toggleBlocker', () => {
     expect(result[0].blockedBy).toEqual(['2']);
   });
 
+  it('allows assigning an in-progress task as a blocker', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: [] },
+      { id: '2', text: 'working task', status: 'inprogress' },
+    ];
+
+    const result = toggleBlocker(todos, '1', '2');
+
+    expect(result[0].blockedBy).toEqual(['2']);
+    expect(hasActiveBlockers(result, '1')).toBe(true);
+  });
+
   it('removes an existing blocker', () => {
     const todos = [
       { id: '1', text: 'task', status: 'blocked', blockedBy: ['2', '3'] },
@@ -722,6 +746,21 @@ describe('wouldCreateCycle', () => {
     ];
 
     expect(wouldCreateCycle(todos, 'b', 'a')).toBe(false);
+  });
+
+  it('detects dependency chains across blocked, in-progress, and todo tasks', () => {
+    const todos = [
+      { id: 'a', text: 'Blocked task', status: 'blocked', blockedBy: ['b'] },
+      {
+        id: 'b',
+        text: 'In-progress blocker',
+        status: 'inprogress',
+        blockedBy: ['c'],
+      },
+      { id: 'c', text: 'Todo blocker', status: 'todo' },
+    ];
+
+    expect(wouldCreateCycle(todos, 'c', 'a')).toBe(true);
   });
 });
 
@@ -840,6 +879,22 @@ describe('detectUnblockedTodos', () => {
     ];
     const result = model.detectUnblockedTodos(before, after);
     expect(result).toEqual(['2', '3']);
+  });
+
+  it('detects unblock when an in-progress blocker completes', () => {
+    const before = [
+      { id: '1', text: 'working blocker', status: 'inprogress' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
+    ];
+
+    const completed = setStatus(before, '1', 'done');
+    const after = cleanupBlockedBy(completed, '1');
+
+    expect(after).toEqual([
+      { id: '1', text: 'working blocker', status: 'done' },
+      { id: '2', text: 'blocked task', status: 'todo' },
+    ]);
+    expect(model.detectUnblockedTodos(before, after)).toEqual(['2']);
   });
 
   it('returns an empty array when statuses are unchanged', () => {
