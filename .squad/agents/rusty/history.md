@@ -242,3 +242,13 @@
 
 **Styles kept in `index.html`:**
 - None. The entire large inline app stylesheet was extracted because Vite now loads it through the JS entrypoint and no critical-path-only exception was needed.
+
+### 2026-03-30: Persistence Routed Through Store Effects
+
+**What I changed:**
+- Moved discoverability-tip persistence into `src/app/store.js` so shortcut and reorder dismissals now load from store state and persist through named actions instead of `main.js` writing `localStorage` directly.
+- Expanded the store's post-action effect pass to cover todos, burndown samples, ready-filter preference, and both tip-dismissal flags in one centralized place while keeping the existing storage keys untouched.
+- Added store tests that pin tip preference hydration/persistence and burndown writes through the effect layer.
+
+**State flow rule to preserve:**
+- Browser event handlers should dispatch store actions and let post-action effects own persistence; `main.js` can react to state changes, but it should not write durable UI or todo state directly.
