@@ -1140,7 +1140,7 @@ if (typeof document !== 'undefined') {
         handle.className = 'drag-handle';
         handle.title = 'Drag to reorder';
         handle.setAttribute('aria-label', 'Drag to reorder');
-        handle.setAttribute('role', 'img');
+        handle.setAttribute('role', 'button');
         handle.textContent = '⠿';
         handle.addEventListener('touchstart', onHandleTouchStart, { passive: true });
 
@@ -1660,12 +1660,6 @@ if (typeof document !== 'undefined') {
     });
 
     window.addEventListener('beforeunload', () => {
-      if (shortcutsTipShownThisSession && !shortcutsTipDismissed) {
-        dismissTip(SHORTCUTS_TIP_STORAGE_KEY);
-      }
-      if (reorderTipShownThisSession && !reorderTipDismissed) {
-        dismissTip(REORDER_TIP_STORAGE_KEY);
-      }
       dismissUnblockedNotification({ clearHighlights: true });
       dagView.destroy();
     }, { once: true });
