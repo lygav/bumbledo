@@ -1821,3 +1821,137 @@ New: `{ date, done, cancelled, active, total }` (full state snapshot)
 - Danny: Chart rendering changes (two lines, summary text, tooltip updates)
 - No breaking changes to existing localStorage (new key, additive)
 
+
+
+# Decision: Evolutionary Architecture Refactor Recommended
+
+**Author:** Danny  
+**Date:** 2026-03-30  
+**Status:** Recommended  
+**Affects:** src/main.js, index.html, project structure, state management
+
+---
+
+## Summary
+
+Complete architecture review of codebase completed. Verdict: refactor warranted, but this is a boundary cleanup, not a framework rewrite. Keep vanilla JS + Vite stack and strengthen module boundaries before the next feature wave.
+
+## Current State Assessment
+
+**Strengths:**
+- Sensible module split around three concerns: todo model, graph, notification
+- Pure domain modules (`src/todo/model.js`, `src/dag/graph.js`) are solid and testable
+- Consistent controller/factory pattern proven in DAG and notification features
+- Minimal dependencies (only `dagre` at runtime)
+- Strong test coverage (193 tests passing)
+- Production build succeeds
+
+**Critical Hotspots:**
+- `src/main.js`: 1820 lines — orchestrates domain flow, DOM rendering, keyboard behavior, drag/drop, charting, persistence, modal management, and selection
+- `index.html`: 1770 lines — mixes markup, all styles, and app bootstrap in one file
+- Status vocabulary and display mapping duplicated across `model.js`, `main.js`, and `dag/view.js`
+- Full list re-renders on each update; per-row listeners wired on every render cycle
+
+**Trend:**
+Code is trending toward brittle — two files now carry most change risk. Feature velocity and consistency will degrade without boundary work.
+
+## Recommended Refactoring (Priority Order)
+
+### Do First (Critical Path)
+1. **Break up `src/main.js` into feature controllers/renderers**
+   - Extract `src/todo/list-view.js` or `src/todo/list-controller.js`
+   - Extract `src/burndown/view.js`
+   - Extract `src/ui/modals.js`
+   - Extract `src/ui/keyboard.js`
+   - Extract `src/todo/reorder.js`
+   - Keep `src/main.js` as composition root
+
+2. **Move CSS out of `index.html`**
+   - Create `src/styles.css` imported from `src/main.js`
+   - Later: split into feature styles (`base.css`, `todo.css`, `burndown.css`, `dag.css`, `modal.css`)
+
+3. **Create shared constants module**
+   - Centralize status vocabulary, labels, palette, storage keys
+   - Replace duplicated mappings across modules
+
+4. **Introduce lightweight app store/action layer**
+   - Formalize mutations as named commands: `addTask`, `setTaskStatus`, `deleteTask`, `toggleBlocker`, `reorderTasks`, `toggleReadyFilter`
+   - Derive computed values with selectors instead of ad hoc recalculation
+   - Centralize persistence as post-action effect
+
+### Do Next (Infrastructure)
+5. Consolidate persistence side effects behind action layer
+6. Reduce full-list re-renders; prefer event delegation where possible
+7. Add ESLint, formatter, and CI guardrails
+
+### Can Wait (Growth Phases)
+8. Further split `src/dag/view.js` if graph behavior expands
+9. Any framework migration discussion
+
+## Why Not a Framework Migration?
+
+The quality issue is not framework choice; it's missing boundaries. The code already proved that local controller boundaries work well (DAG, notifications). Reusing that pattern is lower-risk than introducing React or another framework. The dependency profile is already healthier than the internal boundary profile.
+
+## Consequences
+
+- Feature work now has a clear refactoring path that preserves current stack
+- New features should target the extracted feature modules, not `main.js`
+- App-level behavior changes must go through the action layer
+- Styling changes should land in feature-specific CSS files
+- Build and test infrastructure should be strengthened (ESLint, CI)
+
+## Decision
+
+Refactor now using evolutionary approach. Preserve vanilla JS + Vite, strengthen module boundaries, remove the two oversized hotspots before more features land.
+
+---
+
+## ADR-004: Seven-Issue Refactor Breakdown
+
+**Status:** Accepted  
+**Author:** Danny  
+**Date:** 2026-03-30T09:22:00Z
+
+### Summary
+
+Decomposed the architecture refactor recommendations (from 2026-03-30 architecture review) into seven implementation-ready GitHub issues with explicit dependencies, sequencing, and team assignments. Avoids framework rewrite; preserves vanilla JS + Vite.
+
+### Decision
+
+**Break refactoring work into seven dependency-ordered issues rather than one monolithic task.**
+
+| Issue | Title | Assignee | Dependencies |
+|-------|-------|----------|--------------|
+| #59 | Create shared app constants module for status, palette, and storage keys | Rusty | — |
+| #60 | Extract inline app styles from `index.html` into `src/styles.css` | Rusty | #59 |
+| #61 | Split `src/main.js` into feature controllers with `main.js` as composition root | Saul | #59 |
+| #62 | Introduce a lightweight app store and named action layer | Saul | #61 |
+| #63 | Route todo and burndown persistence through post-action effects | Rusty | #62 |
+| #64 | Use delegated list events instead of per-row listener wiring | Rusty | #61 |
+| #65 | Add ESLint, formatter, and GitHub Actions CI guardrails | Danny | #59–#64 |
+
+### Rationale
+
+A single large issue hides critical dependency edges and makes parallel execution unsafe. Seven issues create explicit seams:
+
+1. **Establish vocabulary and boundaries first** (#59, #60): Create constants module and move styles out of HTML
+2. **Extract feature modules and state orchestration** (#61, #62): Break up `main.js`, introduce store/actions
+3. **Tighten persistence and DOM event wiring** (#63, #64): Route effects through actions, use event delegation
+4. **Lock it down** (#65): Add tooling guardrails to prevent future drift
+
+This sequencing staggers the work across team members while keeping blockers minimal and dependencies clear.
+
+**Trade-off:** More up-front project management overhead. Justified because the architecture risk is concentrated in shared boundaries (`main.js`, `index.html`). Unclear sequencing would create rework across contributors.
+
+### Assignments
+
+- **Rusty:** #59, #60, #63, #64 (constants, styles, persistence, events)
+- **Saul:** #61, #62 (controllers, store)
+- **Danny:** #65 (tooling)
+
+### Consequences
+
+- Team now has implementation-ready work with explicit ownership and acceptance criteria
+- Dependencies are explicit enough to stage refactor safely without a framework freeze
+- Future architecture decisions can reference concrete issue numbers
+- Work begins with Rusty on #59 (constants extraction)

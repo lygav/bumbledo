@@ -1,4 +1,9 @@
 import dagre from 'dagre';
+import {
+  APP_PALETTE,
+  getTodoStatusLabel,
+  getTodoStatusPalette
+} from '../app/constants.js';
 import { buildDependencyGraph } from './graph.js';
 
 // OWNERSHIP: view.js owns SVG rendering inside its container.
@@ -15,13 +20,6 @@ const MIN_FIT_SCALE = 0.75;
 
 function truncateLabel(text, limit = LABEL_LIMIT) {
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
-}
-
-function titleCaseStatus(status) {
-  if (status === 'inprogress') {
-    return 'In Progress';
-  }
-  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function createSvgElement(tagName, attributes = {}) {
@@ -76,61 +74,6 @@ function layoutGraph(graphModel) {
   });
 }
 
-function getStatusPalette(status) {
-  if (status === 'blocked') {
-    return {
-      fill: '#fffbf0',
-      border: '#e6d5b8',
-      accent: '#e67e22',
-      text: '#1a1a1a',
-      opacity: '1',
-      strike: null
-    };
-  }
-
-  if (status === 'done') {
-    return {
-      fill: 'rgba(76, 175, 80, 0.08)',
-      border: '#4caf50',
-      accent: '#4caf50',
-      text: '#5f6f62',
-      opacity: '1',
-      strike: 'rgba(95, 111, 98, 0.7)'
-    };
-  }
-
-  if (status === 'inprogress') {
-    return {
-      fill: 'rgba(33, 150, 243, 0.08)',
-      border: '#90caf9',
-      accent: '#2196f3',
-      text: '#1a1a1a',
-      opacity: '1',
-      strike: null
-    };
-  }
-
-  if (status === 'cancelled') {
-    return {
-      fill: 'rgba(192, 57, 43, 0.08)',
-      border: '#d7a8a3',
-      accent: '#c0392b',
-      text: '#c0392b',
-      opacity: '0.8',
-      strike: '#c0392b'
-    };
-  }
-
-  return {
-    fill: '#ffffff',
-    border: '#e0e0e0',
-    accent: null,
-    text: '#1a1a1a',
-    opacity: '1',
-    strike: null
-  };
-}
-
 function buildEdgePath(source, target, isCycle) {
   const startX = source.x + source.width / 2;
   const startY = source.y;
@@ -173,13 +116,13 @@ export function createDagView({ container, onSelectTask }) {
   const defs = createSvgElement('defs');
   defs.innerHTML = `
     <marker id="dag-arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa1aa"></path>
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="${APP_PALETTE.DAG_ARROW_DEFAULT}"></path>
     </marker>
     <marker id="dag-arrow-highlight" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a90d9"></path>
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="${APP_PALETTE.DAG_ARROW_HIGHLIGHT}"></path>
     </marker>
     <marker id="dag-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d64541"></path>
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="${APP_PALETTE.DAG_ARROW_CYCLE}"></path>
     </marker>
     <clipPath id="dag-node-clip">
       <rect x="0" y="0" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="8" ry="8" />
@@ -249,7 +192,7 @@ export function createDagView({ container, onSelectTask }) {
     const title = document.createElement('strong');
     title.textContent = node.label;
     const status = document.createElement('span');
-    status.textContent = `Status: ${titleCaseStatus(node.status)}`;
+    status.textContent = `Status: ${getTodoStatusLabel(node.status)}`;
     tooltip.append(title, status);
     tooltip.hidden = false;
     positionTooltip(nodeId, nodeElement);
@@ -357,10 +300,10 @@ export function createDagView({ container, onSelectTask }) {
         transform: `translate(${node.x - node.width / 2} ${node.y - node.height / 2})`,
         tabindex: '0',
         role: 'button',
-        'aria-label': `${node.label}. ${titleCaseStatus(node.status)} task.`
+        'aria-label': `${node.label}. ${getTodoStatusLabel(node.status)} task.`
       });
 
-      const palette = getStatusPalette(node.status);
+      const palette = getTodoStatusPalette(node.status);
       const outline = createSvgElement('rect', {
         class: 'dag-node-outline',
         x: -2,

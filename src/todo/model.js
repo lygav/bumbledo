@@ -1,3 +1,12 @@
+import {
+  ACTIONABLE_TODO_STATUSES,
+  APP_STORAGE_KEYS,
+  TERMINAL_TODO_STATUSES,
+  TODO_STATUS,
+  TODO_STATUS_CYCLE,
+  TODO_STATUS_VALUES
+} from '../app/constants.js';
+
 // OWNERSHIP: model.js owns pure todo logic.
 // - Owns: storage helpers, todo mutations, dependency-related status utilities
 // - Does NOT own: DOM setup, event listeners, rendering, DAG section visibility
@@ -8,8 +17,10 @@ const defaultStorage = {
   setItem: (key, value) => localStorage.setItem(key, value)
 };
 
-const BURNDOWN_STORAGE_KEY = 'todos_burndown';
 const BURNDOWN_RETENTION_DAYS = 30;
+const VALID_STATUSES = new Set(TODO_STATUS_VALUES);
+const ACTIONABLE_STATUSES = new Set(ACTIONABLE_TODO_STATUSES);
+const TERMINAL_STATUSES = new Set(TERMINAL_TODO_STATUSES);
 
 function padDatePart(value) {
   return String(value).padStart(2, '0');
@@ -104,27 +115,27 @@ function hasBlockers(todo) {
 }
 
 function normalizeBlockedTodo(todo) {
-  if (todo.status !== 'blocked' || hasBlockers(todo)) {
+  if (todo.status !== TODO_STATUS.BLOCKED || hasBlockers(todo)) {
     return todo;
   }
 
   const { blockedBy, ...rest } = todo;
-  return { ...rest, status: 'todo' };
+  return { ...rest, status: TODO_STATUS.TODO };
 }
 
 export function migrateTodos(list) {
   return list.map(t => {
     if ('done' in t && !('status' in t)) {
       const { done, ...rest } = t;
-      return { ...rest, status: done ? 'done' : 'todo' };
+      return { ...rest, status: done ? TODO_STATUS.DONE : TODO_STATUS.TODO };
     }
     if (!('status' in t)) {
-      return { ...t, status: 'todo' };
+      return { ...t, status: TODO_STATUS.TODO };
     }
     if (t.status === 'active') {
-      return { ...t, status: 'todo' };
+      return { ...t, status: TODO_STATUS.TODO };
     }
-    if (t.status === 'blocked') {
+    if (t.status === TODO_STATUS.BLOCKED) {
       const blockedTodo = {
         ...t,
         blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy : []
@@ -136,10 +147,7 @@ export function migrateTodos(list) {
   });
 }
 
-const VALID_STATUSES = new Set(['todo', 'inprogress', 'done', 'cancelled', 'blocked']);
-const ACTIONABLE_STATUSES = new Set(['todo', 'inprogress']);
-
-export function loadTodos(storage = defaultStorage, storageKey = 'todos') {
+export function loadTodos(storage = defaultStorage, storageKey = APP_STORAGE_KEYS.TODOS) {
   try {
     const data = storage.getItem(storageKey);
     const parsed = data ? JSON.parse(data) : [];
@@ -155,12 +163,12 @@ export function loadTodos(storage = defaultStorage, storageKey = 'todos') {
   }
 }
 
-export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 'todos') {
+export function saveTodos(todosToSave, storage = defaultStorage, storageKey = APP_STORAGE_KEYS.TODOS) {
   const clean = todosToSave.map(t => {
     const normalized = normalizeBlockedTodo(t);
     const obj = { id: normalized.id, text: normalized.text, status: normalized.status };
 
-    if (normalized.status === 'blocked' && hasBlockers(normalized)) {
+    if (normalized.status === TODO_STATUS.BLOCKED && hasBlockers(normalized)) {
       obj.blockedBy = normalized.blockedBy;
     }
 
@@ -170,10 +178,10 @@ export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 't
 }
 
 export function takeBurndownSample(todos, now = new Date()) {
-  const done = todos.filter(todo => todo.status === 'done').length;
-  const cancelled = todos.filter(todo => todo.status === 'cancelled').length;
+  const done = todos.filter(todo => todo.status === TODO_STATUS.DONE).length;
+  const cancelled = todos.filter(todo => todo.status === TODO_STATUS.CANCELLED).length;
   const todo = todos.filter(todo => ACTIONABLE_STATUSES.has(todo.status)).length;
-  const blocked = todos.filter(todo => todo.status === 'blocked').length;
+  const blocked = todos.filter(todo => todo.status === TODO_STATUS.BLOCKED).length;
 
   return {
     date: getLocalDateKey(now),
@@ -184,7 +192,7 @@ export function takeBurndownSample(todos, now = new Date()) {
   };
 }
 
-export function loadBurndownData(storage = defaultStorage, storageKey = BURNDOWN_STORAGE_KEY) {
+export function loadBurndownData(storage = defaultStorage, storageKey = APP_STORAGE_KEYS.BURNDOWN) {
   try {
     const data = storage.getItem(storageKey);
     const parsed = data ? JSON.parse(data) : [];
@@ -194,7 +202,7 @@ export function loadBurndownData(storage = defaultStorage, storageKey = BURNDOWN
   }
 }
 
-export function saveBurndownData(data, storage = defaultStorage, storageKey = BURNDOWN_STORAGE_KEY, now = new Date()) {
+export function saveBurndownData(data, storage = defaultStorage, storageKey = APP_STORAGE_KEYS.BURNDOWN, now = new Date()) {
   const clean = pruneBurndownData(Array.isArray(data) ? data : [], now);
   storage.setItem(storageKey, JSON.stringify(clean));
   return clean;
@@ -208,7 +216,7 @@ export function shouldSampleToday(data, now = new Date()) {
 export function addTodo(todos, text) {
   const trimmed = text.trim();
   if (!trimmed) return todos;
-  return [...todos, { id: generateId(), text: trimmed, status: 'todo' }];
+  return [...todos, { id: generateId(), text: trimmed, status: TODO_STATUS.TODO }];
 }
 
 export function setStatus(todos, id, newStatus) {
@@ -221,7 +229,7 @@ export function setStatus(todos, id, newStatus) {
 
     const updated = { ...todo, status: newStatus };
 
-    if (newStatus === 'blocked') {
+    if (newStatus === TODO_STATUS.BLOCKED) {
       if (!Array.isArray(updated.blockedBy)) updated.blockedBy = [];
     } else {
       delete updated.blockedBy;
@@ -235,25 +243,21 @@ export function cycleStatus(todos, id) {
   return todos.map(todo => {
     if (todo.id !== id) return todo;
 
-    if (todo.status === 'todo') {
-      return { ...todo, status: 'inprogress' };
+    if (todo.status === TODO_STATUS.TODO || todo.status === TODO_STATUS.IN_PROGRESS) {
+      return { ...todo, status: TODO_STATUS_CYCLE[todo.status] };
     }
 
-    if (todo.status === 'inprogress') {
-      return { ...todo, status: 'done' };
+    if (TERMINAL_STATUSES.has(todo.status)) {
+      return { ...todo, status: TODO_STATUS_CYCLE[todo.status] ?? TODO_STATUS.TODO };
     }
 
-    if (todo.status === 'done' || todo.status === 'cancelled') {
-      return { ...todo, status: 'todo' };
-    }
-
-    if (todo.status === 'blocked' && Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
+    if (todo.status === TODO_STATUS.BLOCKED && Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
       return todo;
     }
 
-    if (todo.status === 'blocked') {
+    if (todo.status === TODO_STATUS.BLOCKED) {
       const { blockedBy, ...rest } = todo;
-      return { ...rest, status: 'todo' };
+      return { ...rest, status: TODO_STATUS.TODO };
     }
 
     return todo;
@@ -299,7 +303,7 @@ export function reorderTodos(todos, draggedId, targetId, insertAfter = false) {
 
 export function toggleBlocker(todos, todoId, blockerId) {
   return todos.map(todo => {
-    if (todo.id !== todoId || todo.status !== 'blocked') return todo;
+    if (todo.id !== todoId || todo.status !== TODO_STATUS.BLOCKED) return todo;
 
     const blockedBy = Array.isArray(todo.blockedBy) ? [...todo.blockedBy] : [];
     const idx = blockedBy.indexOf(blockerId);
@@ -307,7 +311,7 @@ export function toggleBlocker(todos, todoId, blockerId) {
     if (idx >= 0) {
       blockedBy.splice(idx, 1);
       if (blockedBy.length === 0) {
-        return { ...todo, status: 'todo', blockedBy: undefined };
+        return { ...todo, status: TODO_STATUS.TODO, blockedBy: undefined };
       }
       return { ...todo, blockedBy };
     }
@@ -354,7 +358,7 @@ export function wouldCreateCycle(todos, taskId, blockerId) {
 
 export function cleanupBlockedBy(todos, removedId) {
   return todos.map(t => {
-    if (t.status !== 'blocked') return t;
+    if (t.status !== TODO_STATUS.BLOCKED) return t;
 
     if (!Array.isArray(t.blockedBy)) {
       return normalizeBlockedTodo(t);
@@ -364,7 +368,7 @@ export function cleanupBlockedBy(todos, removedId) {
 
     if (filteredBlockers.length === 0) {
       const { blockedBy, ...rest } = t;
-      return { ...rest, status: 'todo' };
+      return { ...rest, status: TODO_STATUS.TODO };
     }
 
     return { ...t, blockedBy: filteredBlockers };
@@ -375,7 +379,7 @@ export function detectUnblockedTodos(todosBefore, todosAfter) {
   const beforeById = new Map(todosBefore.map(todo => [todo.id, todo]));
 
   return todosAfter
-    .filter(todo => beforeById.get(todo.id)?.status === 'blocked' && todo.status === 'todo')
+    .filter(todo => beforeById.get(todo.id)?.status === TODO_STATUS.BLOCKED && todo.status === TODO_STATUS.TODO)
     .map(todo => todo.id);
 }
 
@@ -385,8 +389,8 @@ export function deleteTodo(todos, id) {
 }
 
 export function clearFinished(todos) {
-  const removedIds = todos.filter(t => t.status === 'done' || t.status === 'cancelled').map(t => t.id);
-  let filtered = todos.filter(t => t.status !== 'done' && t.status !== 'cancelled');
+  const removedIds = todos.filter(t => TERMINAL_STATUSES.has(t.status)).map(t => t.id);
+  let filtered = todos.filter(t => !TERMINAL_STATUSES.has(t.status));
   removedIds.forEach(id => {
     filtered = cleanupBlockedBy(filtered, id);
   });
@@ -419,11 +423,11 @@ export function hasActiveBlockers(todos, todoId) {
       return false;
     }
 
-    if (blocker.status === 'todo' || blocker.status === 'inprogress') {
+    if (ACTIONABLE_STATUSES.has(blocker.status)) {
       return true;
     }
 
-    if (blocker.status !== 'blocked') {
+    if (blocker.status !== TODO_STATUS.BLOCKED) {
       return false;
     }
 
@@ -462,7 +466,7 @@ export function getActiveBlockerCount(todos, todoId) {
       return count;
     }
 
-    if (blocker.status === 'todo' || blocker.status === 'inprogress' || blocker.status === 'blocked') {
+    if (ACTIONABLE_STATUSES.has(blocker.status) || blocker.status === TODO_STATUS.BLOCKED) {
       return count + 1;
     }
 

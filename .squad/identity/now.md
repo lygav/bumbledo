@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-03-29T20:16:00.000Z
-focus_area: Shipping complete
+updated_at: 2026-03-30T08:37:00.000Z
+focus_area: Language + branding refresh complete
 active_issues: []
 ---
 
 # What We're Focused On
 
-All 4 PRDs shipped. All issues cleared. Board empty.
+Language + branding refresh complete. All issues cleared. 193 tests, board empty.
