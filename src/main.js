@@ -79,8 +79,8 @@ function buildBurndownSeries(samples) {
 function getLiveProgressCounts(todos) {
   const sample = takeBurndownSample(todos);
   const done = sample.done + sample.cancelled;
-  const blocked = todos.filter(todo => todo.status === 'blocked' && hasActiveBlockers(todos, todo.id)).length;
-  const actionable = Math.max(0, sample.total - done - blocked);
+  const blocked = todos.filter(todo => todo.status === 'blocked').length;
+  const actionable = sample.todo;
   const completionPercent = sample.total > 0 ? (done / sample.total) * 100 : 0;
   const blockedPercent = sample.total > 0 ? (blocked / sample.total) * 100 : 0;
 
@@ -121,7 +121,7 @@ function buildStatusMetricItems(progress, { includeTotal = false, trend = null }
   }
 
   items.push(
-    { count: progress.actionable, label: 'actionable', tone: 'actionable' },
+    { count: progress.actionable, label: 'To Do', tone: 'actionable' },
     { count: progress.blocked, label: 'blocked', tone: 'blocked' },
     { count: progress.done, label: 'done', tone: 'done' }
   );
@@ -710,11 +710,11 @@ if (typeof document !== 'undefined') {
     function toggleSelectedTodoStatus() {
       const selectedTodo = todos.find(todo => todo.id === selectedTaskId);
       if (!selectedTodo) return;
-      if (selectedTodo.status !== 'active' && selectedTodo.status !== 'done') return;
+      if (selectedTodo.status !== 'todo' && selectedTodo.status !== 'done') return;
 
       const visibleTodos = getVisibleTodos();
       const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
-      const nextStatus = selectedTodo.status === 'done' ? 'active' : 'done';
+      const nextStatus = selectedTodo.status === 'done' ? 'todo' : 'done';
       const todosBefore = todos;
       todos = setStatus(todos, selectedTodo.id, nextStatus);
       if (nextStatus === 'done') {
@@ -1008,7 +1008,7 @@ if (typeof document !== 'undefined') {
 
         let visibleIndex = 0;
         return todos.map(todo => {
-          if (todo.status !== 'active') {
+          if (todo.status !== 'todo') {
             return todo;
           }
 
@@ -1187,19 +1187,19 @@ if (typeof document !== 'undefined') {
       clearFinishedBtn.disabled = !hasFinished;
       actionableFilterToggle.classList.toggle('is-active', filterActive);
       actionableFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      actionableSummary.textContent = `${progress.actionable} of ${progress.total} tasks are actionable`;
+      actionableSummary.textContent = `${progress.actionable} of ${progress.total} tasks are in To Do`;
       renderStatusMetricLine(taskProgressSummary, buildStatusMetricItems(progress));
       taskProgressBar.setAttribute('aria-valuenow', String(progress.completionPercentRounded));
       taskProgressBar.setAttribute(
         'aria-valuetext',
-        `${progress.done} done, ${progress.blocked} blocked, ${progress.actionable} actionable out of ${progress.total} total`
+        `${progress.done} done, ${progress.blocked} blocked, ${progress.actionable} in To Do out of ${progress.total} total`
       );
       taskProgressBar.style.setProperty('--task-progress-done', `${progress.completionPercent.toFixed(2)}%`);
       taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
       emptyState.hidden = progress.total > 0 ? !showActionableEmptyState : false;
       emptyState.textContent = progress.total === 0
         ? 'No todos yet. Add one above!'
-        : 'Nothing actionable right now. All your tasks are either done or waiting on something.';
+        : 'Nothing is in To Do right now. All your tasks are either done or blocked.';
       syncDiscoverabilityTips();
 
       visibleTodos.forEach(todo => {
@@ -1207,7 +1207,7 @@ if (typeof document !== 'undefined') {
         li.draggable = true;
         li.tabIndex = 0;
         li.dataset.id = todo.id;
-        if (todo.status !== 'active') li.classList.add('status-' + todo.status);
+        if (todo.status !== 'todo') li.classList.add('status-' + todo.status);
         if (todo.id === selectedTaskId) li.classList.add('task-row-selected');
 
         const remainingMs = notificationController.getHighlightRemainingMs(todo.id);
@@ -1228,7 +1228,7 @@ if (typeof document !== 'undefined') {
         select.className = 'todo-status';
         select.setAttribute('aria-label', `Status for "${todo.text}"`);
         const statusOptions = [
-          { value: 'active', label: 'Active' },
+          { value: 'todo', label: 'To Do' },
           { value: 'done', label: 'Done' },
           { value: 'cancelled', label: 'Cancelled' },
           { value: 'blocked', label: 'Blocked' }
@@ -1353,7 +1353,7 @@ if (typeof document !== 'undefined') {
           pickerTitle.textContent = 'Blocked by:';
           picker.appendChild(pickerTitle);
 
-          const eligible = todos.filter(t => t.id !== todo.id && (t.status === 'active' || t.status === 'blocked'));
+          const eligible = todos.filter(t => t.id !== todo.id && (t.status === 'todo' || t.status === 'blocked'));
 
           if (eligible.length === 0) {
             const msg = document.createElement('div');

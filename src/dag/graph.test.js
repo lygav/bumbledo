@@ -18,13 +18,13 @@ describe('buildDependencyGraph — Node mapping', () => {
 
   it('creates one node and no edges for a single todo without blockers', () => {
     const todos = [
-      { id: 'todo-1', text: 'Write tests', status: 'active' }
+      { id: 'todo-1', text: 'Write tests', status: 'todo' }
     ];
 
     const result = buildDependencyGraph(todos);
 
     expect(result.nodes).toEqual([
-      { id: 'todo-1', label: 'Write tests', status: 'active', orderIndex: 0 }
+      { id: 'todo-1', label: 'Write tests', status: 'todo', orderIndex: 0 }
     ]);
     expect(result.edges).toEqual([]);
     expect(result.hasDependencies).toBe(false);
@@ -34,7 +34,7 @@ describe('buildDependencyGraph — Node mapping', () => {
     const todos = [
       { id: 'a', text: 'First task', status: 'done' },
       { id: 'b', text: 'Second task', status: 'blocked' },
-      { id: 'c', text: 'Third task', status: 'active' }
+      { id: 'c', text: 'Third task', status: 'todo' }
     ];
 
     const result = buildDependencyGraph(todos);
@@ -42,22 +42,22 @@ describe('buildDependencyGraph — Node mapping', () => {
     expect(result.nodes).toEqual([
       { id: 'a', label: 'First task', status: 'done', orderIndex: 0 },
       { id: 'b', label: 'Second task', status: 'blocked', orderIndex: 1 },
-      { id: 'c', label: 'Third task', status: 'active', orderIndex: 2 }
+      { id: 'c', label: 'Third task', status: 'todo', orderIndex: 2 }
     ]);
   });
 
   it('represents all supported status types correctly', () => {
     const todos = [
-      { id: 'active-1', text: 'Active task', status: 'active' },
+      { id: 'todo-1', text: 'Todo task', status: 'todo' },
       { id: 'done-1', text: 'Done task', status: 'done' },
       { id: 'cancelled-1', text: 'Cancelled task', status: 'cancelled' },
-      { id: 'blocked-1', text: 'Blocked task', status: 'blocked', blockedBy: ['active-1'] }
+      { id: 'blocked-1', text: 'Blocked task', status: 'blocked', blockedBy: ['todo-1'] }
     ];
 
     const result = buildDependencyGraph(todos);
 
     expect(result.nodes).toEqual([
-      { id: 'active-1', label: 'Active task', status: 'active', orderIndex: 0 },
+      { id: 'todo-1', label: 'Todo task', status: 'todo', orderIndex: 0 },
       { id: 'done-1', label: 'Done task', status: 'done', orderIndex: 1 },
       { id: 'cancelled-1', label: 'Cancelled task', status: 'cancelled', orderIndex: 2 },
       { id: 'blocked-1', label: 'Blocked task', status: 'blocked', orderIndex: 3 }
@@ -68,7 +68,7 @@ describe('buildDependencyGraph — Node mapping', () => {
 describe('buildDependencyGraph — Edge mapping', () => {
   it('creates one edge from blocker to blocked todo', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'blocked', blockedBy: ['task-a'] }
     ];
 
@@ -84,8 +84,8 @@ describe('buildDependencyGraph — Edge mapping', () => {
 
   it('creates multiple edges when one todo has multiple blockers', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
-      { id: 'task-b', text: 'Task B', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
+      { id: 'task-b', text: 'Task B', status: 'todo' },
       { id: 'task-c', text: 'Task C', status: 'blocked', blockedBy: ['task-a', 'task-b'] }
     ];
 
@@ -102,8 +102,8 @@ describe('buildDependencyGraph — Edge mapping', () => {
 
   it('creates correct edges for multiple blocked todos', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
-      { id: 'task-b', text: 'Task B', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
+      { id: 'task-b', text: 'Task B', status: 'todo' },
       { id: 'task-c', text: 'Task C', status: 'blocked', blockedBy: ['task-a'] },
       { id: 'task-d', text: 'Task D', status: 'blocked', blockedBy: ['task-a', 'task-b'] }
     ];
@@ -162,7 +162,7 @@ describe('buildDependencyGraph — Edge mapping', () => {
 describe('buildDependencyGraph — hasDependencies', () => {
   it('is false when no todo has blockers', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'done' },
       { id: 'task-c', text: 'Task C', status: 'cancelled' }
     ];
@@ -175,7 +175,7 @@ describe('buildDependencyGraph — hasDependencies', () => {
 
   it('is true when at least one edge exists', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'blocked', blockedBy: ['task-a'] }
     ];
 
@@ -236,7 +236,7 @@ describe('buildDependencyGraph — Cycle detection', () => {
 
   it('detects only the cyclic edges in a partial cycle', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'blocked', blockedBy: ['task-a', 'task-c'] },
       { id: 'task-c', text: 'Task C', status: 'blocked', blockedBy: ['task-b'] }
     ];
@@ -259,7 +259,7 @@ describe('buildDependencyGraph — Cycle detection', () => {
 
   it('returns an empty cycleEdges array when no cycle exists', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'blocked', blockedBy: ['task-a'] },
       { id: 'task-c', text: 'Task C', status: 'blocked', blockedBy: ['task-b'] }
     ];
@@ -285,7 +285,7 @@ describe('buildDependencyGraph — Cycle detection', () => {
 describe('buildDependencyGraph — Stats', () => {
   it('reports nodeCount equal to the number of todos', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'done' },
       { id: 'task-c', text: 'Task C', status: 'cancelled' }
     ];
@@ -297,8 +297,8 @@ describe('buildDependencyGraph — Stats', () => {
 
   it('reports edgeCount equal to the total number of edges', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
-      { id: 'task-b', text: 'Task B', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
+      { id: 'task-b', text: 'Task B', status: 'todo' },
       { id: 'task-c', text: 'Task C', status: 'blocked', blockedBy: ['task-a', 'task-b'] }
     ];
 
@@ -324,17 +324,17 @@ describe('buildDependencyGraph — Stats', () => {
 describe('buildDependencyGraph — Larger graphs', () => {
   it('builds the correct structure for a larger mixed dependency graph', () => {
     const todos = [
-      { id: 't1', text: 'Task 1', status: 'active' },
+      { id: 't1', text: 'Task 1', status: 'todo' },
       { id: 't2', text: 'Task 2', status: 'blocked', blockedBy: ['t1'] },
       { id: 't3', text: 'Task 3', status: 'blocked', blockedBy: ['t1', 't2'] },
       { id: 't4', text: 'Task 4', status: 'done' },
       { id: 't5', text: 'Task 5', status: 'blocked', blockedBy: ['t2'] },
       { id: 't6', text: 'Task 6', status: 'cancelled' },
-      { id: 't7', text: 'Task 7', status: 'active' },
+      { id: 't7', text: 'Task 7', status: 'todo' },
       { id: 't8', text: 'Task 8', status: 'blocked', blockedBy: ['t3', 't7'] },
-      { id: 't9', text: 'Task 9', status: 'active' },
+      { id: 't9', text: 'Task 9', status: 'todo' },
       { id: 't10', text: 'Task 10', status: 'blocked', blockedBy: ['t8', 't9'] },
-      { id: 't11', text: 'Task 11', status: 'active' }
+      { id: 't11', text: 'Task 11', status: 'todo' }
     ];
 
     const result = buildDependencyGraph(todos);
@@ -364,7 +364,7 @@ describe('buildDependencyGraph — Larger graphs', () => {
   it('creates no edges for todos without a blockedBy field', () => {
     const todos = [
       { id: 'task-a', text: 'Task A', status: 'blocked' },
-      { id: 'task-b', text: 'Task B', status: 'active' },
+      { id: 'task-b', text: 'Task B', status: 'todo' },
       { id: 'task-c', text: 'Task C', status: 'done' }
     ];
 
@@ -377,7 +377,7 @@ describe('buildDependencyGraph — Larger graphs', () => {
 
   it('returns only nodes when all todos are isolated', () => {
     const todos = [
-      { id: 'task-a', text: 'Task A', status: 'active' },
+      { id: 'task-a', text: 'Task A', status: 'todo' },
       { id: 'task-b', text: 'Task B', status: 'blocked', blockedBy: [] },
       { id: 'task-c', text: 'Task C', status: 'done' },
       { id: 'task-d', text: 'Task D', status: 'cancelled' }
