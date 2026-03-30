@@ -2,7 +2,7 @@ import dagre from 'dagre';
 import {
   APP_PALETTE,
   getTodoStatusLabel,
-  getTodoStatusPalette
+  getTodoStatusPalette,
 } from '../app/constants.js';
 import { buildDependencyGraph } from './graph.js';
 
@@ -41,15 +41,17 @@ function layoutGraph(graphModel) {
     ranksep: 92,
     nodesep: 28,
     marginx: 36,
-    marginy: 28
+    marginy: 28,
   });
   graph.setDefaultEdgeLabel(() => ({}));
 
-  const sortedNodes = [...graphModel.nodes].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedNodes = [...graphModel.nodes].sort(
+    (a, b) => a.orderIndex - b.orderIndex,
+  );
   sortedNodes.forEach((node) => {
     graph.setNode(node.id, {
       width: NODE_WIDTH,
-      height: NODE_HEIGHT
+      height: NODE_HEIGHT,
     });
   });
 
@@ -69,7 +71,7 @@ function layoutGraph(graphModel) {
       x: laidOutNode?.x ?? 72 + index * (NODE_WIDTH + 24),
       y: laidOutNode?.y ?? 72,
       width: NODE_WIDTH,
-      height: NODE_HEIGHT
+      height: NODE_HEIGHT,
     };
   });
 }
@@ -110,7 +112,7 @@ export function createDagView({ container, onSelectTask }) {
     class: 'dag-svg',
     viewBox: '0 0 800 280',
     role: 'img',
-    'aria-label': 'Task dependency graph'
+    'aria-label': 'Task dependency graph',
   });
 
   const defs = createSvgElement('defs');
@@ -139,7 +141,14 @@ export function createDagView({ container, onSelectTask }) {
   container.append(warning, resetButton, svg, tooltip);
 
   const transform = { scale: 1, x: 0, y: 0 };
-  const dragState = { active: false, pointerId: null, startX: 0, startY: 0, originX: 0, originY: 0 };
+  const dragState = {
+    active: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  };
 
   let currentGraph = buildDependencyGraph([]);
   let currentLayout = [];
@@ -157,7 +166,10 @@ export function createDagView({ container, onSelectTask }) {
   }
 
   function applyTransform() {
-    surface.setAttribute('transform', `matrix(${transform.scale} 0 0 ${transform.scale} ${transform.x} ${transform.y})`);
+    surface.setAttribute(
+      'transform',
+      `matrix(${transform.scale} 0 0 ${transform.scale} ${transform.x} ${transform.y})`,
+    );
   }
 
   function positionTooltip(nodeId, nodeElement) {
@@ -170,8 +182,15 @@ export function createDagView({ container, onSelectTask }) {
     const containerRect = container.getBoundingClientRect();
     const nodeRect = nodeElement.getBoundingClientRect();
     const top = nodeRect.top - containerRect.top - tooltip.offsetHeight - 10;
-    const left = nodeRect.left - containerRect.left + nodeRect.width / 2 - tooltip.offsetWidth / 2;
-    const maxLeft = Math.max(8, container.clientWidth - tooltip.offsetWidth - 8);
+    const left =
+      nodeRect.left -
+      containerRect.left +
+      nodeRect.width / 2 -
+      tooltip.offsetWidth / 2;
+    const maxLeft = Math.max(
+      8,
+      container.clientWidth - tooltip.offsetWidth - 8,
+    );
 
     tooltip.style.left = `${clamp(left, 8, maxLeft)}px`;
     tooltip.style.top = `${Math.max(8, top)}px`;
@@ -205,8 +224,11 @@ export function createDagView({ container, onSelectTask }) {
 
     edgeElements.forEach((path, edgeId) => {
       const edge = edgeLookup.get(edgeId);
-      const isConnected = Boolean(activeId) && (edge.from === activeId || edge.to === activeId);
-      const isCycle = currentGraph.cycleEdges.some((cycleEdge) => cycleEdge.id === edgeId);
+      const isConnected =
+        Boolean(activeId) && (edge.from === activeId || edge.to === activeId);
+      const isCycle = currentGraph.cycleEdges.some(
+        (cycleEdge) => cycleEdge.id === edgeId,
+      );
 
       if (isConnected) {
         connectedNodeIds.add(edge.from);
@@ -216,7 +238,14 @@ export function createDagView({ container, onSelectTask }) {
       path.classList.toggle('is-highlighted', isConnected);
       path.classList.toggle('is-cycle', isCycle);
       path.classList.toggle('is-dimmed', shouldDim && !isConnected);
-      path.setAttribute('marker-end', isCycle ? 'url(#dag-arrow-cycle)' : isConnected ? 'url(#dag-arrow-highlight)' : 'url(#dag-arrow-default)');
+      path.setAttribute(
+        'marker-end',
+        isCycle
+          ? 'url(#dag-arrow-cycle)'
+          : isConnected
+            ? 'url(#dag-arrow-highlight)'
+            : 'url(#dag-arrow-default)',
+      );
     });
 
     nodeElements.forEach((group, nodeId) => {
@@ -243,26 +272,35 @@ export function createDagView({ container, onSelectTask }) {
       return;
     }
 
-    const bounds = currentLayout.reduce((acc, node) => {
-      acc.minX = Math.min(acc.minX, node.x - node.width / 2);
-      acc.maxX = Math.max(acc.maxX, node.x + node.width / 2);
-      acc.minY = Math.min(acc.minY, node.y - node.height / 2);
-      acc.maxY = Math.max(acc.maxY, node.y + node.height / 2);
-      return acc;
-    }, {
-      minX: Number.POSITIVE_INFINITY,
-      maxX: Number.NEGATIVE_INFINITY,
-      minY: Number.POSITIVE_INFINITY,
-      maxY: Number.NEGATIVE_INFINITY
-    });
+    const bounds = currentLayout.reduce(
+      (acc, node) => {
+        acc.minX = Math.min(acc.minX, node.x - node.width / 2);
+        acc.maxX = Math.max(acc.maxX, node.x + node.width / 2);
+        acc.minY = Math.min(acc.minY, node.y - node.height / 2);
+        acc.maxY = Math.max(acc.maxY, node.y + node.height / 2);
+        return acc;
+      },
+      {
+        minX: Number.POSITIVE_INFINITY,
+        maxX: Number.NEGATIVE_INFINITY,
+        minY: Number.POSITIVE_INFINITY,
+        maxY: Number.NEGATIVE_INFINITY,
+      },
+    );
 
     const paddedWidth = bounds.maxX - bounds.minX + 72;
     const paddedHeight = bounds.maxY - bounds.minY + 64;
-    const scale = clamp(Math.min(width / paddedWidth, height / paddedHeight), MIN_FIT_SCALE, MAX_FIT_SCALE);
+    const scale = clamp(
+      Math.min(width / paddedWidth, height / paddedHeight),
+      MIN_FIT_SCALE,
+      MAX_FIT_SCALE,
+    );
 
     transform.scale = scale;
-    transform.x = (width - paddedWidth * scale) / 2 - (bounds.minX - 36) * scale;
-    transform.y = (height - paddedHeight * scale) / 2 - (bounds.minY - 32) * scale;
+    transform.x =
+      (width - paddedWidth * scale) / 2 - (bounds.minX - 36) * scale;
+    transform.y =
+      (height - paddedHeight * scale) / 2 - (bounds.minY - 32) * scale;
     applyTransform();
   }
 
@@ -288,7 +326,7 @@ export function createDagView({ container, onSelectTask }) {
         class: 'dag-edge-path',
         d: buildEdgePath(source, target, cycleIds.has(edge.id)),
         'data-edge-id': edge.id,
-        fill: 'none'
+        fill: 'none',
       });
       edgeElements.set(edge.id, path);
       edgeLayer.appendChild(path);
@@ -300,7 +338,7 @@ export function createDagView({ container, onSelectTask }) {
         transform: `translate(${node.x - node.width / 2} ${node.y - node.height / 2})`,
         tabindex: '0',
         role: 'button',
-        'aria-label': `${node.label}. ${getTodoStatusLabel(node.status)} task.`
+        'aria-label': `${node.label}. ${getTodoStatusLabel(node.status)} task.`,
       });
 
       const palette = getTodoStatusPalette(node.status);
@@ -311,7 +349,7 @@ export function createDagView({ container, onSelectTask }) {
         width: node.width + 4,
         height: node.height + 4,
         rx: 10,
-        ry: 10
+        ry: 10,
       });
       const body = createSvgElement('rect', {
         class: 'dag-node-body',
@@ -322,7 +360,7 @@ export function createDagView({ container, onSelectTask }) {
         rx: 8,
         ry: 8,
         fill: palette.fill,
-        stroke: palette.border
+        stroke: palette.border,
       });
 
       group.append(outline, body);
@@ -336,20 +374,20 @@ export function createDagView({ container, onSelectTask }) {
           height: node.height,
           rx: 8,
           ry: 8,
-          fill: palette.accent
+          fill: palette.accent,
         });
         group.appendChild(accent);
       }
 
       const textClip = createSvgElement('g', {
-        'clip-path': 'url(#dag-node-clip)'
+        'clip-path': 'url(#dag-node-clip)',
       });
       const text = createSvgElement('text', {
         class: 'dag-node-label',
         x: palette.accent ? 18 : 14,
         y: 26,
         fill: palette.text,
-        'fill-opacity': palette.opacity
+        'fill-opacity': palette.opacity,
       });
       text.textContent = truncateLabel(node.label);
       textClip.appendChild(text);
@@ -363,7 +401,7 @@ export function createDagView({ container, onSelectTask }) {
           y1: 22,
           y2: 22,
           stroke: palette.strike,
-          'stroke-opacity': palette.opacity
+          'stroke-opacity': palette.opacity,
         });
         group.appendChild(strike);
       }
@@ -412,9 +450,10 @@ export function createDagView({ container, onSelectTask }) {
     });
 
     warning.hidden = currentGraph.cycleEdges.length === 0;
-    warning.textContent = currentGraph.cycleEdges.length === 0
-      ? ''
-      : 'Dependency cycle detected. Layout is approximate until the cycle is removed.';
+    warning.textContent =
+      currentGraph.cycleEdges.length === 0
+        ? ''
+        : 'Dependency cycle detected. Layout is approximate until the cycle is removed.';
     resetButton.hidden = currentGraph.nodes.length === 0;
 
     resetView();
@@ -477,9 +516,21 @@ export function createDagView({ container, onSelectTask }) {
   return {
     update({ todos, selectedTaskId: nextSelectedTaskId }) {
       currentGraph = buildDependencyGraph(todos);
-      selectedTaskId = currentGraph.nodes.some((node) => node.id === nextSelectedTaskId) ? nextSelectedTaskId : null;
-      hoveredTaskId = currentGraph.nodes.some((node) => node.id === hoveredTaskId) ? hoveredTaskId : null;
-      focusedTaskId = currentGraph.nodes.some((node) => node.id === focusedTaskId) ? focusedTaskId : null;
+      selectedTaskId = currentGraph.nodes.some(
+        (node) => node.id === nextSelectedTaskId,
+      )
+        ? nextSelectedTaskId
+        : null;
+      hoveredTaskId = currentGraph.nodes.some(
+        (node) => node.id === hoveredTaskId,
+      )
+        ? hoveredTaskId
+        : null;
+      focusedTaskId = currentGraph.nodes.some(
+        (node) => node.id === focusedTaskId,
+      )
+        ? focusedTaskId
+        : null;
       renderGraph();
     },
     destroy() {
@@ -489,6 +540,6 @@ export function createDagView({ container, onSelectTask }) {
       svg.removeEventListener('pointerup', endPointerDrag);
       svg.removeEventListener('pointercancel', endPointerDrag);
       container.innerHTML = '';
-    }
+    },
   };
 }

@@ -5,6 +5,6 @@ export default defineConfig({
   root: '.',
   server: { open: true },
   test: {
-    include: ['src/**/*.test.js']
-  }
+    include: ['src/**/*.test.js'],
+  },
 });

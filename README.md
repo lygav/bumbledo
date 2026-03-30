@@ -55,6 +55,15 @@ npm run dev
 # Build for production
 npm run build
 
+# Lint source and config files
+npm run lint
+
+# Format tracked app files
+npm run format
+
+# Check formatting without changing files
+npm run format:check
+
 # Preview production build
 npm run preview
 
@@ -86,28 +95,28 @@ npm test:watch
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| **Cmd/Ctrl + Shift + A** | Focus the task input and select its text |
-| **↑ / ↓** | Move selection to the previous or next visible todo |
-| **Enter** | Cycle the selected todo through To Do → In Progress → Done |
-| **Delete / Backspace** | Delete the selected todo |
-| **?** | Show or hide shortcut help |
-| **Escape** | Deselect the current todo and close open dialogs |
+| Shortcut                 | Action                                                     |
+| ------------------------ | ---------------------------------------------------------- |
+| **Cmd/Ctrl + Shift + A** | Focus the task input and select its text                   |
+| **↑ / ↓**                | Move selection to the previous or next visible todo        |
+| **Enter**                | Cycle the selected todo through To Do → In Progress → Done |
+| **Delete / Backspace**   | Delete the selected todo                                   |
+| **?**                    | Show or hide shortcut help                                 |
+| **Escape**               | Deselect the current todo and close open dialogs           |
 
 ---
 
 ## 🏗️ Tech Stack
 
-| Layer | Tech |
-|-------|------|
-| **Framework** | Vanilla JavaScript (no React, Vue, etc.) |
-| **Architecture** | Modular ES modules for todos, DAG rendering, and notifications |
-| **Build** | Vite |
-| **Testing** | Vitest |
-| **Persistence** | Browser localStorage |
-| **Visualization** | Dagre + custom SVG rendering |
-| **Styling** | Vanilla CSS |
+| Layer             | Tech                                                           |
+| ----------------- | -------------------------------------------------------------- |
+| **Framework**     | Vanilla JavaScript (no React, Vue, etc.)                       |
+| **Architecture**  | Modular ES modules for todos, DAG rendering, and notifications |
+| **Build**         | Vite                                                           |
+| **Testing**       | Vitest                                                         |
+| **Persistence**   | Browser localStorage                                           |
+| **Visualization** | Dagre + custom SVG rendering                                   |
+| **Styling**       | Vanilla CSS                                                    |
 
 **Zero external runtime dependencies.** The only npm package at runtime is `dagre` for graph layout.
 
@@ -116,7 +125,6 @@ npm test:watch
 ## 💾 Persistence
 
 Tasks are stored in your browser's `localStorage`. No backend, no sync across devices, no cloud backup—everything lives locally. Clear your browser data and tasks are gone. It's intentional: simple tools don't need complexity.
-
 
 ## 🌐 Browser & Accessibility
 
@@ -133,6 +141,15 @@ MIT
 ## 🤝 Contributing
 
 Found a bug? Have an idea? Check the [PRD.md](./PRD.md) for full feature scope, then open an issue or pull request on GitHub.
+
+Before you open a PR, run the same guardrails CI runs:
+
+```bash
+npm run lint
+npm run format:check
+npm test
+npm run build
+```
 
 ---
 

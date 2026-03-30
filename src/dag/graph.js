@@ -12,7 +12,9 @@ function detectCycleEdgeIds(nodes, edges) {
   });
 
   adjacency.forEach((list) => {
-    list.sort((a, b) => (nodeOrder.get(a.to) ?? 0) - (nodeOrder.get(b.to) ?? 0));
+    list.sort(
+      (a, b) => (nodeOrder.get(a.to) ?? 0) - (nodeOrder.get(b.to) ?? 0),
+    );
   });
 
   const visitState = new Map();
@@ -70,7 +72,7 @@ export function buildDependencyGraph(todos) {
     id: todo.id,
     label: todo.text,
     status: todo.status,
-    orderIndex
+    orderIndex,
   }));
 
   const knownIds = new Set(nodes.map((node) => node.id));
@@ -89,7 +91,7 @@ export function buildDependencyGraph(todos) {
       edges.push({
         id: `${blockerId}->${todo.id}:${blockerIndex}`,
         from: blockerId,
-        to: todo.id
+        to: todo.id,
       });
     });
   });
@@ -105,7 +107,7 @@ export function buildDependencyGraph(todos) {
     stats: {
       nodeCount: nodes.length,
       edgeCount: edges.length,
-      cycleCount: cycleEdges.length
-    }
+      cycleCount: cycleEdges.length,
+    },
   };
 }

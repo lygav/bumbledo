@@ -3,7 +3,7 @@ export const TODO_STATUS = Object.freeze({
   IN_PROGRESS: 'inprogress',
   DONE: 'done',
   CANCELLED: 'cancelled',
-  BLOCKED: 'blocked'
+  BLOCKED: 'blocked',
 });
 
 export const TODO_STATUS_VALUES = Object.freeze([
@@ -11,80 +11,83 @@ export const TODO_STATUS_VALUES = Object.freeze([
   TODO_STATUS.IN_PROGRESS,
   TODO_STATUS.DONE,
   TODO_STATUS.CANCELLED,
-  TODO_STATUS.BLOCKED
+  TODO_STATUS.BLOCKED,
 ]);
 
 export const ACTIONABLE_TODO_STATUSES = Object.freeze([
   TODO_STATUS.TODO,
-  TODO_STATUS.IN_PROGRESS
+  TODO_STATUS.IN_PROGRESS,
 ]);
 
 export const EDITABLE_TODO_STATUSES = Object.freeze([
   ...ACTIONABLE_TODO_STATUSES,
-  TODO_STATUS.BLOCKED
+  TODO_STATUS.BLOCKED,
 ]);
 
 export const TERMINAL_TODO_STATUSES = Object.freeze([
   TODO_STATUS.DONE,
-  TODO_STATUS.CANCELLED
+  TODO_STATUS.CANCELLED,
 ]);
 
 export const TOGGLEABLE_TODO_STATUSES = Object.freeze([
   TODO_STATUS.TODO,
   TODO_STATUS.IN_PROGRESS,
-  TODO_STATUS.DONE
+  TODO_STATUS.DONE,
 ]);
 
 export const BLOCKER_SOURCE_TODO_STATUSES = Object.freeze([
   TODO_STATUS.TODO,
-  TODO_STATUS.BLOCKED
+  TODO_STATUS.BLOCKED,
 ]);
 
 export const TODO_STATUS_CYCLE = Object.freeze({
   [TODO_STATUS.TODO]: TODO_STATUS.IN_PROGRESS,
   [TODO_STATUS.IN_PROGRESS]: TODO_STATUS.DONE,
   [TODO_STATUS.DONE]: TODO_STATUS.TODO,
-  [TODO_STATUS.CANCELLED]: TODO_STATUS.TODO
+  [TODO_STATUS.CANCELLED]: TODO_STATUS.TODO,
 });
 
 export const TODO_STATUS_META = Object.freeze({
   [TODO_STATUS.TODO]: Object.freeze({
     value: TODO_STATUS.TODO,
     label: 'To Do',
-    metricLabel: 'To Do'
+    metricLabel: 'To Do',
   }),
   [TODO_STATUS.IN_PROGRESS]: Object.freeze({
     value: TODO_STATUS.IN_PROGRESS,
     label: 'In Progress',
-    metricLabel: 'In Progress'
+    metricLabel: 'In Progress',
   }),
   [TODO_STATUS.DONE]: Object.freeze({
     value: TODO_STATUS.DONE,
     label: 'Done',
-    metricLabel: 'done'
+    metricLabel: 'done',
   }),
   [TODO_STATUS.CANCELLED]: Object.freeze({
     value: TODO_STATUS.CANCELLED,
     label: 'Cancelled',
-    metricLabel: 'cancelled'
+    metricLabel: 'cancelled',
   }),
   [TODO_STATUS.BLOCKED]: Object.freeze({
     value: TODO_STATUS.BLOCKED,
     label: 'Blocked',
-    metricLabel: 'blocked'
-  })
+    metricLabel: 'blocked',
+  }),
 });
 
 export const TODO_STATUS_OPTIONS = Object.freeze(
-  TODO_STATUS_VALUES.map((status) => Object.freeze({
-    value: status,
-    label: TODO_STATUS_META[status].label
-  }))
+  TODO_STATUS_VALUES.map((status) =>
+    Object.freeze({
+      value: status,
+      label: TODO_STATUS_META[status].label,
+    }),
+  ),
 );
 
-export const ACTIONABLE_TODO_STATUS_SUMMARY_LABEL = ACTIONABLE_TODO_STATUSES
-  .map((status) => TODO_STATUS_META[status].label)
-  .join(' or ');
+export const ACTIONABLE_TODO_STATUS_SUMMARY_LABEL =
+  ACTIONABLE_TODO_STATUSES.map((status) => TODO_STATUS_META[status].label).join(
+    ' or ',
+  );
 
 const DEFAULT_TODO_STATUS_PALETTE = Object.freeze({
   fill: '#ffffff',
@@ -92,7 +95,7 @@ const DEFAULT_TODO_STATUS_PALETTE = Object.freeze({
   accent: null,
   text: '#1a1a1a',
   opacity: '1',
-  strike: null
+  strike: null,
 });
 
 export const TODO_STATUS_PALETTE = Object.freeze({
@@ -104,7 +107,7 @@ export const TODO_STATUS_PALETTE = Object.freeze({
     accent: '#2196f3',
     text: '#1a1a1a',
     opacity: '1',
-    strike: null
+    strike: null,
   }),
   [TODO_STATUS.DONE]: Object.freeze({
     fill: 'rgba(76, 175, 80, 0.08)',
@@ -112,7 +115,7 @@ export const TODO_STATUS_PALETTE = Object.freeze({
     accent: '#4caf50',
     text: '#5f6f62',
     opacity: '1',
-    strike: 'rgba(95, 111, 98, 0.7)'
+    strike: 'rgba(95, 111, 98, 0.7)',
   }),
   [TODO_STATUS.CANCELLED]: Object.freeze({
     fill: 'rgba(192, 57, 43, 0.08)',
@@ -120,7 +123,7 @@ export const TODO_STATUS_PALETTE = Object.freeze({
     accent: '#c0392b',
     text: '#c0392b',
     opacity: '0.8',
-    strike: '#c0392b'
+    strike: '#c0392b',
   }),
   [TODO_STATUS.BLOCKED]: Object.freeze({
     fill: '#fffbf0',
@@ -128,8 +131,8 @@ export const TODO_STATUS_PALETTE = Object.freeze({
     accent: '#e67e22',
     text: '#1a1a1a',
     opacity: '1',
-    strike: null
-  })
+    strike: null,
+  }),
 });
 
 export const APP_PALETTE = Object.freeze({
@@ -138,7 +141,7 @@ export const APP_PALETTE = Object.freeze({
   BURNDOWN_GAP: 'rgba(74, 144, 217, 0.12)',
   DAG_ARROW_DEFAULT: '#9aa1aa',
   DAG_ARROW_HIGHLIGHT: '#4a90d9',
-  DAG_ARROW_CYCLE: '#d64541'
+  DAG_ARROW_CYCLE: '#d64541',
 });
 
 export const APP_STORAGE_KEYS = Object.freeze({
@@ -147,7 +150,7 @@ export const APP_STORAGE_KEYS = Object.freeze({
   READY_FILTER: 'bumbledo_filter_ready',
   LEGACY_ACTIONABLE_FILTER: 'bumbledo_filter_actionable',
   SHORTCUTS_TIP_DISMISSED: 'bumbledo_tip_shortcuts_dismissed',
-  REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed'
+  REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed',
 });
 
 export function getTodoStatusLabel(status) {

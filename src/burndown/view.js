@@ -1,7 +1,7 @@
 import { APP_PALETTE } from '../app/constants.js';
 import {
   buildStatusMetricItems,
-  renderStatusMetricLine
+  renderStatusMetricLine,
 } from '../ui/status-metrics.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -12,7 +12,9 @@ function parseBurndownDate(dateKey) {
 }
 
 function formatBurndownDate(dateKey, options) {
-  return new Intl.DateTimeFormat(undefined, options).format(parseBurndownDate(dateKey));
+  return new Intl.DateTimeFormat(undefined, options).format(
+    parseBurndownDate(dateKey),
+  );
 }
 
 function buildBurndownSeries(samples) {
@@ -27,13 +29,14 @@ function buildBurndownSeries(samples) {
     return {
       ...sample,
       completed: completedMax,
-      total: totalMax
+      total: totalMax,
     };
   });
 }
 
 function getBurndownTrend(samples, currentDone) {
-  const previousSample = samples.length >= 2 ? samples[samples.length - 2] : null;
+  const previousSample =
+    samples.length >= 2 ? samples[samples.length - 2] : null;
   if (!previousSample) {
     return { symbol: '→', tone: 'trend' };
   }
@@ -99,7 +102,7 @@ export function createBurndownView({
   svgEl,
   tooltipEl,
   isMobileViewport,
-  onToggle = () => {}
+  onToggle = () => {},
 }) {
   function hideTooltip() {
     tooltipEl.hidden = true;
@@ -118,11 +121,16 @@ export function createBurndownView({
 
     const chartRect = chartEl.getBoundingClientRect();
     const x = (point.x / viewBoxWidth) * chartRect.width;
-    const y = (Math.min(point.completedY, point.totalY) / viewBoxHeight) * chartRect.height;
+    const y =
+      (Math.min(point.completedY, point.totalY) / viewBoxHeight) *
+      chartRect.height;
 
     const tooltipWidth = tooltipEl.offsetWidth;
     const tooltipHeight = tooltipEl.offsetHeight;
-    const left = Math.max(8, Math.min(chartRect.width - tooltipWidth - 8, x - (tooltipWidth / 2)));
+    const left = Math.max(
+      8,
+      Math.min(chartRect.width - tooltipWidth - 8, x - tooltipWidth / 2),
+    );
     const top = Math.max(8, y - tooltipHeight - 12);
 
     tooltipEl.style.left = `${left}px`;
@@ -138,106 +146,125 @@ export function createBurndownView({
       : { top: 24, right: 20, bottom: 40, left: 42 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
-    const maxY = Math.max(1, ...series.map(point => point.total));
+    const maxY = Math.max(1, ...series.map((point) => point.total));
     const tickCount = maxY >= 6 ? 4 : 3;
-    const yTicks = [...new Set(
-      Array.from({ length: tickCount }, (_, index) => Math.round((maxY / (tickCount - 1)) * index))
-    )];
-    const xLabelEvery = Math.max(1, Math.ceil(series.length / (mobile ? 3 : 6)));
-    const shouldShowXAxisLabel = (index) => (
-      index === 0
-      || index === series.length - 1
-      || index % xLabelEvery === 0
+    const yTicks = [
+      ...new Set(
+        Array.from({ length: tickCount }, (_, index) =>
+          Math.round((maxY / (tickCount - 1)) * index),
+        ),
+      ),
+    ];
+    const xLabelEvery = Math.max(
+      1,
+      Math.ceil(series.length / (mobile ? 3 : 6)),
     );
-    const getX = (index) => (
+    const shouldShowXAxisLabel = (index) =>
+      index === 0 || index === series.length - 1 || index % xLabelEvery === 0;
+    const getX = (index) =>
       series.length === 1
-        ? margin.left + (chartWidth / 2)
-        : margin.left + ((chartWidth * index) / (series.length - 1))
-    );
-    const getY = (value) => margin.top + chartHeight - ((value / maxY) * chartHeight);
+        ? margin.left + chartWidth / 2
+        : margin.left + (chartWidth * index) / (series.length - 1);
+    const getY = (value) =>
+      margin.top + chartHeight - (value / maxY) * chartHeight;
 
     const totalPoints = series.map((point, index) => ({
       ...point,
       x: getX(index),
-      y: getY(point.total)
+      y: getY(point.total),
     }));
     const completedPoints = series.map((point, index) => ({
       ...point,
       x: getX(index),
-      y: getY(point.completed)
+      y: getY(point.completed),
     }));
 
     svgEl.innerHTML = '';
     svgEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
     svgEl.setAttribute('role', 'img');
-    svgEl.setAttribute('aria-label', 'Burndown chart showing done work versus total work over time');
+    svgEl.setAttribute(
+      'aria-label',
+      'Burndown chart showing done work versus total work over time',
+    );
 
     yTicks.forEach((tick) => {
       const y = getY(tick);
-      svgEl.appendChild(createSvgElement('line', {
-        x1: margin.left,
-        y1: y,
-        x2: width - margin.right,
-        y2: y,
-        stroke: '#e3e8ef',
-        'stroke-width': 1
-      }));
+      svgEl.appendChild(
+        createSvgElement('line', {
+          x1: margin.left,
+          y1: y,
+          x2: width - margin.right,
+          y2: y,
+          stroke: '#e3e8ef',
+          'stroke-width': 1,
+        }),
+      );
 
       const tickLabel = createSvgElement('text', {
         x: margin.left - 8,
         y: y + 4,
         'text-anchor': 'end',
         fill: '#7c8798',
-        'font-size': mobile ? 10 : 11
+        'font-size': mobile ? 10 : 11,
       });
       tickLabel.textContent = String(tick);
       svgEl.appendChild(tickLabel);
     });
 
-    svgEl.appendChild(createSvgElement('path', {
-      d: buildBurndownAreaPath(totalPoints, completedPoints),
-      fill: APP_PALETTE.BURNDOWN_GAP,
-      stroke: 'none'
-    }));
+    svgEl.appendChild(
+      createSvgElement('path', {
+        d: buildBurndownAreaPath(totalPoints, completedPoints),
+        fill: APP_PALETTE.BURNDOWN_GAP,
+        stroke: 'none',
+      }),
+    );
 
-    svgEl.appendChild(createSvgElement('path', {
-      d: buildBurndownPath(totalPoints),
-      fill: 'none',
-      stroke: APP_PALETTE.BURNDOWN_TOTAL,
-      'stroke-width': 2.5,
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
-    }));
+    svgEl.appendChild(
+      createSvgElement('path', {
+        d: buildBurndownPath(totalPoints),
+        fill: 'none',
+        stroke: APP_PALETTE.BURNDOWN_TOTAL,
+        'stroke-width': 2.5,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      }),
+    );
 
-    svgEl.appendChild(createSvgElement('path', {
-      d: buildBurndownPath(completedPoints),
-      fill: 'none',
-      stroke: APP_PALETTE.BURNDOWN_COMPLETED,
-      'stroke-width': 2.5,
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round'
-    }));
+    svgEl.appendChild(
+      createSvgElement('path', {
+        d: buildBurndownPath(completedPoints),
+        fill: 'none',
+        stroke: APP_PALETTE.BURNDOWN_COMPLETED,
+        'stroke-width': 2.5,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      }),
+    );
 
     totalPoints.forEach((point, index) => {
       const completedPoint = completedPoints[index];
 
-      svgEl.appendChild(createSvgElement('circle', {
-        cx: point.x,
-        cy: point.y,
-        r: 3.5,
-        fill: '#fff',
-        stroke: APP_PALETTE.BURNDOWN_TOTAL,
-        'stroke-width': 2
-      }));
+      svgEl.appendChild(
+        createSvgElement('circle', {
+          cx: point.x,
+          cy: point.y,
+          r: 3.5,
+          fill: '#fff',
+          stroke: APP_PALETTE.BURNDOWN_TOTAL,
+          'stroke-width': 2,
+        }),
+      );
 
-      svgEl.appendChild(createSvgElement('circle', {
-        cx: completedPoint.x,
-        cy: completedPoint.y,
-        r: 3.5,
-        fill: '#fff',
-        stroke: APP_PALETTE.BURNDOWN_COMPLETED,
-        'stroke-width': 2
-      }));
+      svgEl.appendChild(
+        createSvgElement('circle', {
+          cx: completedPoint.x,
+          cy: completedPoint.y,
+          r: 3.5,
+          fill: '#fff',
+          stroke: APP_PALETTE.BURNDOWN_COMPLETED,
+          'stroke-width': 2,
+        }),
+      );
 
       if (shouldShowXAxisLabel(index)) {
         const xAxisLabel = createSvgElement('text', {
@@ -245,11 +272,14 @@ export function createBurndownView({
           y: height - 10,
           'text-anchor': 'middle',
           fill: '#7c8798',
-          'font-size': mobile ? 10 : 11
+          'font-size': mobile ? 10 : 11,
         });
-        xAxisLabel.textContent = formatBurndownDate(point.date, mobile
-          ? { month: 'numeric', day: 'numeric' }
-          : { month: 'short', day: 'numeric' });
+        xAxisLabel.textContent = formatBurndownDate(
+          point.date,
+          mobile
+            ? { month: 'numeric', day: 'numeric' }
+            : { month: 'short', day: 'numeric' },
+        );
         svgEl.appendChild(xAxisLabel);
       }
 
@@ -260,18 +290,22 @@ export function createBurndownView({
         height: chartHeight,
         fill: 'transparent',
         tabindex: 0,
-        'aria-label': `${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}: ${completedPoint.completed} done, ${point.total} total`
+        'aria-label': `${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}: ${completedPoint.completed} done, ${point.total} total`,
       });
 
       const tooltipPoint = {
         ...point,
         completed: completedPoint.completed,
         completedY: completedPoint.y,
-        totalY: point.y
+        totalY: point.y,
       };
 
-      hitTarget.addEventListener('mouseenter', () => showTooltip(tooltipPoint, width, height));
-      hitTarget.addEventListener('focus', () => showTooltip(tooltipPoint, width, height));
+      hitTarget.addEventListener('mouseenter', () =>
+        showTooltip(tooltipPoint, width, height),
+      );
+      hitTarget.addEventListener('focus', () =>
+        showTooltip(tooltipPoint, width, height),
+      );
       hitTarget.addEventListener('mouseleave', hideTooltip);
       hitTarget.addEventListener('blur', hideTooltip);
       svgEl.appendChild(hitTarget);
@@ -286,13 +320,13 @@ export function createBurndownView({
     toggleEl.setAttribute('aria-expanded', String(expanded));
     renderStatusMetricLine(
       collapsedSummaryEl,
-      buildStatusMetricItems(progress, { trend })
+      buildStatusMetricItems(progress, { trend }),
     );
     collapsedSummaryEl.hidden = expanded;
     panelEl.hidden = !expanded;
     renderStatusMetricLine(
       summaryHeadlineEl,
-      buildStatusMetricItems(progress, { includeTotal: true })
+      buildStatusMetricItems(progress, { includeTotal: true }),
     );
 
     emptyStateEl.hidden = hasEnoughData;
@@ -322,6 +356,6 @@ export function createBurndownView({
       svgEl.removeEventListener('mouseleave', hideTooltip);
       svgEl.innerHTML = '';
       hideTooltip();
-    }
+    },
   };
 }

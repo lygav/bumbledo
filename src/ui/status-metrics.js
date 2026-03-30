@@ -1,7 +1,4 @@
-import {
-  TODO_STATUS,
-  TODO_STATUS_META
-} from '../app/constants.js';
+import { TODO_STATUS, TODO_STATUS_META } from '../app/constants.js';
 
 const STATUS_PILL_TONE_CLASS = {
   total: 'is-total',
@@ -11,10 +8,13 @@ const STATUS_PILL_TONE_CLASS = {
   done: 'is-done',
   trend: 'is-trend',
   'trend-up': 'is-trend-up',
-  'trend-down': 'is-trend-down'
+  'trend-down': 'is-trend-down',
 };
 
-export function buildStatusMetricItems(progress, { includeTotal = false, trend = null } = {}) {
+export function buildStatusMetricItems(
+  progress,
+  { includeTotal = false, trend = null } = {},
+) {
   const items = [];
 
   if (includeTotal) {
@@ -22,10 +22,26 @@ export function buildStatusMetricItems(progress, { includeTotal = false, trend =
   }
 
   items.push(
-    { count: progress.todo, label: TODO_STATUS_META[TODO_STATUS.TODO].metricLabel, tone: 'ready' },
-    { count: progress.inProgress, label: TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].metricLabel, tone: 'inprogress' },
-    { count: progress.blocked, label: TODO_STATUS_META[TODO_STATUS.BLOCKED].metricLabel, tone: 'blocked' },
-    { count: progress.done, label: TODO_STATUS_META[TODO_STATUS.DONE].metricLabel, tone: 'done' }
+    {
+      count: progress.todo,
+      label: TODO_STATUS_META[TODO_STATUS.TODO].metricLabel,
+      tone: 'ready',
+    },
+    {
+      count: progress.inProgress,
+      label: TODO_STATUS_META[TODO_STATUS.IN_PROGRESS].metricLabel,
+      tone: 'inprogress',
+    },
+    {
+      count: progress.blocked,
+      label: TODO_STATUS_META[TODO_STATUS.BLOCKED].metricLabel,
+      tone: 'blocked',
+    },
+    {
+      count: progress.done,
+      label: TODO_STATUS_META[TODO_STATUS.DONE].metricLabel,
+      tone: 'done',
+    },
   );
 
   if (trend) {
@@ -36,12 +52,15 @@ export function buildStatusMetricItems(progress, { includeTotal = false, trend =
 }
 
 function buildStatusMetricText(items) {
-  return items.map(item => item.text ?? `${item.count} ${item.label}`).join(' · ');
+  return items
+    .map((item) => item.text ?? `${item.count} ${item.label}`)
+    .join(' · ');
 }
 
 function createStatusPill(item) {
   const pill = document.createElement('span');
-  const toneClass = STATUS_PILL_TONE_CLASS[item.tone] ?? STATUS_PILL_TONE_CLASS.total;
+  const toneClass =
+    STATUS_PILL_TONE_CLASS[item.tone] ?? STATUS_PILL_TONE_CLASS.total;
   pill.className = `status-pill ${toneClass}`;
 
   if (item.text) {

@@ -14,7 +14,7 @@ function createStorage(seed = {}) {
     },
     removeItem(key) {
       data.delete(key);
-    }
+    },
   };
 }
 
@@ -31,7 +31,7 @@ function createState(overrides = {}) {
     isMobileViewport: false,
     shortcutsTipDismissed: false,
     reorderTipDismissed: false,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -45,7 +45,7 @@ describe('createAppStore', () => {
     expect(event.changed).toBe(true);
     expect(store.getState().todos).toHaveLength(1);
     expect(JSON.parse(storage.data.get(APP_STORAGE_KEYS.TODOS))).toMatchObject([
-      { text: 'Ship store', status: TODO_STATUS.TODO }
+      { text: 'Ship store', status: TODO_STATUS.TODO },
     ]);
   });
 
@@ -53,15 +53,26 @@ describe('createAppStore', () => {
     const initialState = createState({
       todos: [
         { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
-        { id: 'b', text: 'Blocked', status: TODO_STATUS.BLOCKED, blockedBy: ['a'] }
-      ]
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+      ],
     });
     const store = createAppStore({ storage: createStorage(), initialState });
 
-    const event = store.setTaskStatus({ id: 'b', nextStatus: TODO_STATUS.DONE });
+    const event = store.setTaskStatus({
+      id: 'b',
+      nextStatus: TODO_STATUS.DONE,
+    });
 
     expect(event.changed).toBe(false);
-    expect(event.meta).toMatchObject({ blockedCompletionAttempt: true, activeBlockerCount: 1 });
+    expect(event.meta).toMatchObject({
+      blockedCompletionAttempt: true,
+      activeBlockerCount: 1,
+    });
     expect(store.getState()).toEqual(initialState);
   });
 
@@ -73,14 +84,17 @@ describe('createAppStore', () => {
         selectedTaskId: 'a',
         todos: [
           { id: 'a', text: 'Todo A', status: TODO_STATUS.IN_PROGRESS },
-          { id: 'b', text: 'Todo B', status: TODO_STATUS.TODO }
-        ]
-      })
+          { id: 'b', text: 'Todo B', status: TODO_STATUS.TODO },
+        ],
+      }),
     });
 
     const event = store.toggleSelectedTaskStatus();
 
-    expect(event.meta).toMatchObject({ focusSelection: true, scrollSelection: true });
+    expect(event.meta).toMatchObject({
+      focusSelection: true,
+      scrollSelection: true,
+    });
     expect(store.getState().selectedTaskId).toBe('b');
     expect(store.getState().todos[0].status).toBe(TODO_STATUS.DONE);
   });
@@ -98,13 +112,13 @@ describe('createAppStore', () => {
     const store = createAppStore({
       storage: createStorage({
         [APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED]: 'true',
-        [APP_STORAGE_KEYS.REORDER_TIP_DISMISSED]: 'true'
-      })
+        [APP_STORAGE_KEYS.REORDER_TIP_DISMISSED]: 'true',
+      }),
     });
 
     expect(store.getState()).toMatchObject({
       shortcutsTipDismissed: true,
-      reorderTipDismissed: true
+      reorderTipDismissed: true,
     });
   });
 
@@ -115,8 +129,12 @@ describe('createAppStore', () => {
     store.dismissShortcutsTip();
     store.dismissReorderTip();
 
-    expect(storage.data.get(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED)).toBe('true');
-    expect(storage.data.get(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED)).toBe('true');
+    expect(storage.data.get(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED)).toBe(
+      'true',
+    );
+    expect(storage.data.get(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED)).toBe(
+      'true',
+    );
   });
 
   it('samples burndown data through a named action', () => {
@@ -124,15 +142,20 @@ describe('createAppStore', () => {
     const store = createAppStore({
       storage,
       initialState: createState({
-        todos: [{ id: 'a', text: 'Todo', status: TODO_STATUS.TODO }]
-      })
+        todos: [{ id: 'a', text: 'Todo', status: TODO_STATUS.TODO }],
+      }),
     });
 
     const event = store.ensureBurndownSample();
 
     expect(event.changed).toBe(true);
     expect(store.getState().burndownData).toHaveLength(1);
-    expect(store.getState().burndownData[0]).toMatchObject({ todo: 1, total: 1 });
-    expect(JSON.parse(storage.data.get(APP_STORAGE_KEYS.BURNDOWN))).toHaveLength(1);
+    expect(store.getState().burndownData[0]).toMatchObject({
+      todo: 1,
+      total: 1,
+    });
+    expect(
+      JSON.parse(storage.data.get(APP_STORAGE_KEYS.BURNDOWN)),
+    ).toHaveLength(1);
   });
 });

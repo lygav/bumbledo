@@ -7,16 +7,20 @@ function getFocusableElements(container) {
     return [];
   }
 
-  return [...container.querySelectorAll(
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-  )].filter((element) => {
+  return [
+    ...container.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ].filter((element) => {
     if (!isHTMLElement(element)) {
       return false;
     }
 
-    return !element.hidden
-      && !element.hasAttribute('disabled')
-      && element.getAttribute('aria-hidden') !== 'true';
+    return (
+      !element.hidden &&
+      !element.hasAttribute('disabled') &&
+      element.getAttribute('aria-hidden') !== 'true'
+    );
   });
 }
 
@@ -26,7 +30,7 @@ export function createModals({
   helpCloseButton,
   blockedCompletionModal,
   blockedCompletionMessage,
-  blockedCompletionDismissButton
+  blockedCompletionDismissButton,
 }) {
   let helpOpen = false;
   let helpReturnFocusEl = null;
@@ -38,7 +42,9 @@ export function createModals({
       return;
     }
 
-    helpReturnFocusEl = isHTMLElement(document.activeElement) ? document.activeElement : null;
+    helpReturnFocusEl = isHTMLElement(document.activeElement)
+      ? document.activeElement
+      : null;
     helpOpen = true;
     helpModal.hidden = false;
     helpButton.setAttribute('aria-expanded', 'true');
@@ -74,7 +80,9 @@ export function createModals({
       return;
     }
 
-    blockedReturnFocusEl = returnFocusEl ?? (isHTMLElement(document.activeElement) ? document.activeElement : null);
+    blockedReturnFocusEl =
+      returnFocusEl ??
+      (isHTMLElement(document.activeElement) ? document.activeElement : null);
     blockedCompletionMessage.textContent = message;
     blockedCompletionModal.hidden = false;
     blockedOpen = true;
@@ -109,7 +117,9 @@ export function createModals({
     const firstFocusable = focusableElements[0];
     const lastFocusable = focusableElements[focusableElements.length - 1];
     const activeElement = document.activeElement;
-    const focusInsideModal = isHTMLElement(activeElement) && blockedCompletionModal.contains(activeElement);
+    const focusInsideModal =
+      isHTMLElement(activeElement) &&
+      blockedCompletionModal.contains(activeElement);
 
     if (event.shiftKey) {
       if (!focusInsideModal || activeElement === firstFocusable) {
@@ -153,7 +163,10 @@ export function createModals({
   helpButton.addEventListener('click', handleHelpButtonClick);
   helpCloseButton.addEventListener('click', handleHelpCloseClick);
   helpModal.addEventListener('click', handleHelpBackdropClick);
-  blockedCompletionDismissButton.addEventListener('click', handleBlockedDismissClick);
+  blockedCompletionDismissButton.addEventListener(
+    'click',
+    handleBlockedDismissClick,
+  );
   blockedCompletionModal.addEventListener('click', handleBlockedBackdropClick);
 
   return {
@@ -169,8 +182,14 @@ export function createModals({
       helpButton.removeEventListener('click', handleHelpButtonClick);
       helpCloseButton.removeEventListener('click', handleHelpCloseClick);
       helpModal.removeEventListener('click', handleHelpBackdropClick);
-      blockedCompletionDismissButton.removeEventListener('click', handleBlockedDismissClick);
-      blockedCompletionModal.removeEventListener('click', handleBlockedBackdropClick);
-    }
+      blockedCompletionDismissButton.removeEventListener(
+        'click',
+        handleBlockedDismissClick,
+      );
+      blockedCompletionModal.removeEventListener(
+        'click',
+        handleBlockedBackdropClick,
+      );
+    },
   };
 }
