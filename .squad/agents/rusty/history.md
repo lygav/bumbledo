@@ -21,6 +21,7 @@
 - After the shared status-pill refactor, `.status-metric-line` forced `display: flex` without a matching `[hidden]` override, so the collapsed summary stayed visible when the burndown panel opened and duplicated the badges.
 
 ### 2026-03-30: Delegated Todo List Interactions
+### 2026-03-30: Delegated Todo List Interactions (Task #64)
 
 **What I changed:**
 - Moved todo row interaction wiring in `src/todo/list-view.js` from per-row listeners to stable container listeners for click, change, dblclick, focus, and edit-key handling.
@@ -30,6 +31,11 @@
 **Interaction rules to preserve:**
 - List controls that survive full re-renders should be identified from the stable list container with `event.target.closest(...)`, not rebound per `<li>`.
 - Blocker picker clicks must not fall through to generic row-click selection logic, but focus-driven selection and keyboard edit behavior should still keep working after re-render or reorder.
+
+**Cross-refs:**
+- Depends on Saul's store API (Task #62): dispatch `setTaskStatus`, `deleteTask`, `toggleBlocker`, etc.
+- Works alongside Rusty's persistence effects (Task #63): store handles all localStorage writes
+- PR #70 merged
 
 ### 2026-03-30: Active Label Copy + Inline Progress Summary
 
