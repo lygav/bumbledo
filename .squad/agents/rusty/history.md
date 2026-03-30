@@ -222,3 +222,12 @@
 - `src/main.js`
 - `src/todo/model.js`
 - `src/dag/view.js`
+
+### 2026-03-30: Inline CSS Extraction to src/styles.css
+
+**What I changed:**
+- Moved the full app stylesheet out of `index.html` into `src/styles.css` without renaming selectors or changing style behavior.
+- Imported the stylesheet from `src/main.js` so Vite owns CSS bundling and the existing UI keeps the same look across the todo list, burndown, DAG, notifications, and modals.
+
+**Styles kept in `index.html`:**
+- None. The entire large inline app stylesheet was extracted because Vite now loads it through the JS entrypoint and no critical-path-only exception was needed.
