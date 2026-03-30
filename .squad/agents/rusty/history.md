@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Full-Viewport Confetti Tuning
+
+**What I changed:**
+- Reworked the done-state confetti so particles spawn across the full viewport instead of from the completed task, using a fixed full-screen burst layer with pointer-events disabled.
+- Tuned the motion to feel gentler with 2-3 second durations, smoother cubic-bezier easing, multi-step sway, varied spin rates, and opacity that only fades during the final stretch of the fall.
+- Increased density and variety by mixing 52 pieces with randomized sizes, colors, entry offsets, and end drifts while keeping DOM cleanup tied to each particle's `animationend`.
+
+**Animation rules to preserve:**
+- Celebration effects should read as a full-screen ambient shower, not a tight local pop, when the action is app-wide like marking a todo done.
+- Prefer longer motion arcs with staged sway + fade variables over abrupt start/end transforms so randomized particles still feel cohesive instead of jerky.
+
 ### 2026-03-29: Blocker Picker Label Activation + DAG Status Parity
 
 **What I changed:**
