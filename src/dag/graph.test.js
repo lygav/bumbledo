@@ -153,6 +153,38 @@ describe('buildDependencyGraph — Edge mapping', () => {
     );
   });
 
+  it('creates edges from in-progress blockers the same as todo blockers', () => {
+    const todos = [
+      { id: 'task-a', text: 'Task A', status: 'inprogress' },
+      {
+        id: 'task-b',
+        text: 'Task B',
+        status: 'blocked',
+        blockedBy: ['task-a'],
+      },
+    ];
+
+    const result = buildDependencyGraph(todos);
+
+    expect(result.edges).toEqual([
+      expect.objectContaining({ from: 'task-a', to: 'task-b' }),
+    ]);
+    expect(result.nodes).toEqual([
+      {
+        id: 'task-a',
+        label: 'Task A',
+        status: 'inprogress',
+        orderIndex: 0,
+      },
+      {
+        id: 'task-b',
+        label: 'Task B',
+        status: 'blocked',
+        orderIndex: 1,
+      },
+    ]);
+  });
+
   it('handles non-existent blocker ids without crashing', () => {
     const todos = [
       {

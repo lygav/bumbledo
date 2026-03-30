@@ -310,4 +310,14 @@
 
 **UI rules to preserve:**
 - Control chrome should stay on the 6px / 8px / pill radius system: interactive controls use the control radius, elevated surfaces use the surface radius, and passive badges stay fully rounded.
+
+### 2026-03-30: In-Progress Tasks as Valid Blockers
+
+**What I changed:**
+- Expanded `BLOCKER_SOURCE_TODO_STATUSES` so the blocked-task picker now lists `todo`, `inprogress`, and `blocked` tasks as valid blockers while still excluding finished work.
+- Verified the model/store flow already treats in-progress blockers as active dependencies, then added regression coverage to lock in unblock notifications when an in-progress blocker moves to `done`.
+- Added a DAG regression test to confirm dependency edges and node statuses render normally when the upstream blocker is already in progress.
+
+**Interaction rule to preserve:**
+- Blocker eligibility should be driven from the shared status constant, not reimplemented in the picker, so list UI, unblock logic, and DAG rendering stay aligned when dependency rules change.
 - If a status color changes, update it in `src/app/constants.js` and let the runtime CSS-variable sync fan it out across CSS and SVG renderers instead of hand-tuning individual surfaces.

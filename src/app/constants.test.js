@@ -18,6 +18,8 @@ const EXPECTED_STATUS_LABELS = {
   blocked: 'Blocked',
 };
 
+const EXPECTED_BLOCKER_SOURCE_STATUSES = ['todo', 'inprogress', 'blocked'];
+
 const EXPECTED_STATUS_PALETTE = {
   todo: {
     fill: '#ffffff',
@@ -146,6 +148,13 @@ function getStorageKeys() {
   return resolveExport(
     ['APP_STORAGE_KEYS', 'STORAGE_KEYS', 'LOCAL_STORAGE_KEYS'],
     'a storage key map',
+  );
+}
+
+function getBlockerSourceStatuses() {
+  return resolveExport(
+    ['BLOCKER_SOURCE_TODO_STATUSES', 'BLOCKER_SOURCE_STATUSES'],
+    'a blocker source status list',
   );
 }
 
@@ -288,6 +297,12 @@ describe('app constants contract', () => {
         storageKeys.TODOS,
         JSON.stringify([{ id: 'task-1', text: 'Persist me', status: 'todo' }]),
       );
+    });
+  });
+
+  describe('blocker source statuses', () => {
+    it('allows todo, in-progress, and blocked tasks as blocker candidates', () => {
+      expect(getBlockerSourceStatuses()).toEqual(EXPECTED_BLOCKER_SOURCE_STATUSES);
     });
   });
 

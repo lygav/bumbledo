@@ -37,6 +37,7 @@ export const TOGGLEABLE_TODO_STATUSES = Object.freeze([
 
 export const BLOCKER_SOURCE_TODO_STATUSES = Object.freeze([
   TODO_STATUS.TODO,
+  TODO_STATUS.IN_PROGRESS,
   TODO_STATUS.BLOCKED,
 ]);
 
