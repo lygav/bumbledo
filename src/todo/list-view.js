@@ -233,7 +233,6 @@ export function createTodoListView({
       }
       statusSelect.appendChild(option);
     });
-    statusSelect.style.color = '#1a1a1a';
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';

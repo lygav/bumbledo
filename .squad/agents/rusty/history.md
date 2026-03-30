@@ -290,3 +290,14 @@
 **UI rule to preserve:**
 - Interactive controls should read as controls first: tighter corners, hover/focus affordance, and consistent button chrome across toolbars, forms, modals, and side panels.
 - Passive metrics should stay pill-shaped with `cursor: default` and no hover affordance so they never compete visually with actionable controls.
+
+### 2026-03-30: Design Tokens + Visual Unification
+
+**What I changed:**
+- Introduced a flat `:root` token set in `src/styles.css` for radii, text, borders, surfaces, spacing, shadows, and focus, then rewired buttons, form controls, panels, tooltips, pills, and list rows to consume those tokens.
+- Synced status-driven CSS variables from `src/app/constants.js` at app startup so list rows, pills, burndown touches, and DAG visuals all pull from the same shared status palette instead of drifting per surface.
+- Removed the last hard-coded form-control text color in `src/todo/list-view.js`, aligned burndown SVG neutrals with shared constants, and standardized DAG node corner radii to the shared surface radius.
+
+**UI rules to preserve:**
+- Control chrome should stay on the 6px / 8px / pill radius system: interactive controls use the control radius, elevated surfaces use the surface radius, and passive badges stay fully rounded.
+- If a status color changes, update it in `src/app/constants.js` and let the runtime CSS-variable sync fan it out across CSS and SVG renderers instead of hand-tuning individual surfaces.

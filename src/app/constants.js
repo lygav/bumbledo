@@ -139,10 +139,61 @@ export const APP_PALETTE = Object.freeze({
   BURNDOWN_TOTAL: '#4a90d9',
   BURNDOWN_COMPLETED: '#2f8f63',
   BURNDOWN_GAP: 'rgba(74, 144, 217, 0.12)',
+  BURNDOWN_GRID: '#e3e8ef',
+  BURNDOWN_AXIS: '#7c8798',
+  BURNDOWN_POINT_FILL: '#ffffff',
   DAG_ARROW_DEFAULT: '#9aa1aa',
   DAG_ARROW_HIGHLIGHT: '#4a90d9',
   DAG_ARROW_CYCLE: '#d64541',
+  DAG_EDGE_DEFAULT: '#9aa1aa',
+  DAG_EDGE_HIGHLIGHT: '#4a90d9',
+  DAG_EDGE_CYCLE: '#d64541',
 });
+
+export const DESIGN_RADII = Object.freeze({
+  CONTROL: 6,
+  SURFACE: 8,
+  PILL: 999,
+});
+
+export const CONFETTI_COLORS = Object.freeze([
+  APP_PALETTE.BURNDOWN_TOTAL,
+  APP_PALETTE.BURNDOWN_COMPLETED,
+  '#f59e0b',
+  TODO_STATUS_PALETTE[TODO_STATUS.CANCELLED].accent,
+  '#8b5cf6',
+  '#14b8a6',
+  '#f97316',
+  '#ec4899',
+]);
+
+const STATUS_CSS_VARIABLES = Object.freeze(
+  Object.freeze(
+    Object.fromEntries(
+      TODO_STATUS_VALUES.flatMap((status) => {
+        const palette = TODO_STATUS_PALETTE[status];
+        return [
+          [`--status-${status}-fill`, palette.fill],
+          [`--status-${status}-border`, palette.border],
+          [`--status-${status}-accent`, palette.accent ?? palette.border],
+          [`--status-${status}-text`, palette.text],
+          [`--status-${status}-opacity`, palette.opacity],
+          [`--status-${status}-strike`, palette.strike ?? 'transparent'],
+        ];
+      }),
+    ),
+  ),
+);
+
+export function applyRootDesignTokens(root) {
+  if (!root) {
+    return;
+  }
+
+  Object.entries(STATUS_CSS_VARIABLES).forEach(([name, value]) => {
+    root.style.setProperty(name, value);
+  });
+}
 
 export const APP_STORAGE_KEYS = Object.freeze({
   TODOS: 'todos',
