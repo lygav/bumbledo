@@ -73,27 +73,57 @@
           </div>
 
           <div class="list-toolbar">
-            <button type="button" id="ready-filter-toggle" aria-pressed="false">
-              Ready
-            </button>
-            <div class="list-toolbar-copy">
-              <p id="ready-summary" role="status">
-                0 of 0 tasks are ready (To Do or In Progress)
-              </p>
+            <div class="toolbar-controls" aria-label="Task filters and views">
+              <button
+                type="button"
+                id="ready-filter-toggle"
+                class="toolbar-button"
+                aria-pressed="false"
+              >
+                <span
+                  id="ready-filter-toggle-icon"
+                  class="toolbar-button-icon"
+                  aria-hidden="true"
+                  >✓</span
+                >
+                <span class="toolbar-button-label">Hide Blocked</span>
+              </button>
+              <button
+                type="button"
+                id="burndown-toggle"
+                class="toolbar-button toolbar-disclosure-button"
+                aria-expanded="false"
+                aria-controls="burndown-panel"
+              >
+                <span
+                  id="burndown-toggle-chevron"
+                  class="toolbar-button-icon"
+                  aria-hidden="true"
+                  >▸</span
+                >
+                <span id="burndown-toggle-label" class="toolbar-button-label"
+                  >Show progress</span
+                >
+              </button>
             </div>
-          </div>
-
-          <div id="task-progress" aria-label="Task progress">
-            <p id="task-progress-summary" class="status-metric-line">
+            <span class="list-toolbar-divider" aria-hidden="true">·</span>
+            <p id="task-progress-summary" class="status-metric-line" role="status">
               0 To Do · 0 In Progress · 0 blocked · 0 done
             </p>
+          </div>
+
+          <p id="ready-summary" class="list-toolbar-copy" role="status">
+            Showing all 0 tasks
+          </p>
+
+          <div id="task-progress" aria-label="Task progress">
             <div
               class="task-progress-bar"
               role="progressbar"
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow="0"
-              aria-labelledby="task-progress-summary"
+              aria-labelledby="ready-summary task-progress-summary"
             ></div>
           </div>
 
@@ -131,23 +161,7 @@
                   Completed versus total tasks over the last 30 days
                 </p>
               </div>
-              <button
-                type="button"
-                id="burndown-toggle"
-                aria-expanded="false"
-                aria-controls="burndown-panel"
-              >
-                Progress
-              </button>
             </div>
-
-            <p
-              id="burndown-collapsed-summary"
-              class="status-metric-line"
-              role="status"
-            >
-              0 To Do · 0 In Progress · 0 blocked · 0 done · trend: →
-            </p>
 
             <div id="burndown-panel" hidden>
               <div class="burndown-summary">

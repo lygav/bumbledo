@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Toolbar Controls vs Metric Pills
+
+**What I changed:**
+- Moved the burndown disclosure toggle into the main list toolbar so the two interactive controls sit together before the status pills.
+- Restyled the actionable controls as squared toggle buttons with hover/focus affordance, while keeping the metric pills quiet, fully rounded, and non-interactive.
+- Renamed the ready filter copy to **Hide Blocked**, added an active checkmark state, and updated the burndown toggle copy/chevron to **Show progress** / **Hide progress** based on expansion.
+
+**UI rule to preserve:**
+- If an element triggers a state change, it should never share the same pill treatment as passive metrics; controls need a visible pointer/hover state and a tighter radius so click targets are obvious at a glance.
+- Disclosure controls should communicate state in both text and iconography, so expansion is readable even before users interact with the panel.
+
 ### 2026-03-30: Burndown Duplicate Badge Regression
 
 **What I fixed:**
