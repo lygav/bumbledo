@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo App</title>
+  <title>bumbledo</title>
+  <link rel="icon" type="image/svg+xml" href="/bumbledo/favicon.svg">
   <style>
     *,
     *::before,
@@ -48,9 +49,24 @@
     }
 
     header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #111;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: lowercase;
+      color: #a35a00;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1 .brand-mark {
+      font-size: 1.9rem;
+      line-height: 1;
+      filter: drop-shadow(0 1px 0 rgba(163, 90, 0, 0.12));
+    }
+
+    header h1 .brand-name {
+      color: #8a4b00;
     }
 
     /* Input area */
@@ -1478,7 +1494,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>Todos</h1>
+      <h1><span class="brand-mark" aria-hidden="true">🐝</span><span class="brand-name">bumbledo</span></h1>
     </header>
 
     <div class="app-shell">
