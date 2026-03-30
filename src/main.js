@@ -1232,8 +1232,8 @@ if (typeof document !== 'undefined') {
       taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
       emptyState.hidden = progress.total > 0 ? !showReadyEmptyState : false;
       emptyState.textContent = progress.total === 0
-        ? 'No todos yet. Add one above!'
-        : 'Nothing is ready right now. All your tasks are either done, blocked, or cancelled.';
+        ? 'Your hive is empty — add a task to get buzzing 🐝'
+        : 'All caught up! Nothing ready to work on right now. 🍯';
       syncDiscoverabilityTips();
 
       visibleTodos.forEach(todo => {
