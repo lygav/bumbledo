@@ -34,10 +34,10 @@ const BURNDOWN_STORAGE_KEY = 'todos_burndown';
 const BURNDOWN_TOTAL_COLOR = '#4a90d9';
 const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
 const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
-const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
-const CONFETTI_COUNT = 24;
-const CONFETTI_MIN_DURATION_MS = 900;
-const CONFETTI_MAX_DURATION_MS = 1200;
+const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
+const CONFETTI_COUNT = 52;
+const CONFETTI_MIN_DURATION_MS = 2000;
+const CONFETTI_MAX_DURATION_MS = 3000;
 
 function parseBurndownDate(dateKey) {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -386,18 +386,11 @@ if (typeof document !== 'undefined') {
       }, 1400);
     }
 
-    function fireConfetti(originElement = null) {
-      const sourceRect = originElement?.getBoundingClientRect?.() ?? null;
-      const originX = sourceRect
-        ? sourceRect.left + (sourceRect.width / 2)
-        : window.innerWidth / 2;
-      const originY = sourceRect
-        ? sourceRect.top + Math.min(sourceRect.height * 0.45, 24)
-        : Math.max(72, window.innerHeight * 0.18);
+    function fireConfetti() {
+      const viewportWidth = Math.max(window.innerWidth, 320);
+      const viewportHeight = Math.max(window.innerHeight, 480);
       const burst = document.createElement('div');
       burst.className = 'confetti-burst';
-      burst.style.left = `${originX}px`;
-      burst.style.top = `${originY}px`;
 
       let remainingPieces = CONFETTI_COUNT;
       let longestAnimationMs = CONFETTI_MAX_DURATION_MS;
@@ -429,28 +422,44 @@ if (typeof document !== 'undefined') {
         const piece = document.createElement('span');
         const isCircle = Math.random() > 0.55;
         const size = 6 + Math.random() * 6;
-        const midX = Math.round((Math.random() - 0.5) * 72);
-        const endX = Math.round((Math.random() - 0.5) * 180);
-        const midY = -Math.round(18 + Math.random() * 50);
-        const endY = Math.round(72 + Math.random() * 86);
-        const rotation = Math.round((Math.random() - 0.5) * 520);
-        const midRotation = Math.round(rotation * 0.45);
+        const startX = Math.round(Math.random() * viewportWidth);
+        const swayOneX = Math.round((Math.random() - 0.5) * 72);
+        const swayTwoX = Math.round((Math.random() - 0.5) * 108);
+        const endX = Math.round((Math.random() - 0.5) * 144);
+        const endY = Math.round(viewportHeight + 72 + Math.random() * 64);
+        const swayYOne = Math.round(endY * (0.32 + Math.random() * 0.08));
+        const swayYTwo = Math.round(endY * (0.62 + Math.random() * 0.1));
+        const rotationDirection = Math.random() > 0.5 ? 1 : -1;
+        const baseRotation = (180 + Math.random() * 220) * rotationDirection;
+        const startRotation = Math.round((Math.random() - 0.5) * 90);
+        const midRotation = Math.round(startRotation + baseRotation * 0.45);
+        const midRotationTwo = Math.round(startRotation + baseRotation * 0.8);
+        const endRotation = Math.round(startRotation + baseRotation * (1.2 + Math.random() * 0.5));
         const durationMs = Math.round(CONFETTI_MIN_DURATION_MS + Math.random() * (CONFETTI_MAX_DURATION_MS - CONFETTI_MIN_DURATION_MS));
-        const delayMs = Math.round(Math.random() * 120);
-        const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+        const delayMs = Math.round(Math.random() * 220);
+        const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+        const scale = (0.85 + Math.random() * 0.45).toFixed(2);
+        const entryOffset = Math.round(18 + Math.random() * 36);
 
         longestAnimationMs = Math.max(longestAnimationMs, durationMs + delayMs);
 
         piece.className = `confetti-piece${isCircle ? ' is-circle' : ''}`;
         piece.style.backgroundColor = color;
+        piece.style.left = `${startX}px`;
         piece.style.width = `${size}px`;
         piece.style.height = `${isCircle ? size : Math.max(4, size * 0.62)}px`;
-        piece.style.setProperty('--confetti-mid-x', `${midX}px`);
-        piece.style.setProperty('--confetti-mid-y', `${midY}px`);
+        piece.style.setProperty('--confetti-scale', scale);
+        piece.style.setProperty('--confetti-entry-offset', `${entryOffset}px`);
+        piece.style.setProperty('--confetti-sway-x-one', `${swayOneX}px`);
+        piece.style.setProperty('--confetti-sway-y-one', `${swayYOne}px`);
+        piece.style.setProperty('--confetti-sway-x-two', `${swayTwoX}px`);
+        piece.style.setProperty('--confetti-sway-y-two', `${swayYTwo}px`);
         piece.style.setProperty('--confetti-end-x', `${endX}px`);
         piece.style.setProperty('--confetti-end-y', `${endY}px`);
+        piece.style.setProperty('--confetti-start-rotate', `${startRotation}deg`);
         piece.style.setProperty('--confetti-mid-rotate', `${midRotation}deg`);
-        piece.style.setProperty('--confetti-end-rotate', `${rotation}deg`);
+        piece.style.setProperty('--confetti-mid-rotate-two', `${midRotationTwo}deg`);
+        piece.style.setProperty('--confetti-end-rotate', `${endRotation}deg`);
         piece.style.setProperty('--confetti-duration', `${durationMs}ms`);
         piece.style.animationDelay = `${delayMs}ms`;
         burst.appendChild(piece);
@@ -563,7 +572,6 @@ if (typeof document !== 'undefined') {
       const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
       const nextStatus = selectedTodo.status === 'done' ? 'active' : 'done';
       const todosBefore = todos;
-      const confettiOrigin = nextStatus === 'done' ? findTaskElement(selectedTodo.id) : null;
       todos = setStatus(todos, selectedTodo.id, nextStatus);
       if (nextStatus === 'done') {
         todos = cleanupBlockedBy(todos, selectedTodo.id);
@@ -571,7 +579,7 @@ if (typeof document !== 'undefined') {
       }
       saveTodos(todos);
       if (nextStatus === 'done') {
-        fireConfetti(confettiOrigin);
+        fireConfetti();
       }
       render();
 
@@ -948,8 +956,6 @@ if (typeof document !== 'undefined') {
           const nextStatus = select.value;
           const currentTodo = todos.find(item => item.id === todo.id);
           if (!currentTodo) return;
-          const confettiOrigin = nextStatus === 'done' ? select.closest('li') : null;
-
           const isBlockedCompletionAttempt = currentTodo.status === 'blocked'
             && (nextStatus === 'done' || nextStatus === 'cancelled')
             && Array.isArray(currentTodo.blockedBy)
@@ -970,7 +976,7 @@ if (typeof document !== 'undefined') {
           }
           saveTodos(todos);
           if (nextStatus === 'done') {
-            fireConfetti(confettiOrigin);
+            fireConfetti();
           }
           render();
         });
