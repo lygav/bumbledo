@@ -291,6 +291,9 @@
       line-height: 1;
       padding: 0.25rem;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
       min-width: 44px;
       min-height: 44px;
       display: flex;
@@ -301,6 +304,10 @@
     }
 
     .drag-handle:hover {
+      color: #888;
+    }
+
+    .drag-handle.touch-armed {
       color: #888;
     }
 
@@ -681,6 +688,15 @@
     /* Drag-and-drop states */
     #todo-list li.dragging {
       opacity: 0.4;
+    }
+
+    #todo-list li.touch-dragging {
+      opacity: 0.96;
+      transform: translate3d(var(--touch-drag-x, 0), var(--touch-drag-y, 0), 0) scale(1.02);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+      pointer-events: none;
+      position: relative;
+      z-index: 2;
     }
 
     #todo-list li.drag-over-above {

@@ -255,6 +255,25 @@ export function getPrevTodoId(todos, currentId) {
   return todos[(currentIndex - 1 + todos.length) % todos.length].id;
 }
 
+export function reorderTodos(todos, draggedId, targetId, insertAfter = false) {
+  if (todos.length < 2 || draggedId === targetId) {
+    return todos;
+  }
+
+  const reorderedTodos = [...todos];
+  const fromIndex = reorderedTodos.findIndex(todo => todo.id === draggedId);
+  if (fromIndex === -1) return todos;
+
+  const [movedTodo] = reorderedTodos.splice(fromIndex, 1);
+  let toIndex = reorderedTodos.findIndex(todo => todo.id === targetId);
+
+  if (!movedTodo || toIndex === -1) return todos;
+  if (insertAfter) toIndex += 1;
+
+  reorderedTodos.splice(toIndex, 0, movedTodo);
+  return reorderedTodos;
+}
+
 export function toggleBlocker(todos, todoId, blockerId) {
   return todos.map(todo => {
     if (todo.id !== todoId || todo.status !== 'blocked') return todo;

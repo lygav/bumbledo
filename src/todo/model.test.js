@@ -9,6 +9,7 @@ import {
   saveBurndownData,
   addTodo,
   setStatus,
+  reorderTodos,
   toggleBlocker,
   cleanupBlockedBy,
   deleteTodo,
@@ -552,6 +553,59 @@ describe('getPrevTodoId', () => {
   it('returns null for an empty list', () => {
     const result = model.getPrevTodoId([], '1');
     expect(result).toBeNull();
+  });
+});
+
+describe('reorderTodos', () => {
+  const makeTodos = () => ([
+    { id: 'a', text: 'first', status: 'active' },
+    { id: 'b', text: 'second', status: 'active' },
+    { id: 'c', text: 'third', status: 'active' },
+    { id: 'd', text: 'fourth', status: 'active' }
+  ]);
+
+  it('moves an item from position 0 to position 2', () => {
+    const result = reorderTodos(makeTodos(), 'a', 'c', false);
+    expect(result.map(todo => todo.id)).toEqual(['b', 'a', 'c', 'd']);
+  });
+
+  it('moves an item from position 2 to position 0', () => {
+    const result = reorderTodos(makeTodos(), 'c', 'a', false);
+    expect(result.map(todo => todo.id)).toEqual(['c', 'a', 'b', 'd']);
+  });
+
+  it('returns the original array when moving to the same position', () => {
+    const todos = makeTodos();
+    const result = reorderTodos(todos, 'b', 'b', false);
+
+    expect(result).toBe(todos);
+    expect(result.map(todo => todo.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('returns the original array for a single-item list', () => {
+    const todos = [{ id: 'a', text: 'only', status: 'active' }];
+    const result = reorderTodos(todos, 'a', 'a', true);
+
+    expect(result).toBe(todos);
+    expect(result).toEqual(todos);
+  });
+
+  it('moves an item to the end of the list', () => {
+    const result = reorderTodos(makeTodos(), 'b', 'd', true);
+    expect(result.map(todo => todo.id)).toEqual(['a', 'c', 'd', 'b']);
+  });
+
+  it('moves an item to the beginning of the list', () => {
+    const result = reorderTodos(makeTodos(), 'd', 'a', false);
+    expect(result.map(todo => todo.id)).toEqual(['d', 'a', 'b', 'c']);
+  });
+
+  it('returns the original array when the dragged id is not found', () => {
+    const todos = makeTodos();
+    const result = reorderTodos(todos, 'missing', 'b', false);
+
+    expect(result).toBe(todos);
+    expect(result).toEqual(todos);
   });
 });
 
