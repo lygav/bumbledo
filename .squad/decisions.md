@@ -2335,3 +2335,176 @@ The toolbar mixed clickable filters and toggles (Ready, Progress) with read-only
 - PR #75: Full implementation of button/badge differentiation, blocker label fixes, disclosure chevron, confetti tuning, active status label clarity
 - Files: `src/styles.css`, `src/main.js`, `src/todo/list-view.js`, `src/styles.test.js`
 
+
+---
+
+## ADR-008: Burndown Feature Removal
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30
+
+### Summary
+
+- Remove burndown chart visualization entirely (not just hide behind toggle)
+- Migrate status counter pills from burndown row to main toolbar
+- Redesign Hide Blocked control as visible switch-style toggle (not icon-only button)
+
+### Decision Notes
+
+**Why remove instead of defer?**
+- User feedback: burndown adds no value and duplicates the simpler status overview already shown inline
+- One progress system (toolbar) is easier to scan than split view (pills + secondary chart)
+- Implementation cost of maintaining both is higher than removing unused feature
+
+**Pill relocation:**
+- Status counter pills (Ready, In Progress, Blocked, Done, Total) remain as primary progress overview
+- Moved from burndown row into main toolbar for unified visibility
+- Styling: fully rounded badges (999px) per design-token system for passive status display
+
+**Hide Blocked redesign:**
+- Previous design: icon-only button with dead space to the left (affordance filled only on press)
+- New design: switch-style button using `role="switch"` and `aria-checked`
+- Visible track/thumb state change shows toggled state at a glance
+- Eliminates empty icon gutter design problem and clarifies toggle intent
+
+### Scope of Removal
+
+**Removed entirely:**
+- src/burndown/ directory (view, store, selectors, model, helpers)
+- Burndown UI components and button
+- Burndown state persistence
+- All burndown-related tests (21 test cases)
+
+**Retained & relocated:**
+- Status counter pills
+- Styling system (design tokens remain unchanged)
+
+### Implementation
+
+- Main toolbar consolidates Hide Blocked toggle + status counter pills
+- Switch pattern control semantics: `role="switch"`, `aria-checked="true|false"`
+- Counter pills follow passive badge styling (no hover, no click handlers)
+- Test cleanup: removed 21 dead burndown tests; suite reduced 216 → 195 (no regressions)
+
+### Rationale
+
+- **Single source of truth:** One unified toolbar for progress visibility
+- **Improved affordance:** Switch pattern makes blocked-filter state obvious at a glance
+- **Code cleanliness:** Removal is cleaner than dormant feature flag or hidden UI
+- **User focus:** Toolbar is where users already look for action controls and status
+
+### Related Changes
+
+- PR #78: Full burndown removal + toolbar consolidation + Hide Blocked redesign
+- Files: `src/todo/list-view.js` (toolbar consolidation), `src/app/store.js` (state cleanup), `src/styles.css`, `src/styles.test.js`
+- Test suite: 216 → 195 (removed burndown test cases)
+
+---
+
+## ADR-009: Design Token System Finalization
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30
+
+### Summary
+
+- Flat design-token layer in `src/styles.css` covering radii, text, borders, surfaces, spacing, shadows, focus treatment
+- Standardized control radius 6px, surface radius 8px, passive pills/badges 999px
+- Unified form controls on shared 1px border, shared border color, shared focus ring
+- Status palette values routed from `src/app/constants.js` into CSS variables at runtime
+
+### Decision Notes
+
+**Why flat, not component-scoped?**
+- Current codebase is imperative DOM generation (list-view.js), not component-driven
+- One `:root` CSS block + runtime variable hydration from constants.js sufficient for current architecture
+- Component library abstraction not needed yet; revisit if refactoring toward components
+
+**Token categories:**
+- **Radii:** 6px (controls), 8px (surfaces), 999px (pills/badges)
+- **Typography:** Single font stack, standard weights (400 normal, 600 bold)
+- **Borders:** 1px solid, unified border color, unified focus ring (2px inset)
+- **Surfaces:** Background colors, overlay colors from status palette
+- **Spacing:** Consistent 4px, 8px, 12px, 16px scale
+- **Shadows:** Subtle elevation shadows for cards/dropdowns
+
+**Status palette integration:**
+- `src/app/constants.js` defines color values (active, done, blocked, etc.)
+- `src/main.js` hydrates CSS variables from constants at startup
+- All status-dependent rendering (list rows, pills, DAG, previously burndown) uses same palette
+
+### Scope
+
+- `src/styles.css`: Token definitions + shared rules
+- `src/app/constants.js`: Status palette values
+- `src/main.js`: Runtime CSS variable hydration
+- All UI components use token variables, not hard-coded colors
+
+### Rationale
+
+- **Consistency:** Single palette across all UI elements
+- **Maintainability:** Color changes in one place (constants.js)
+- **Simplicity:** Flat structure matches current imperative architecture
+- **Scalability:** If component refactoring happens, tokens already in place
+
+### Related Changes
+
+- PR #75, PR #78: Token system in use across toolbar, pills, form controls, burndown (removed), DAG rendering
+- Covers control styling (squared buttons), badge styling (rounded pills), and status color consistency
+
+---
+
+## ADR-010: User Feedback Implementation — Burndown + Tailwind Analysis
+
+**Status:** Accepted  
+**Author:** Danny (via Copilot directive)  
+**Date:** 2026-03-30
+
+### Summary
+
+User-driven feedback addressed three issues:
+1. Burndown chart is redundant — remove entirely
+2. Status counter pills valuable — keep and relocate to main toolbar
+3. Hide Blocked toggle affordance broken — redesign as visible switch
+
+Concurrently: Tailwind CSS adoption analyzed and deferred.
+
+### User Feedback
+
+- Burndown feature adds no value; duplicate of simpler inline status overview
+- Empty space on Hide Blocked button confuses affordance (icon gutter only fills on press)
+- Status pills are useful; want them more prominent in toolbar
+
+### Implementation Decision
+
+**Burndown removal:** See ADR-008
+**Toolbar redesign:** Hide Blocked → visible switch toggle; counter pills → main toolbar integration
+**Design consistency:** Leverage token system (ADR-009) for visual unification
+
+### Tailwind Analysis (Danny)
+
+**Examined:** Integration cost vs. current architecture
+**Finding:** Utility-first CSS conflicts with imperative DOM generation
+**Recommendation:** Defer adoption; current token system sufficient and aligns with architecture
+
+**Rationale for deferral:**
+- Utility classes require programmatic className generation or JSX; current code uses imperative DOM creation
+- Refactoring to component-driven architecture would be prerequisite
+- Custom token system recently implemented (ADR-009) provides design consistency
+- Revisit if architecture refactoring toward components occurs
+
+### Rationale
+
+- **User-centered:** Direct feedback drives feature prioritization (remove burndown, improve toggle affordance)
+- **Architectural alignment:** Design system decisions (tokens) match current implementation patterns (imperative DOM)
+- **Technical pragmatism:** Deferring Tailwind avoids refactoring tax; custom tokens already provide consistency
+- **Scalability:** Token system + future component refactoring = path to CSS framework adoption
+
+### Related Changes
+
+- ADR-008: Burndown removal + toolbar redesign (PR #78)
+- ADR-009: Design token system formalization (PR #75)
+- No Tailwind adoption; monitor for component refactoring opportunities in future
+
