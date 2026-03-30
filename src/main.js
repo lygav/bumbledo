@@ -8,7 +8,7 @@ import {
   detectUnblockedTodos,
   finalizeBlockedStatus,
   deleteTodo,
-  getActionableTodos,
+  getActionableTodos as getReadyTodos,
   getActiveBlockerCount,
   hasActiveBlockers,
   hasDependencies,
@@ -29,7 +29,8 @@ import {
 // - Owns: #dag-toggle, #dag-summary, #dag-empty-state, #dependency-graph-section
 // - dag/view.js owns only SVG rendering inside #dependency-graph container
 
-const ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
+const READY_FILTER_STORAGE_KEY = 'bumbledo_filter_ready';
+const LEGACY_ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
 const BURNDOWN_STORAGE_KEY = 'todos_burndown';
 const SHORTCUTS_TIP_STORAGE_KEY = 'bumbledo_tip_shortcuts_dismissed';
 const REORDER_TIP_STORAGE_KEY = 'bumbledo_tip_reorder_dismissed';
@@ -42,7 +43,7 @@ const CONFETTI_MIN_DURATION_MS = 2000;
 const CONFETTI_MAX_DURATION_MS = 3000;
 const STATUS_PILL_TONE_CLASS = {
   total: 'is-total',
-  actionable: 'is-actionable',
+  ready: 'is-ready',
   blocked: 'is-blocked',
   done: 'is-done',
   trend: 'is-trend',
@@ -121,7 +122,7 @@ function buildStatusMetricItems(progress, { includeTotal = false, trend = null }
   }
 
   items.push(
-    { count: progress.actionable, label: 'To Do', tone: 'actionable' },
+    { count: progress.actionable, label: 'ready', tone: 'ready' },
     { count: progress.blocked, label: 'blocked', tone: 'blocked' },
     { count: progress.done, label: 'done', tone: 'done' }
   );
@@ -211,17 +212,34 @@ function isMobileViewport() {
   return window.matchMedia('(max-width: 479px)').matches;
 }
 
-function loadActionableFilterPreference() {
+function loadReadyFilterPreference() {
   try {
-    return localStorage.getItem(ACTIONABLE_FILTER_STORAGE_KEY) === 'true';
+    const storedPreference = localStorage.getItem(READY_FILTER_STORAGE_KEY);
+    if (storedPreference !== null) {
+      return storedPreference === 'true';
+    }
+
+    const legacyPreference = localStorage.getItem(LEGACY_ACTIONABLE_FILTER_STORAGE_KEY);
+    if (legacyPreference !== null) {
+      try {
+        localStorage.setItem(READY_FILTER_STORAGE_KEY, legacyPreference);
+        localStorage.removeItem(LEGACY_ACTIONABLE_FILTER_STORAGE_KEY);
+      } catch {
+        // Ignore storage migration failures so the UI stays usable.
+      }
+
+      return legacyPreference === 'true';
+    }
+
+    return false;
   } catch {
     return false;
   }
 }
 
-function saveActionableFilterPreference(isActive) {
+function saveReadyFilterPreference(isActive) {
   try {
-    localStorage.setItem(ACTIONABLE_FILTER_STORAGE_KEY, String(isActive));
+    localStorage.setItem(READY_FILTER_STORAGE_KEY, String(isActive));
   } catch {
     // Ignore storage write failures so the UI stays usable.
   }
@@ -289,8 +307,8 @@ if (typeof document !== 'undefined') {
     const unblockedNotificationMessage = document.getElementById('unblocked-notification-message');
     const unblockedNotificationDetail = document.getElementById('unblocked-notification-detail');
     const unblockedNotificationDismiss = document.getElementById('unblocked-notification-dismiss');
-    const actionableFilterToggle = document.getElementById('actionable-filter-toggle');
-    const actionableSummary = document.getElementById('actionable-summary');
+    const readyFilterToggle = document.getElementById('ready-filter-toggle');
+    const readySummary = document.getElementById('ready-summary');
     const taskProgressSummary = document.getElementById('task-progress-summary');
     const taskProgressBar = document.querySelector('.task-progress-bar');
     const emptyState = document.getElementById('empty-state');
@@ -321,7 +339,7 @@ if (typeof document !== 'undefined') {
     let todos = loadTodos();
     let burndownData = loadBurndownData();
     let selectedTaskId = null;
-    let filterActive = loadActionableFilterPreference();
+    let filterActive = loadReadyFilterPreference();
     let burndownExpanded = false;
     let dagExpanded = !isMobileViewport() && hasDependencies(todos);
     let dagToggleTouched = false;
@@ -369,7 +387,7 @@ if (typeof document !== 'undefined') {
     });
 
     function getVisibleTodos() {
-      return filterActive ? getActionableTodos(todos) : todos;
+      return filterActive ? getReadyTodos(todos) : todos;
     }
 
     function applyNotificationState() {
@@ -1002,7 +1020,7 @@ if (typeof document !== 'undefined') {
 
     function reorderVisibleTodos(draggedId, targetId, insertAfter) {
       if (filterActive) {
-        const visibleTodos = getActionableTodos(todos);
+        const visibleTodos = getReadyTodos(todos);
         const reorderedVisible = reorderTodos(visibleTodos, draggedId, targetId, insertAfter);
         if (reorderedVisible === visibleTodos) return todos;
 
@@ -1175,7 +1193,7 @@ if (typeof document !== 'undefined') {
 
       const progress = getLiveProgressCounts(todos);
       const visibleTodos = getVisibleTodos();
-      const showActionableEmptyState = filterActive && progress.total > 0 && progress.actionable === 0;
+      const showReadyEmptyState = filterActive && progress.total > 0 && progress.actionable === 0;
 
       if (!visibleTodos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
@@ -1185,21 +1203,21 @@ if (typeof document !== 'undefined') {
 
       const hasFinished = todos.some(t => t.status === 'done' || t.status === 'cancelled');
       clearFinishedBtn.disabled = !hasFinished;
-      actionableFilterToggle.classList.toggle('is-active', filterActive);
-      actionableFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      actionableSummary.textContent = `${progress.actionable} of ${progress.total} tasks are in To Do`;
+      readyFilterToggle.classList.toggle('is-active', filterActive);
+      readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
+      readySummary.textContent = `${progress.actionable} of ${progress.total} tasks are ready`;
       renderStatusMetricLine(taskProgressSummary, buildStatusMetricItems(progress));
       taskProgressBar.setAttribute('aria-valuenow', String(progress.completionPercentRounded));
       taskProgressBar.setAttribute(
         'aria-valuetext',
-        `${progress.done} done, ${progress.blocked} blocked, ${progress.actionable} in To Do out of ${progress.total} total`
+        `${progress.done} done, ${progress.blocked} blocked, ${progress.actionable} ready out of ${progress.total} total`
       );
       taskProgressBar.style.setProperty('--task-progress-done', `${progress.completionPercent.toFixed(2)}%`);
       taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
-      emptyState.hidden = progress.total > 0 ? !showActionableEmptyState : false;
+      emptyState.hidden = progress.total > 0 ? !showReadyEmptyState : false;
       emptyState.textContent = progress.total === 0
         ? 'No todos yet. Add one above!'
-        : 'Nothing is in To Do right now. All your tasks are either done or blocked.';
+        : 'Nothing is ready right now. All your tasks are either done or blocked.';
       syncDiscoverabilityTips();
 
       visibleTodos.forEach(todo => {
@@ -1437,9 +1455,9 @@ if (typeof document !== 'undefined') {
       todoInput.focus();
     });
 
-    actionableFilterToggle.addEventListener('click', () => {
+    readyFilterToggle.addEventListener('click', () => {
       filterActive = !filterActive;
-      saveActionableFilterPreference(filterActive);
+      saveReadyFilterPreference(filterActive);
       render();
     });
 

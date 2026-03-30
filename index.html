@@ -149,7 +149,7 @@
       min-width: 180px;
     }
 
-    #actionable-filter-toggle {
+    #ready-filter-toggle {
       padding: 0.45rem 0.8rem;
       font-size: 0.875rem;
       font-family: inherit;
@@ -163,25 +163,25 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
     }
 
-    #actionable-filter-toggle:hover {
+    #ready-filter-toggle:hover {
       background: #f6f8fb;
       border-color: #bcc7d6;
       color: #243447;
     }
 
-    #actionable-filter-toggle.is-active {
+    #ready-filter-toggle.is-active {
       background: #eef6ff;
       border-color: #4a90d9;
       color: #2563a6;
       box-shadow: inset 0 0 0 1px rgba(74, 144, 217, 0.12);
     }
 
-    #actionable-filter-toggle:focus-visible {
+    #ready-filter-toggle:focus-visible {
       outline: 2px solid #4a90d9;
       outline-offset: 2px;
     }
 
-    #actionable-summary {
+    #ready-summary {
       color: #667085;
       font-size: 0.875rem;
     }
@@ -234,7 +234,7 @@
       color: #4f5d75;
     }
 
-    .status-pill.is-actionable {
+    .status-pill.is-ready {
       background: #edf8f1;
       border-color: #c7e7d3;
       color: #2f8f63;
@@ -1407,7 +1407,7 @@
         min-width: 100%;
       }
 
-      #actionable-filter-toggle {
+      #ready-filter-toggle {
         width: 100%;
       }
 
@@ -1550,14 +1550,14 @@
         </div>
 
         <div class="list-toolbar">
-          <button type="button" id="actionable-filter-toggle" aria-pressed="false">To Do</button>
+          <button type="button" id="ready-filter-toggle" aria-pressed="false">Ready</button>
           <div class="list-toolbar-copy">
-            <p id="actionable-summary" role="status">0 of 0 tasks are in To Do</p>
+            <p id="ready-summary" role="status">0 of 0 tasks are ready</p>
           </div>
         </div>
 
         <div id="task-progress" aria-label="Task progress">
-          <p id="task-progress-summary" class="status-metric-line">0 To Do · 0 blocked · 0 done</p>
+          <p id="task-progress-summary" class="status-metric-line">0 ready · 0 blocked · 0 done</p>
           <div class="task-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="task-progress-summary"></div>
         </div>
 
