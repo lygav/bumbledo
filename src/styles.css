@@ -188,6 +188,14 @@ header h1 .brand-name {
   color: var(--accent-text);
 }
 
+header .brand-tagline {
+  margin-top: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 /* Input area */
 .input-row {
   display: flex;
