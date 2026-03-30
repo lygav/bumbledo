@@ -14,6 +14,13 @@
       padding: 0;
     }
 
+    :root {
+      --accent: #f59e0b;
+      --accent-light: #fbbf24;
+      --accent-bg: #fffbeb;
+      --accent-text: #92400e;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #f5f5f5;
@@ -46,6 +53,11 @@
 
     header {
       margin-bottom: 1.5rem;
+      padding: 1rem 1.125rem;
+      background: linear-gradient(135deg, var(--accent-bg), rgba(255, 255, 255, 0.96));
+      border: 1px solid rgba(245, 158, 11, 0.18);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(146, 64, 14, 0.06);
     }
 
     header h1 {
@@ -53,7 +65,7 @@
       font-weight: 800;
       letter-spacing: -0.03em;
       text-transform: lowercase;
-      color: #a35a00;
+      color: var(--accent-text);
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
@@ -62,11 +74,11 @@
     header h1 .brand-mark {
       font-size: 1.9rem;
       line-height: 1;
-      filter: drop-shadow(0 1px 0 rgba(163, 90, 0, 0.12));
+      filter: drop-shadow(0 1px 0 rgba(146, 64, 14, 0.12));
     }
 
     header h1 .brand-name {
-      color: #8a4b00;
+      color: var(--accent-text);
     }
 
     /* Input area */
@@ -149,7 +161,7 @@
       min-width: 180px;
     }
 
-    #actionable-filter-toggle {
+    #ready-filter-toggle {
       padding: 0.45rem 0.8rem;
       font-size: 0.875rem;
       font-family: inherit;
@@ -163,25 +175,25 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
     }
 
-    #actionable-filter-toggle:hover {
-      background: #f6f8fb;
-      border-color: #bcc7d6;
-      color: #243447;
+    #ready-filter-toggle:hover {
+      background: var(--accent-bg);
+      border-color: rgba(245, 158, 11, 0.38);
+      color: var(--accent-text);
     }
 
-    #actionable-filter-toggle.is-active {
-      background: #eef6ff;
-      border-color: #4a90d9;
-      color: #2563a6;
-      box-shadow: inset 0 0 0 1px rgba(74, 144, 217, 0.12);
+    #ready-filter-toggle.is-active {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent-text);
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.16);
     }
 
-    #actionable-filter-toggle:focus-visible {
+    #ready-filter-toggle:focus-visible {
       outline: 2px solid #4a90d9;
       outline-offset: 2px;
     }
 
-    #actionable-summary {
+    #ready-summary {
       color: #667085;
       font-size: 0.875rem;
     }
@@ -234,16 +246,16 @@
       color: #4f5d75;
     }
 
-    .status-pill.is-actionable {
+    .status-pill.is-ready {
       background: #edf8f1;
       border-color: #c7e7d3;
       color: #2f8f63;
     }
 
     .status-pill.is-blocked {
-      background: #fff4e5;
-      border-color: #f6d19a;
-      color: #c56a0b;
+      background: #fff7ed;
+      border-color: #fdba74;
+      color: #c2410c;
     }
 
     .status-pill.is-done {
@@ -278,10 +290,11 @@
         linear-gradient(
           to right,
           #2f8f63 0 var(--task-progress-done, 0%),
-          #f59e0b var(--task-progress-done, 0%) calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)),
-          #e6ebf1 calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)) 100%
+          #ea580c var(--task-progress-done, 0%) calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)),
+          var(--accent-bg) calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)) 100%
         );
       overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.12);
       transition: background 0.2s ease;
     }
 
@@ -317,22 +330,23 @@
       font-size: 1rem;
       font-family: inherit;
       font-weight: 600;
-      background: #4a90d9;
-      color: #fff;
+      background: var(--accent);
+      color: var(--accent-text);
       border: none;
       border-radius: 6px;
       cursor: pointer;
       min-width: 44px;
       min-height: 44px;
-      transition: background 0.15s;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
     }
 
     #add-btn:hover {
-      background: #3a7bc8;
+      background: var(--accent-light);
+      box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
     }
 
     #add-btn:focus-visible {
-      outline: 2px solid #4a90d9;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
 
@@ -406,8 +420,8 @@
     }
 
     #todo-list li.task-row-selected {
-      box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.45);
-      border-color: #4a90d9;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+      border-color: var(--accent);
     }
 
     #todo-list li.task-row-flash {
@@ -465,11 +479,11 @@
     }
 
     .drag-handle:hover {
-      color: #888;
+      color: var(--accent-text);
     }
 
     .drag-handle.touch-armed {
-      color: #888;
+      color: var(--accent-text);
     }
 
     /* Status select */
@@ -581,8 +595,8 @@
 
     /* Status: blocked */
     #todo-list li.status-blocked {
-      border-left: 3px solid #e67e22;
-      background: #fffbf0;
+      border-left: 3px solid #ea580c;
+      background: #fff7ed;
     }
 
     /* Delete button */
@@ -665,9 +679,9 @@
       font-size: 0.875rem;
       font-family: inherit;
       font-weight: 600;
-      color: #4a90d9;
+      color: var(--accent-text);
       background: #fff;
-      border: 1px solid #cfe0f5;
+      border: 1px solid rgba(245, 158, 11, 0.28);
       border-radius: 999px;
       cursor: pointer;
       min-height: 40px;
@@ -676,8 +690,8 @@
     }
 
     #burndown-toggle:hover {
-      background: #f4f8fd;
-      border-color: #4a90d9;
+      background: var(--accent-bg);
+      border-color: var(--accent-light);
     }
 
     #burndown-toggle:focus-visible {
@@ -823,9 +837,9 @@
     }
 
     #clear-finished-btn:hover:not(:disabled) {
-      background: #f0f0f0;
-      border-color: #999;
-      color: #333;
+      background: var(--accent-bg);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: var(--accent-text);
     }
 
     #clear-finished-btn:focus-visible {
@@ -846,7 +860,7 @@
       font-size: 0.875rem;
       font-family: inherit;
       font-weight: 600;
-      color: #4a90d9;
+      color: var(--accent-text);
       background: transparent;
       border: 1px solid transparent;
       border-radius: 999px;
@@ -856,9 +870,9 @@
     }
 
     #shortcuts-help-btn:hover {
-      background: rgba(74, 144, 217, 0.08);
-      border-color: rgba(74, 144, 217, 0.18);
-      color: #2563a6;
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.22);
+      color: var(--accent-text);
     }
 
     #shortcuts-help-btn:focus-visible {
@@ -881,11 +895,11 @@
     }
 
     #todo-list li.drag-over-above {
-      box-shadow: 0 -2px 0 0 #4a90d9;
+      box-shadow: 0 -2px 0 0 var(--accent);
     }
 
     #todo-list li.drag-over-below {
-      box-shadow: 0 2px 0 0 #4a90d9;
+      box-shadow: 0 2px 0 0 var(--accent);
     }
 
     body.is-dragging * {
@@ -899,7 +913,7 @@
     /* Blocked-by subtitle */
     .blocked-by-text {
       font-size: 0.75rem;
-      color: #b07020;
+      color: #c2410c;
       margin-top: 0.125rem;
       font-style: italic;
     }
@@ -908,15 +922,15 @@
     .blocker-picker {
       margin-top: 0.375rem;
       padding: 0.5rem 0.75rem;
-      background: #fffbf0;
-      border: 1px solid #e6d5b8;
+      background: #fffaf0;
+      border: 1px solid #fed7aa;
       border-radius: 4px;
       font-size: 0.8125rem;
     }
 
     .blocker-picker-title {
       font-weight: 600;
-      color: #8a6d3b;
+      color: var(--accent-text);
       margin-bottom: 0.375rem;
       font-size: 0.75rem;
       text-transform: uppercase;
@@ -933,7 +947,7 @@
     }
 
     .blocker-picker label:hover {
-      color: #1a1a1a;
+      color: var(--accent-text);
     }
 
     .blocker-picker input[type="checkbox"] {
@@ -986,9 +1000,9 @@
       font-size: 0.875rem;
       font-family: inherit;
       font-weight: 600;
-      color: #4a90d9;
+      color: var(--accent-text);
       background: #fff;
-      border: 1px solid #cfe0f5;
+      border: 1px solid rgba(245, 158, 11, 0.28);
       border-radius: 999px;
       cursor: pointer;
       min-height: 40px;
@@ -997,8 +1011,8 @@
     }
 
     #dag-toggle:hover:not(:disabled) {
-      background: #f4f8fd;
-      border-color: #4a90d9;
+      background: var(--accent-bg);
+      border-color: var(--accent-light);
     }
 
     #dag-toggle:focus-visible {
@@ -1077,9 +1091,9 @@
       font-size: 0.75rem;
       font-family: inherit;
       font-weight: 600;
-      color: #4a90d9;
+      color: var(--accent-text);
       background: rgba(255, 255, 255, 0.96);
-      border: 1px solid #cfe0f5;
+      border: 1px solid rgba(245, 158, 11, 0.28);
       border-radius: 999px;
       cursor: pointer;
     }
@@ -1258,7 +1272,7 @@
     }
 
     .shortcut-help-close:hover {
-      background: #e5e7eb;
+      background: var(--accent-bg);
     }
 
     .shortcut-help-close:focus-visible {
@@ -1276,8 +1290,8 @@
       padding: 0.625rem 1rem;
       border: none;
       border-radius: 8px;
-      background: #4a90d9;
-      color: #fff;
+      background: var(--accent);
+      color: var(--accent-text);
       font: inherit;
       font-weight: 600;
       cursor: pointer;
@@ -1286,7 +1300,7 @@
     }
 
     .blocked-completion-dismiss:hover {
-      background: #3a7bc8;
+      background: var(--accent-light);
     }
 
     .blocked-completion-dismiss:focus-visible {
@@ -1407,7 +1421,7 @@
         min-width: 100%;
       }
 
-      #actionable-filter-toggle {
+      #ready-filter-toggle {
         width: 100%;
       }
 
@@ -1550,14 +1564,14 @@
         </div>
 
         <div class="list-toolbar">
-          <button type="button" id="actionable-filter-toggle" aria-pressed="false">To Do</button>
+          <button type="button" id="actionable-filter-toggle" aria-pressed="false">Ready</button>
           <div class="list-toolbar-copy">
-            <p id="actionable-summary" role="status">0 of 0 tasks are in To Do</p>
+            <p id="actionable-summary" role="status">0 of 0 tasks are ready</p>
           </div>
         </div>
 
         <div id="task-progress" aria-label="Task progress">
-          <p id="task-progress-summary" class="status-metric-line">0 To Do · 0 blocked · 0 done</p>
+          <p id="task-progress-summary" class="status-metric-line">0 ready · 0 blocked · 0 done</p>
           <div class="task-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="task-progress-summary"></div>
         </div>
 
@@ -1594,11 +1608,11 @@
             <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
           </div>
 
-          <p id="burndown-collapsed-summary" class="status-metric-line" role="status">0 To Do · 0 blocked · 0 done · trend: →</p>
+          <p id="burndown-collapsed-summary" class="status-metric-line" role="status">0 ready · 0 blocked · 0 done · trend: →</p>
 
           <div id="burndown-panel" hidden>
             <div class="burndown-summary">
-              <p id="burndown-summary-headline" class="status-metric-line">0 total · 0 To Do · 0 blocked · 0 done</p>
+              <p id="burndown-summary-headline" class="status-metric-line">0 total · 0 ready · 0 blocked · 0 done</p>
               <p id="burndown-summary-detail"></p>
             </div>
 
