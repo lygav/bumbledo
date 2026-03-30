@@ -16,7 +16,7 @@
 - Inline checkbox picker below blocked items for selecting blockers
 - "Blocked by: ..." subtitle text on blocked todos
 - Auto-cleanup: deleting/completing a blocker removes it from all `blockedBy` arrays; empty `blockedBy` → auto-revert to active
-- No circular dependency detection (acceptable for a todo app)
+- Circular dependencies are **prevented**. The blocker picker validates and rejects selections that would create a cycle.
 - Backward-compatible localStorage: omit `blockedBy` when saving non-blocked todos
 
 ### Data Model
@@ -59,7 +59,7 @@ When a blocked todo has `blockedBy.length > 0`, render a small text line below t
 |----------|----------|
 | Blocking task is deleted | Remove its ID from all `blockedBy` arrays. If a todo's `blockedBy` becomes empty, auto-set status to `active`. |
 | Blocking task is completed/cancelled | Remove its ID from all `blockedBy` arrays. If `blockedBy` becomes empty, auto-set status to `active`. |
-| Task blocked by a blocked task | Allowed. No circular-dependency detection. |
+| Circular dependency attempted | Checkbox is not toggled; user sees "Can't add — would create a circular dependency" message. |
 | User unchecks all blockers | `blockedBy` becomes `[]`. Auto-set status to `active`. |
 | Status changed away from "blocked" | Clear `blockedBy` to `[]`. |
 | Status set to "blocked" with no blockers | Status is "blocked" with `blockedBy: []`. The picker is shown so user can select. |
@@ -77,7 +77,11 @@ When a blocked todo has `blockedBy.length > 0`, render a small text line below t
 
 - **Simple and self-contained.** No new data structures, no new storage keys.
 - **Auto-cleanup on delete/complete keeps data healthy.**
-- **No circular dependency protection.** Acceptable for a todo app.
+- **Circular dependency prevention.** The blocker picker validates selections to ensure no cycles are created.
+
+### Revision Note
+
+**Revised (issue #55):** Originally circular dependencies were allowed. Changed to prevent them based on user feedback — cycles confused users and created deadlocked tasks.
 
 ---
 

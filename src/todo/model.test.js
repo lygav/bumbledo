@@ -11,6 +11,7 @@ import {
   setStatus,
   reorderTodos,
   toggleBlocker,
+  wouldCreateCycle,
   cleanupBlockedBy,
   deleteTodo,
   clearFinished,
@@ -703,6 +704,52 @@ describe('toggleBlocker', () => {
     ];
     const result = toggleBlocker(todos, '1', '3');
     expect(result[1]).toEqual(todos[1]);
+  });
+});
+
+describe('wouldCreateCycle', () => {
+  it('returns true for a direct cycle', () => {
+    const todos = [
+      { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] }
+    ];
+
+    expect(wouldCreateCycle(todos, 'b', 'a')).toBe(true);
+  });
+
+  it('returns true for an indirect cycle', () => {
+    const todos = [
+      { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: ['c'] },
+      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] }
+    ];
+
+    expect(wouldCreateCycle(todos, 'c', 'a')).toBe(true);
+  });
+
+  it('returns false when the tasks are unrelated', () => {
+    const todos = [
+      { id: 'a', text: 'Task A', status: 'blocked', blockedBy: ['b'] },
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] },
+      { id: 'c', text: 'Task C', status: 'blocked', blockedBy: [] }
+    ];
+
+    expect(wouldCreateCycle(todos, 'c', 'a')).toBe(false);
+  });
+
+  it('returns true for a self-reference', () => {
+    const todos = [{ id: 'a', text: 'Task A', status: 'blocked', blockedBy: [] }];
+
+    expect(wouldCreateCycle(todos, 'a', 'a')).toBe(true);
+  });
+
+  it('returns false when the blocker has no blockers', () => {
+    const todos = [
+      { id: 'a', text: 'Task A', status: 'blocked', blockedBy: [] },
+      { id: 'b', text: 'Task B', status: 'blocked', blockedBy: [] }
+    ];
+
+    expect(wouldCreateCycle(todos, 'b', 'a')).toBe(false);
   });
 });
 
