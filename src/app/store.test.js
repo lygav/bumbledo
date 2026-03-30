@@ -27,6 +27,7 @@ function createState(overrides = {}) {
     dagToggleTouched: false,
     editingId: null,
     isMobileViewport: false,
+    welcomeTipDismissed: false,
     shortcutsTipDismissed: false,
     reorderTipDismissed: false,
     ...overrides,
@@ -141,12 +142,14 @@ describe('createAppStore', () => {
   it('loads tip dismissal preferences into store state', () => {
     const store = createAppStore({
       storage: createStorage({
+        [APP_STORAGE_KEYS.WELCOME_TIP_DISMISSED]: 'true',
         [APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED]: 'true',
         [APP_STORAGE_KEYS.REORDER_TIP_DISMISSED]: 'true',
       }),
     });
 
     expect(store.getState()).toMatchObject({
+      welcomeTipDismissed: true,
       shortcutsTipDismissed: true,
       reorderTipDismissed: true,
     });
@@ -156,15 +159,30 @@ describe('createAppStore', () => {
     const storage = createStorage();
     const store = createAppStore({ storage, initialState: createState() });
 
+    store.dismissWelcomeTip();
     store.dismissShortcutsTip();
     store.dismissReorderTip();
 
+    expect(storage.data.get(APP_STORAGE_KEYS.WELCOME_TIP_DISMISSED)).toBe('true');
     expect(storage.data.get(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED)).toBe(
       'true',
     );
     expect(storage.data.get(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED)).toBe(
       'true',
     );
+  });
+
+  it('treats the welcome hint as one-shot once a task already exists', () => {
+    const storage = createStorage({
+      [APP_STORAGE_KEYS.TODOS]: JSON.stringify([
+        { id: 'task-1', text: 'Existing task', status: TODO_STATUS.TODO },
+      ]),
+    });
+
+    const store = createAppStore({ storage });
+
+    expect(store.getState().welcomeTipDismissed).toBe(true);
+    expect(storage.data.get(APP_STORAGE_KEYS.WELCOME_TIP_DISMISSED)).toBe('true');
   });
 
 });

@@ -67,6 +67,7 @@ const EXPECTED_STORAGE_KEYS = {
   TODOS: 'todos',
   READY_FILTER: 'bumbledo_filter_ready',
   LEGACY_ACTIONABLE_FILTER: 'bumbledo_filter_actionable',
+  WELCOME_TIP_DISMISSED: 'bumbledo_tip_welcome_dismissed',
   SHORTCUTS_TIP_DISMISSED: 'bumbledo_tip_shortcuts_dismissed',
   REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed',
 };
