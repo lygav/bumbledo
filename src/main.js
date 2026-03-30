@@ -22,6 +22,7 @@ import {
   shouldSampleToday,
   takeBurndownSample,
   toggleBlocker,
+  wouldCreateCycle,
   updateTodoText
 } from './todo/model.js';
 
@@ -38,6 +39,8 @@ const REORDER_TIP_STORAGE_KEY = 'bumbledo_tip_reorder_dismissed';
 const BURNDOWN_TOTAL_COLOR = '#4a90d9';
 const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
 const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
+const CYCLE_TOOLTIP_MESSAGE = 'Can\'t add — would create a circular dependency';
+const CYCLE_TOOLTIP_CLEAR_MS = 2000;
 const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
 const CONFETTI_COUNT = 52;
 const CONFETTI_MIN_DURATION_MS = 2000;
@@ -55,6 +58,10 @@ const STATUS_PILL_TONE_CLASS = {
 
 function isActionableStatus(status) {
   return status === 'todo' || status === 'inprogress';
+}
+
+function canEditTodoStatus(status) {
+  return status === 'todo' || status === 'inprogress' || status === 'blocked';
 }
 
 function parseBurndownDate(dateKey) {
@@ -653,6 +660,10 @@ if (typeof document !== 'undefined') {
     }
 
     function enterEditMode(id) {
+      const todo = todos.find(item => item.id === id);
+      if (!todo || !canEditTodoStatus(todo.status)) {
+        return;
+      }
       editingId = id;
       render();
       const input = document.querySelector(`li[data-id="${id}"] .edit-input`);
@@ -1348,7 +1359,9 @@ if (typeof document !== 'undefined') {
           li.append(handle, select, input, deleteBtn);
         } else {
           text.addEventListener('dblclick', () => {
-            enterEditMode(todo.id);
+            if (canEditTodoStatus(todo.status)) {
+              enterEditMode(todo.id);
+            }
           });
           li.append(handle, select, text, deleteBtn);
         }
@@ -1401,10 +1414,33 @@ if (typeof document !== 'undefined') {
               const checkboxId = `blocker-${todo.id}-${t.id}`;
               label.htmlFor = checkboxId;
               const cb = document.createElement('input');
+              let clearCycleMessageTimeoutId = null;
               cb.id = checkboxId;
               cb.type = 'checkbox';
               cb.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(t.id);
               cb.addEventListener('change', () => {
+                cb.setCustomValidity('');
+
+                if (
+                  cb.checked
+                  && wouldCreateCycle(todos, todo.id, t.id)
+                ) {
+                  cb.checked = false;
+                  cb.setCustomValidity(CYCLE_TOOLTIP_MESSAGE);
+                  cb.reportValidity();
+
+                  if (clearCycleMessageTimeoutId !== null) {
+                    window.clearTimeout(clearCycleMessageTimeoutId);
+                  }
+
+                  clearCycleMessageTimeoutId = window.setTimeout(() => {
+                    cb.setCustomValidity('');
+                    clearCycleMessageTimeoutId = null;
+                  }, CYCLE_TOOLTIP_CLEAR_MS);
+
+                  return;
+                }
+
                 todos = toggleBlocker(todos, todo.id, t.id);
                 saveTodos(todos);
                 render();
