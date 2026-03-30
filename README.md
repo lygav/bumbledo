@@ -11,11 +11,11 @@ A lightweight, zero-friction browser-based todo app built with vanilla JavaScrip
 ## ✨ Features
 
 - **📝 Quick capture, mouse or keyboard** — Add tasks instantly, then fly with shortcuts
-- **🎯 Four-state tracking** — Mark tasks as Active, Done, Cancelled, or Blocked
+- **🎯 Five-state tracking** — Move tasks through To Do, In Progress, Done, Cancelled, or Blocked
 - **✅ Ready filter** — Toggle **Ready** to show only ready work, with a persisted “N of M tasks are ready” summary
 - **🔗 Dependency tracking** — Block tasks, pick blockers, and prevent premature completion when dependencies remain
 - **🔔 Smart unblock alerts** — Get a notification when finishing one task unlocks others, plus a brief highlight on newly ready rows
-- **📈 Burndown progress** — Track completed vs total tasks in a 30-day rolling chart inside the collapsible **Progress** section
+- **📈 Burndown progress** — Track To Do, In Progress, blocked, and done counts in a 30-day rolling chart inside the collapsible **Progress** section
 - **📊 Dependency graph** — Visualize task dependencies with status-aware colors in an interactive DAG
 - **🎉 Delightful feedback** — Done tasks get a green success state and a confetti burst
 - **🖥️ Responsive layout** — Desktop shows tasks beside a sidebar; mobile stacks everything cleanly
@@ -72,11 +72,11 @@ npm test:watch
 - **Add a task:** Type and press Enter
 - **Jump to input:** Press **Cmd/Ctrl + Shift + A**
 - **Select and move:** Click a todo, then use **↑ / ↓** to move through visible tasks
-- **Change status fast:** Press **Enter** to cycle a selected task between Active and Done, or use the status dropdown
+- **Change status fast:** Press **Enter** to cycle a selected task through **To Do → In Progress → Done**, or use the status dropdown
 - **Delete quickly:** Press **Delete** or **Backspace** on a selected todo
 - **Block tasks:** Mark as Blocked and check which tasks are blocking it
 - **Focus:** Toggle **Ready** to hide work that isn’t ready yet and keep that preference between visits
-- **Track momentum:** Open **Progress** to see the burndown chart for the last 30 days
+- **Track momentum:** Open **Progress** to see To Do, In Progress, blocked, and done counts alongside the 30-day burndown chart
 - **Visualize:** Click "Dependencies" to see task blocking relationships in a graph
 - **Learn shortcuts:** Press **?** for the help modal, and **Escape** to close dialogs or clear selection
 - **Reorder:** Drag the ⋮ handle to move tasks up or down
@@ -90,7 +90,7 @@ npm test:watch
 |----------|--------|
 | **Cmd/Ctrl + Shift + A** | Focus the task input and select its text |
 | **↑ / ↓** | Move selection to the previous or next visible todo |
-| **Enter** | Toggle the selected todo between Active and Done |
+| **Enter** | Cycle the selected todo through To Do → In Progress → Done |
 | **Delete / Backspace** | Delete the selected todo |
 | **?** | Show or hide shortcut help |
 | **Escape** | Deselect the current todo and close open dialogs |
@@ -147,7 +147,7 @@ No cross-device sync, no undo, no search, no categories, no cloud backup. These 
 - **Rapid entry:** Press Enter repeatedly to add tasks quickly
 - **Shortcut memory:** `?` opens the keyboard cheat sheet anytime
 - **Stay focused:** Leave **Ready** on to return to only ready work next time
-- **Read progress at a glance:** The **Progress** sidebar shows burndown, while smart alerts call out newly unblocked tasks
+- **Read progress at a glance:** The **Progress** sidebar shows To Do, In Progress, blocked, and done counts alongside burndown, while smart alerts call out newly unblocked tasks
 - **Offline:** Works with no internet—data lives on your device
 
 ---
