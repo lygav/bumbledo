@@ -1,17 +1,22 @@
 import './styles.css';
+import { createAppStore } from './app/store.js';
+import {
+  selectBurndownViewModel,
+  selectDagViewModel,
+  selectHasFinishedTodos,
+  selectProgress,
+  selectShowReadyEmptyState,
+  selectVisibleTodos
+} from './app/selectors.js';
 import { createBurndownView } from './burndown/view.js';
 import { createDagView } from './dag/view.js';
-import { buildDependencyGraph } from './dag/graph.js';
 import {
   ACTIONABLE_TODO_STATUSES,
   ACTIONABLE_TODO_STATUS_SUMMARY_LABEL,
   APP_STORAGE_KEYS,
   EDITABLE_TODO_STATUSES,
-  TERMINAL_TODO_STATUSES,
   TODO_STATUS,
-  TODO_STATUS_CYCLE,
   TODO_STATUS_META,
-  TOGGLEABLE_TODO_STATUSES
 } from './app/constants.js';
 import { createKeyboardController } from './ui/keyboard.js';
 import { createModals } from './ui/modals.js';
@@ -22,30 +27,7 @@ import {
 import { createTodoListView } from './todo/list-view.js';
 import { createNotificationController } from './todo/notification.js';
 import { createTodoReorderController } from './todo/reorder.js';
-import {
-  addTodo,
-  cleanupBlockedBy,
-  clearFinished,
-  cycleStatus,
-  detectUnblockedTodos,
-  finalizeBlockedStatus,
-  deleteTodo,
-  getActionableTodos as getReadyTodos,
-  getActiveBlockerCount,
-  hasActiveBlockers,
-  hasDependencies,
-  loadBurndownData,
-  loadTodos,
-  reorderTodos,
-  saveTodos,
-  saveBurndownData,
-  setStatus,
-  shouldSampleToday,
-  takeBurndownSample,
-  toggleBlocker,
-  wouldCreateCycle,
-  updateTodoText
-} from './todo/model.js';
+import { reorderTodos, wouldCreateCycle } from './todo/model.js';
 
 const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
 const CONFETTI_COUNT = 52;
@@ -54,9 +36,6 @@ const CONFETTI_MAX_DURATION_MS = 3000;
 
 const ACTIONABLE_STATUS_SET = new Set(ACTIONABLE_TODO_STATUSES);
 const EDITABLE_STATUS_SET = new Set(EDITABLE_TODO_STATUSES);
-const TERMINAL_STATUS_SET = new Set(TERMINAL_TODO_STATUSES);
-const TOGGLEABLE_STATUS_SET = new Set(TOGGLEABLE_TODO_STATUSES);
-
 function isActionableStatus(status) {
   return ACTIONABLE_STATUS_SET.has(status);
 }
@@ -65,63 +44,8 @@ function canEditTodoStatus(status) {
   return EDITABLE_STATUS_SET.has(status);
 }
 
-function getLiveProgressCounts(todos) {
-  const total = todos.length;
-  const todo = todos.filter(item => item.status === TODO_STATUS.TODO).length;
-  const inProgress = todos.filter(item => item.status === TODO_STATUS.IN_PROGRESS).length;
-  const blocked = todos.filter(item => item.status === TODO_STATUS.BLOCKED).length;
-  const sample = takeBurndownSample(todos);
-  const done = sample.done + sample.cancelled;
-  const actionable = todo + inProgress;
-  const completionPercent = total > 0 ? (done / total) * 100 : 0;
-  const blockedPercent = total > 0 ? (blocked / total) * 100 : 0;
-
-  return {
-    total,
-    todo,
-    inProgress,
-    actionable,
-    blocked,
-    done,
-    completionPercent,
-    completionPercentRounded: Math.round(completionPercent),
-    blockedPercent
-  };
-}
-
 function isMobileViewport() {
   return window.matchMedia('(max-width: 479px)').matches;
-}
-
-function loadReadyFilterPreference() {
-  try {
-    const storedPreference = localStorage.getItem(APP_STORAGE_KEYS.READY_FILTER);
-    if (storedPreference !== null) {
-      return storedPreference === 'true';
-    }
-
-    const legacyPreference = localStorage.getItem(APP_STORAGE_KEYS.LEGACY_ACTIONABLE_FILTER);
-    if (legacyPreference !== null) {
-      try {
-        localStorage.setItem(APP_STORAGE_KEYS.READY_FILTER, legacyPreference);
-        localStorage.removeItem(APP_STORAGE_KEYS.LEGACY_ACTIONABLE_FILTER);
-      } catch {
-        // Ignore storage migration failures so the UI stays usable.
-      }
-    }
-
-    return legacyPreference === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function saveReadyFilterPreference(isActive) {
-  try {
-    localStorage.setItem(APP_STORAGE_KEYS.READY_FILTER, String(isActive));
-  } catch {
-    // Ignore storage write failures so the UI stays usable.
-  }
 }
 
 function loadTipDismissed(storageKey) {
@@ -180,13 +104,13 @@ if (typeof document !== 'undefined') {
     const blockedCompletionMessage = document.getElementById('blocked-completion-message');
     const blockedCompletionDismiss = document.getElementById('blocked-completion-dismiss');
 
-    let todos = loadTodos();
-    let burndownData = loadBurndownData();
+    const store = createAppStore({ isMobileViewport: isMobileViewport() });
+    let todos = [];
+    let burndownData = [];
     let selectedTaskId = null;
-    let filterActive = loadReadyFilterPreference();
+    let filterActive = false;
     let burndownExpanded = false;
-    let dagExpanded = !isMobileViewport() && hasDependencies(todos);
-    let dagToggleTouched = false;
+    let dagExpanded = false;
     let editingId = null;
     let shortcutsTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED);
     let reorderTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED);
@@ -194,10 +118,10 @@ if (typeof document !== 'undefined') {
     let reorderTipShownThisSession = false;
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    if (shouldSampleToday(burndownData)) {
-      burndownData = saveBurndownData([...burndownData, takeBurndownSample(todos)], undefined, APP_STORAGE_KEYS.BURNDOWN);
-    }
+    const syncStoreState = (nextState) => {
+      ({ todos, burndownData, selectedTaskId, filterActive, burndownExpanded, dagExpanded, editingId } = nextState);
+    };
+    syncStoreState(store.getState());
 
     const modals = createModals({
       helpButton: shortcutsHelpBtn,
@@ -213,94 +137,30 @@ if (typeof document !== 'undefined') {
       container: todoList,
       getHighlightRemainingMs: (id) => notificationController.getHighlightRemainingMs(id),
       canEditTodoStatus,
-      wouldCreateCycle,
+      wouldCreateCycle: (allTodos, todoId, blockerId) => wouldCreateCycle(allTodos, todoId, blockerId),
       onSelectTask: (id) => {
-        selectedTaskId = id;
-        listView.syncSelection(selectedTaskId);
-        syncDagState();
+        store.selectTask({ id });
       },
       onEnterEditMode: (id) => {
-        const todo = todos.find(item => item.id === id);
-        if (!todo || !canEditTodoStatus(todo.status)) {
-          return;
-        }
-
-        editingId = id;
-        renderApp();
+        store.enterEditMode({ id });
       },
       onSaveEdit: (newText) => {
-        if (!editingId) {
-          return;
-        }
-
-        const trimmed = newText.trim();
-        if (!trimmed) {
-          return;
-        }
-
-        todos = updateTodoText(todos, editingId, newText);
-        saveTodos(todos);
-        editingId = null;
-        renderApp();
+        store.saveEditedTask({ text: newText });
       },
       onCancelEdit: () => {
-        editingId = null;
-        renderApp();
+        store.cancelEdit();
       },
       onDeleteTask: (id) => {
-        const todosBefore = todos;
-        todos = deleteTodo(todos, id);
-        surfaceUnblockedTodos(todosBefore, todos);
-        if (selectedTaskId === id) {
-          selectedTaskId = null;
-        }
-        saveTodos(todos);
-        renderApp();
+        store.deleteTask({ id });
       },
       onStatusChange: (id, nextStatus, { returnFocusEl = null } = {}) => {
-        const currentTodo = todos.find(item => item.id === id);
-        if (!currentTodo) {
-          return;
-        }
-
-        const isBlockedCompletionAttempt = currentTodo.status === TODO_STATUS.BLOCKED
-          && TERMINAL_STATUS_SET.has(nextStatus)
-          && Array.isArray(currentTodo.blockedBy)
-          && currentTodo.blockedBy.length > 0
-          && hasActiveBlockers(todos, currentTodo.id);
-
-        if (isBlockedCompletionAttempt) {
-          showBlockedCompletionNotification(currentTodo.id, returnFocusEl);
-          renderApp();
-          return;
-        }
-
-        const todosBefore = todos;
-        todos = setStatus(todos, currentTodo.id, nextStatus);
-        if (TERMINAL_STATUS_SET.has(nextStatus)) {
-          todos = cleanupBlockedBy(todos, currentTodo.id);
-          surfaceUnblockedTodos(todosBefore, todos);
-        }
-        saveTodos(todos);
-        if (nextStatus === TODO_STATUS.DONE) {
-          fireConfetti();
-        }
-        renderApp();
+        store.setTaskStatus({ id, nextStatus, returnFocusEl });
       },
       onToggleBlocker: (todoId, blockerId) => {
-        todos = toggleBlocker(todos, todoId, blockerId);
-        saveTodos(todos);
-        renderApp();
+        store.toggleBlocker({ todoId, blockerId });
       },
       onFinalizeBlockedStatus: (todoId) => {
-        const nextTodos = finalizeBlockedStatus(todos, todoId);
-        if (nextTodos === todos) {
-          return;
-        }
-
-        todos = nextTodos;
-        saveTodos(todos);
-        renderApp();
+        store.finalizeBlockedStatus({ todoId });
       },
       onClearHighlight: (id) => {
         notificationController.clearHighlight(id);
@@ -319,26 +179,19 @@ if (typeof document !== 'undefined') {
       tooltipEl: burndownTooltip,
       isMobileViewport,
       onToggle: () => {
-        burndownExpanded = !burndownExpanded;
-        burndownView.update({
-          burndownData,
-          progress: getLiveProgressCounts(todos),
-          expanded: burndownExpanded
-        });
+        store.toggleBurndownExpanded();
       }
     });
 
     const dagView = createDagView({
       container: dagContainer,
       onSelectTask: (id) => {
-        selectedTaskId = id;
-        listView.syncSelection(selectedTaskId);
-        syncDagState();
-        listView.scrollTaskIntoView(id, { flash: true });
+        store.selectTask({ id });
+        if (store.getState().selectedTaskId === id) {
+          listView.scrollTaskIntoView(id, { flash: true });
+        }
       }
     });
-
-    saveTodos(todos);
 
     notificationController = createNotificationController({
       onStateChange: () => {
@@ -358,26 +211,38 @@ if (typeof document !== 'undefined') {
       }),
       actions: {
         cancelEdit: () => {
-          editingId = null;
-          renderApp();
+          store.cancelEdit();
         },
-        clearSelection,
+        clearSelection: ({ focusList = false } = {}) => {
+          store.clearSelection();
+          if (focusList) {
+            listView.focusList();
+          }
+        },
         closeBlockedModal: () => {
           modals.closeBlocked();
         },
         closeHelpModal: () => {
           modals.closeHelp();
         },
-        deleteSelectedTodo,
+        deleteSelectedTodo: () => {
+          if (selectedTaskId) {
+            store.deleteTask({ id: selectedTaskId });
+          }
+        },
         focusTodoInput: () => {
           todoInput.focus();
           todoInput.select();
         },
-        moveSelection,
+        moveSelection: (step) => {
+          store.moveSelection({ step });
+        },
         toggleHelp: () => {
           modals.toggleHelp();
         },
-        toggleSelectedTodoStatus,
+        toggleSelectedTodoStatus: () => {
+          store.toggleSelectedTaskStatus();
+        },
         trapBlockedModalFocus: (event) => modals.trapBlockedFocus(event)
       }
     });
@@ -396,14 +261,7 @@ if (typeof document !== 'undefined') {
       isReorderableTodo: (todo) => isActionableStatus(todo.status),
       reorderTodos,
       onReorder: (nextTodos) => {
-        if (nextTodos === todos) {
-          return false;
-        }
-
-        todos = nextTodos;
-        saveTodos(todos);
-        renderApp();
-        return true;
+        return store.reorderTasks({ todos: nextTodos }).changed;
       },
       onDismissReorderTip: () => {
         dismissReorderTip();
@@ -412,7 +270,7 @@ if (typeof document !== 'undefined') {
     reorderController.attach();
 
     function getVisibleTodos() {
-      return filterActive ? getReadyTodos(todos) : todos;
+      return selectVisibleTodos(store.getState());
     }
 
     function applyNotificationState() {
@@ -476,8 +334,7 @@ if (typeof document !== 'undefined') {
       return `Can't complete — this task has ${activeBlockerCount} ${dependencyLabel} remaining.`;
     }
 
-    function showBlockedCompletionNotification(todoId, returnFocusEl = null) {
-      const activeBlockerCount = getActiveBlockerCount(todos, todoId);
+    function showBlockedCompletionNotification(activeBlockerCount, returnFocusEl = null) {
       if (activeBlockerCount === 0) {
         return;
       }
@@ -488,21 +345,20 @@ if (typeof document !== 'undefined') {
       );
     }
 
-    function surfaceUnblockedTodos(todosBefore, todosAfter) {
-      const unblockedIds = detectUnblockedTodos(todosBefore, todosAfter);
+    function surfaceUnblockedTodos(unblockedIds) {
       if (unblockedIds.length === 0) {
         return;
       }
 
       notificationController.showUnblocked(
         unblockedIds
-          .map(id => ({ id, name: todosAfter.find(todo => todo.id === id)?.text }))
+          .map(id => ({ id, name: todos.find(todo => todo.id === id)?.text }))
           .filter(item => item.name)
       );
     }
 
     function renderTaskSummary(progress, showReadyEmptyState) {
-      const hasFinished = todos.some(todo => TERMINAL_STATUS_SET.has(todo.status));
+      const hasFinished = selectHasFinishedTodos(store.getState());
       clearFinishedBtn.disabled = !hasFinished;
       readyFilterToggle.classList.toggle('is-active', filterActive);
       readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
@@ -522,15 +378,8 @@ if (typeof document !== 'undefined') {
     }
 
     function syncDagState() {
-      const { hasDependencies: dependencyState, stats } = buildDependencyGraph(todos);
-
-      if (!dagToggleTouched) {
-        dagExpanded = dependencyState && !isMobileViewport();
-      }
-
-      if (!dependencyState) {
-        dagExpanded = false;
-      }
+      const { hasDependencies: dependencyState, stats, expanded } = selectDagViewModel(store.getState());
+      dagExpanded = expanded;
 
       dagSection.classList.toggle('is-empty', !dependencyState);
       dagToggle.disabled = !dependencyState;
@@ -549,17 +398,10 @@ if (typeof document !== 'undefined') {
     }
 
     function renderApp() {
-      if (!todos.some(todo => todo.id === selectedTaskId)) {
-        selectedTaskId = null;
-      }
-
-      const progress = getLiveProgressCounts(todos);
-      const visibleTodos = getVisibleTodos();
-      const showReadyEmptyState = filterActive && progress.total > 0 && progress.actionable === 0;
-
-      if (!visibleTodos.some(todo => todo.id === selectedTaskId)) {
-        selectedTaskId = null;
-      }
+      const storeState = store.getState();
+      const progress = selectProgress(storeState);
+      const visibleTodos = selectVisibleTodos(storeState);
+      const showReadyEmptyState = selectShowReadyEmptyState(storeState, progress);
 
       renderTaskSummary(progress, showReadyEmptyState);
       syncDiscoverabilityTips();
@@ -569,117 +411,10 @@ if (typeof document !== 'undefined') {
         selectedTaskId,
         editingId
       });
-      burndownView.update({
-        burndownData,
-        progress,
-        expanded: burndownExpanded
-      });
+      burndownView.update(selectBurndownViewModel(storeState));
       syncDagState();
       applyNotificationState();
       reorderController.reset();
-    }
-
-    function clearSelection({ focusList = false } = {}) {
-      selectedTaskId = null;
-      listView.syncSelection(selectedTaskId);
-      syncDagState();
-      if (focusList) {
-        listView.focusList();
-      }
-    }
-
-    function selectTask(id, { focus = false, scroll = false, flash = false } = {}) {
-      if (!todos.some(todo => todo.id === id)) {
-        return;
-      }
-
-      selectedTaskId = id;
-      listView.syncSelection(selectedTaskId);
-      syncDagState();
-
-      if (scroll) {
-        listView.scrollTaskIntoView(id, { flash });
-      }
-
-      if (focus) {
-        listView.focusTask(id);
-      }
-    }
-
-    function moveSelection(step) {
-      const visibleTodos = getVisibleTodos();
-      if (visibleTodos.length === 0) {
-        return;
-      }
-
-      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTaskId);
-      const nextIndex = currentIndex === -1
-        ? (step > 0 ? 0 : visibleTodos.length - 1)
-        : Math.max(0, Math.min(visibleTodos.length - 1, currentIndex + step));
-      const nextTodo = visibleTodos[nextIndex];
-      if (!nextTodo) {
-        return;
-      }
-
-      selectTask(nextTodo.id, { focus: true, scroll: true });
-    }
-
-    function toggleSelectedTodoStatus() {
-      const selectedTodo = todos.find(todo => todo.id === selectedTaskId);
-      if (!selectedTodo || !TOGGLEABLE_STATUS_SET.has(selectedTodo.status)) {
-        return;
-      }
-
-      const visibleTodos = getVisibleTodos();
-      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTodo.id);
-      const nextStatus = TODO_STATUS_CYCLE[selectedTodo.status];
-      const todosBefore = todos;
-      todos = cycleStatus(todos, selectedTodo.id);
-      if (nextStatus === TODO_STATUS.DONE) {
-        todos = cleanupBlockedBy(todos, selectedTodo.id);
-        surfaceUnblockedTodos(todosBefore, todos);
-      }
-      saveTodos(todos);
-      if (nextStatus === TODO_STATUS.DONE) {
-        fireConfetti();
-      }
-      renderApp();
-
-      const nextVisibleTodos = getVisibleTodos();
-      if (nextVisibleTodos.some(todo => todo.id === selectedTodo.id)) {
-        selectTask(selectedTodo.id, { focus: true, scroll: true });
-        return;
-      }
-
-      const fallbackTodo = currentIndex === -1
-        ? null
-        : nextVisibleTodos[currentIndex] ?? nextVisibleTodos[currentIndex - 1] ?? null;
-
-      if (fallbackTodo) {
-        selectTask(fallbackTodo.id, { focus: true, scroll: true });
-      } else {
-        clearSelection({ focusList: true });
-      }
-    }
-
-    function deleteSelectedTodo() {
-      const visibleTodos = getVisibleTodos();
-      const currentIndex = visibleTodos.findIndex(todo => todo.id === selectedTaskId);
-      const fallbackId = currentIndex === -1
-        ? null
-        : visibleTodos[currentIndex + 1]?.id ?? visibleTodos[currentIndex - 1]?.id ?? null;
-
-      const todosBefore = todos;
-      todos = deleteTodo(todos, selectedTaskId);
-      surfaceUnblockedTodos(todosBefore, todos);
-      saveTodos(todos);
-      renderApp();
-
-      if (fallbackId && todos.some(todo => todo.id === fallbackId)) {
-        selectTask(fallbackId, { focus: true, scroll: true });
-      } else {
-        clearSelection({ focusList: true });
-      }
     }
 
     function fireConfetti() {
@@ -767,17 +502,14 @@ if (typeof document !== 'undefined') {
 
     addForm.addEventListener('submit', (event) => {
       event.preventDefault();
-      todos = addTodo(todos, todoInput.value);
-      saveTodos(todos);
-      renderApp();
-      todoInput.value = '';
-      todoInput.focus();
+      if (store.addTask({ text: todoInput.value }).changed) {
+        todoInput.value = '';
+        todoInput.focus();
+      }
     });
 
     readyFilterToggle.addEventListener('click', () => {
-      filterActive = !filterActive;
-      saveReadyFilterPreference(filterActive);
-      renderApp();
+      store.toggleReadyFilter();
     });
 
     unblockedNotificationDismiss.addEventListener('click', () => {
@@ -785,32 +517,19 @@ if (typeof document !== 'undefined') {
     });
 
     clearFinishedBtn.addEventListener('click', () => {
-      const todosBefore = todos;
-      todos = clearFinished(todos);
-      surfaceUnblockedTodos(todosBefore, todos);
-      if (!todos.some(todo => todo.id === selectedTaskId)) {
-        selectedTaskId = null;
-      }
-      saveTodos(todos);
-      renderApp();
+      store.clearFinished();
     });
 
     dagToggle.addEventListener('click', () => {
-      if (!hasDependencies(todos)) {
+      if (!selectDagViewModel(store.getState()).hasDependencies) {
         return;
       }
-      dagToggleTouched = true;
-      dagExpanded = !dagExpanded;
-      syncDagState();
+      store.toggleDagExpanded();
     });
 
     window.addEventListener('resize', () => {
+      store.setViewport({ isMobileViewport: isMobileViewport() });
       renderApp();
-      if (!dagToggleTouched) {
-        dagExpanded = hasDependencies(todos) && !isMobileViewport();
-      }
-      syncDagState();
-      syncDiscoverabilityTips();
     });
 
     shortcutsTipDismiss?.addEventListener('click', () => {
@@ -831,6 +550,40 @@ if (typeof document !== 'undefined') {
       dagView.destroy();
     }, { once: true });
 
+    store.subscribe((event) => {
+      if (!event.changed && !event.meta.blockedCompletionAttempt) {
+        return;
+      }
+
+      syncStoreState(event.state);
+
+      if (event.changed) {
+        renderApp();
+      }
+
+      if (event.meta.unblockedIds?.length) {
+        surfaceUnblockedTodos(event.meta.unblockedIds);
+      }
+
+      if (event.meta.blockedCompletionAttempt) {
+        showBlockedCompletionNotification(event.meta.activeBlockerCount, event.meta.returnFocusEl);
+      }
+
+      if (event.meta.completedTaskId) {
+        fireConfetti();
+      }
+
+      if (event.meta.focusSelection && selectedTaskId) {
+        listView.focusTask(selectedTaskId);
+        if (event.meta.scrollSelection) {
+          listView.scrollTaskIntoView(selectedTaskId);
+        }
+      } else if (event.meta.focusList) {
+        listView.focusList();
+      }
+    });
+
     renderApp();
+    store.ensureBurndownSample();
   })();
 }
