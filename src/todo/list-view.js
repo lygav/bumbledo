@@ -398,10 +398,21 @@ export function createTodoListView({
       return;
     }
 
-    const todo = findTodo(todoId);
-    if (todo?.status === TODO_STATUS.BLOCKED && currentEditingId !== todoId) {
-      onFinalizeBlockedStatus(todoId);
+    if (!row.querySelector('.blocker-picker')) {
+      return;
     }
+
+    queueMicrotask(() => {
+      const nextRow = findTaskElement(todoId);
+      if (nextRow?.contains(document.activeElement)) {
+        return;
+      }
+
+      const todo = findTodo(todoId);
+      if (todo?.status === TODO_STATUS.BLOCKED && currentEditingId !== todoId) {
+        onFinalizeBlockedStatus(todoId);
+      }
+    });
   }
 
   function handleContainerKeyDown(event) {
