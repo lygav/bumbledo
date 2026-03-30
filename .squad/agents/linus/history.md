@@ -8,6 +8,23 @@
 
 ## Learnings
 
+### 2026-03-30: Touch drag reorder model coverage
+
+**What I delivered:**
+- Added 7 unit tests in `src/todo/model.test.js` for the pure reorder helper behind drag-and-drop
+- Extracted/exported `reorderTodos(todos, draggedId, targetId, insertAfter)` from `src/todo/model.js` so touch drag logic can be exercised without DOM or JSDOM
+- Updated `src/main.js` to route both mouse and touch reorder commits through the shared model helper
+
+**Coverage focus:**
+- Forward and backward moves across the list, including explicit moves to the beginning and end
+- No-op handling for same-position drags and single-item lists
+- Invalid dragged ID behavior returning the original list unchanged
+
+**Execution outcome:**
+- Baseline before changes: full Vitest suite was green (`175` tests passing)
+- After adding reorder coverage and extracting the helper: full Vitest suite stayed green (`182` tests passing)
+- This pins the touch drag reorder contract at the model layer while keeping event-handler behavior thin in `main.js`
+
 ### 2026-03-29: Burndown view data-layer contract tests
 
 **What I delivered:**
