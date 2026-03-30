@@ -8,7 +8,6 @@ import {
   detectUnblockedTodos,
   finalizeBlockedStatus,
   deleteTodo,
-  getActionableCount,
   getActionableTodos,
   getActiveBlockerCount,
   hasActiveBlockers,
@@ -41,6 +40,15 @@ const CONFETTI_COLORS = ['#4a90d9', '#2f8f63', '#f59e0b', '#ef4444', '#8b5cf6', 
 const CONFETTI_COUNT = 52;
 const CONFETTI_MIN_DURATION_MS = 2000;
 const CONFETTI_MAX_DURATION_MS = 3000;
+const STATUS_PILL_TONE_CLASS = {
+  total: 'is-total',
+  actionable: 'is-actionable',
+  blocked: 'is-blocked',
+  done: 'is-done',
+  trend: 'is-trend',
+  'trend-up': 'is-trend-up',
+  'trend-down': 'is-trend-down'
+};
 
 function parseBurndownDate(dateKey) {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -68,48 +76,110 @@ function buildBurndownSeries(samples) {
   });
 }
 
-function getBurndownSummary(series, todos = []) {
-  if (series.length === 0) {
-    const fallbackSample = takeBurndownSample(todos);
-    const completed = fallbackSample.done + fallbackSample.cancelled;
-    const remaining = Math.max(0, fallbackSample.total - completed);
-    const percent = fallbackSample.total === 0 ? 0 : Math.round((completed / fallbackSample.total) * 100);
-
-    return {
-      completed,
-      total: fallbackSample.total,
-      remaining,
-      percent,
-      deltaToday: 0,
-      hasDelta: false
-    };
-  }
-
-  const latest = series[series.length - 1];
-  const previous = series[series.length - 2] ?? null;
-  const remaining = Math.max(0, latest.total - latest.completed);
-  const percent = latest.total === 0 ? 0 : Math.round((latest.completed / latest.total) * 100);
+function getLiveProgressCounts(todos) {
+  const sample = takeBurndownSample(todos);
+  const done = sample.done + sample.cancelled;
+  const blocked = todos.filter(todo => todo.status === 'blocked' && hasActiveBlockers(todos, todo.id)).length;
+  const actionable = Math.max(0, sample.total - done - blocked);
+  const completionPercent = sample.total > 0 ? (done / sample.total) * 100 : 0;
+  const blockedPercent = sample.total > 0 ? (blocked / sample.total) * 100 : 0;
 
   return {
-    completed: latest.completed,
-    total: latest.total,
-    remaining,
-    percent,
-    deltaToday: previous ? latest.completed - previous.completed : latest.completed,
-    hasDelta: previous !== null
+    total: sample.total,
+    actionable,
+    blocked,
+    done,
+    completionPercent,
+    completionPercentRounded: Math.round(completionPercent),
+    blockedPercent
   };
 }
 
-function buildBurndownCollapsedSummary(summary) {
-  const deltaText = summary.hasDelta
-    ? `${summary.deltaToday >= 0 ? '+' : ''}${summary.deltaToday} done today`
-    : 'First sample today';
+function getBurndownTrend(samples, currentDone) {
+  const previousSample = samples.length >= 2 ? samples[samples.length - 2] : null;
+  if (!previousSample) {
+    return { symbol: '→', tone: 'trend' };
+  }
 
-  return `${summary.completed} done · ${summary.remaining} remaining · ${deltaText}`;
+  const previousDone = previousSample.done + previousSample.cancelled;
+  if (currentDone > previousDone) {
+    return { symbol: '↑', tone: 'trend-up' };
+  }
+
+  if (currentDone < previousDone) {
+    return { symbol: '↓', tone: 'trend-down' };
+  }
+
+  return { symbol: '→', tone: 'trend' };
+}
+
+function buildStatusMetricItems(progress, { includeTotal = false, trend = null } = {}) {
+  const items = [];
+
+  if (includeTotal) {
+    items.push({ count: progress.total, label: 'total', tone: 'total' });
+  }
+
+  items.push(
+    { count: progress.actionable, label: 'actionable', tone: 'actionable' },
+    { count: progress.blocked, label: 'blocked', tone: 'blocked' },
+    { count: progress.done, label: 'done', tone: 'done' }
+  );
+
+  if (trend) {
+    items.push({ text: `trend: ${trend.symbol}`, tone: trend.tone });
+  }
+
+  return items;
+}
+
+function buildStatusMetricText(items) {
+  return items.map(item => item.text ?? `${item.count} ${item.label}`).join(' · ');
+}
+
+function createStatusPill(item) {
+  const pill = document.createElement('span');
+  const toneClass = STATUS_PILL_TONE_CLASS[item.tone] ?? STATUS_PILL_TONE_CLASS.total;
+  pill.className = `status-pill ${toneClass}`;
+
+  if (item.text) {
+    pill.textContent = item.text;
+    return pill;
+  }
+
+  const count = document.createElement('span');
+  count.className = 'status-pill-count';
+  count.textContent = String(item.count);
+
+  const label = document.createElement('span');
+  label.className = 'status-pill-label';
+  label.textContent = item.label;
+
+  pill.append(count, label);
+  return pill;
+}
+
+function renderStatusMetricLine(container, items) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren(...items.map(createStatusPill));
+  container.setAttribute('aria-label', buildStatusMetricText(items));
 }
 
 function buildBurndownPath(points) {
-  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  if (points.length === 0) {
+    return '';
+  }
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) {
+      return `M ${point.x} ${point.y}`;
+    }
+
+    return `${path} H ${point.x} V ${point.y}`;
+  }, '');
 }
 
 function buildBurndownAreaPath(upperPoints, lowerPoints) {
@@ -117,10 +187,16 @@ function buildBurndownAreaPath(upperPoints, lowerPoints) {
     return '';
   }
 
-  const start = `M ${upperPoints[0].x} ${upperPoints[0].y}`;
-  const upperPath = upperPoints.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ');
-  const lowerPath = [...lowerPoints].reverse().map(point => `L ${point.x} ${point.y}`).join(' ');
-  return `${start} ${upperPath} ${lowerPath} Z`;
+  const upperPath = buildBurndownPath(upperPoints);
+  const reversedLower = [...lowerPoints].reverse();
+  const lowerPath = reversedLower.reduce((path, point, index) => {
+    if (index === 0) {
+      return `${path} L ${point.x} ${point.y}`;
+    }
+
+    return `${path} H ${point.x} V ${point.y}`;
+  }, upperPath);
+  return `${lowerPath} Z`;
 }
 
 function createSvgElement(tagName, attributes = {}) {
@@ -217,7 +293,6 @@ if (typeof document !== 'undefined') {
     const actionableSummary = document.getElementById('actionable-summary');
     const taskProgressSummary = document.getElementById('task-progress-summary');
     const taskProgressBar = document.querySelector('.task-progress-bar');
-    const taskProgressFill = document.getElementById('task-progress-fill');
     const emptyState = document.getElementById('empty-state');
     const reorderTip = document.getElementById('reorder-tip');
     const reorderTipDismiss = document.getElementById('reorder-tip-dismiss');
@@ -225,7 +300,6 @@ if (typeof document !== 'undefined') {
     const burndownCollapsedSummary = document.getElementById('burndown-collapsed-summary');
     const burndownPanel = document.getElementById('burndown-panel');
     const burndownSummaryHeadline = document.getElementById('burndown-summary-headline');
-    const burndownSummaryDetail = document.getElementById('burndown-summary-detail');
     const burndownEmptyState = document.getElementById('burndown-empty-state');
     const burndownChart = document.getElementById('burndown-chart');
     const burndownChartSvg = document.getElementById('burndown-chart-svg');
@@ -700,7 +774,7 @@ if (typeof document !== 'undefined') {
     function showBurndownTooltip(point, viewBoxWidth, viewBoxHeight) {
       burndownTooltip.innerHTML = `
         <strong>${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
-        <div>Completed: ${point.completed}</div>
+        <div>Done: ${point.completed}</div>
         <div>Total: ${point.total}</div>
       `;
       burndownTooltip.hidden = false;
@@ -759,7 +833,7 @@ if (typeof document !== 'undefined') {
       burndownChartSvg.innerHTML = '';
       burndownChartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       burndownChartSvg.setAttribute('role', 'img');
-      burndownChartSvg.setAttribute('aria-label', 'Burndown chart showing completed work versus total work over time');
+      burndownChartSvg.setAttribute('aria-label', 'Burndown chart showing done work versus total work over time');
 
       yTicks.forEach((tick) => {
         const y = getY(tick);
@@ -852,7 +926,7 @@ if (typeof document !== 'undefined') {
           height: chartHeight,
           fill: 'transparent',
           tabindex: 0,
-          'aria-label': `${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}: ${completedPoint.completed} completed, ${point.total} total`
+          'aria-label': `${formatBurndownDate(point.date, { month: 'short', day: 'numeric', year: 'numeric' })}: ${completedPoint.completed} done, ${point.total} total`
         });
 
         const tooltipPoint = {
@@ -872,14 +946,20 @@ if (typeof document !== 'undefined') {
 
     function syncBurndownState() {
       const series = buildBurndownSeries(burndownData);
-      const summary = getBurndownSummary(series, todos);
+      const progress = getLiveProgressCounts(todos);
+      const trend = getBurndownTrend(burndownData, progress.done);
 
       burndownToggle.setAttribute('aria-expanded', String(burndownExpanded));
-      burndownCollapsedSummary.textContent = buildBurndownCollapsedSummary(summary);
+      renderStatusMetricLine(
+        burndownCollapsedSummary,
+        buildStatusMetricItems(progress, { trend })
+      );
       burndownCollapsedSummary.hidden = burndownExpanded;
       burndownPanel.hidden = !burndownExpanded;
-      burndownSummaryHeadline.textContent = `${summary.completed} of ${summary.total} done (${summary.percent}%)`;
-      burndownSummaryDetail.textContent = `${summary.remaining} remaining`;
+      renderStatusMetricLine(
+        burndownSummaryHeadline,
+        buildStatusMetricItems(progress, { includeTotal: true })
+      );
 
       const hasEnoughData = series.length >= 3;
       burndownEmptyState.hidden = hasEnoughData;
@@ -1093,14 +1173,9 @@ if (typeof document !== 'undefined') {
         selectedTaskId = null;
       }
 
-      const { actionable, total } = getActionableCount(todos);
-      const { done, cancelled, total: progressTotal } = takeBurndownSample(todos);
+      const progress = getLiveProgressCounts(todos);
       const visibleTodos = getVisibleTodos();
-      const showActionableEmptyState = filterActive && total > 0 && actionable === 0;
-      const completedCount = done + cancelled;
-      const completionPercent = progressTotal > 0
-        ? Math.round((completedCount / progressTotal) * 100)
-        : 0;
+      const showActionableEmptyState = filterActive && progress.total > 0 && progress.actionable === 0;
 
       if (!visibleTodos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
@@ -1112,12 +1187,17 @@ if (typeof document !== 'undefined') {
       clearFinishedBtn.disabled = !hasFinished;
       actionableFilterToggle.classList.toggle('is-active', filterActive);
       actionableFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      actionableSummary.textContent = `${actionable} of ${total} tasks are actionable`;
-      taskProgressSummary.textContent = `${completedCount} of ${progressTotal} done (${completionPercent}%)`;
-      taskProgressBar.setAttribute('aria-valuenow', String(completionPercent));
-      taskProgressFill.style.width = `${completionPercent}%`;
-      emptyState.hidden = total > 0 ? !showActionableEmptyState : false;
-      emptyState.textContent = total === 0
+      actionableSummary.textContent = `${progress.actionable} of ${progress.total} tasks are actionable`;
+      renderStatusMetricLine(taskProgressSummary, buildStatusMetricItems(progress));
+      taskProgressBar.setAttribute('aria-valuenow', String(progress.completionPercentRounded));
+      taskProgressBar.setAttribute(
+        'aria-valuetext',
+        `${progress.done} done, ${progress.blocked} blocked, ${progress.actionable} actionable out of ${progress.total} total`
+      );
+      taskProgressBar.style.setProperty('--task-progress-done', `${progress.completionPercent.toFixed(2)}%`);
+      taskProgressBar.style.setProperty('--task-progress-blocked', `${progress.blockedPercent.toFixed(2)}%`);
+      emptyState.hidden = progress.total > 0 ? !showActionableEmptyState : false;
+      emptyState.textContent = progress.total === 0
         ? 'No todos yet. Add one above!'
         : 'Nothing actionable right now. All your tasks are either done or waiting on something.';
       syncDiscoverabilityTips();

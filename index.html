@@ -176,24 +176,97 @@
 
     #task-progress-summary {
       margin: 0 0 0.35rem;
-      color: #667085;
       font-size: 0.875rem;
+    }
+
+    .status-metric-line {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      line-height: 1.4;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-height: 1.75rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: #f3f5f8;
+      color: #4f5d75;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-pill-count {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: inherit;
+    }
+
+    .status-pill-label {
+      color: inherit;
+    }
+
+    .status-pill.is-total {
+      background: #eef2f6;
+      border-color: #d7dce4;
+      color: #4f5d75;
+    }
+
+    .status-pill.is-actionable {
+      background: #edf8f1;
+      border-color: #c7e7d3;
+      color: #2f8f63;
+    }
+
+    .status-pill.is-blocked {
+      background: #fff4e5;
+      border-color: #f6d19a;
+      color: #c56a0b;
+    }
+
+    .status-pill.is-done {
+      background: #f5f6f8;
+      border-color: #dde1e7;
+      color: #667085;
+    }
+
+    .status-pill.is-trend {
+      background: #eef4ff;
+      border-color: #d4e1f7;
+      color: #335a8f;
+    }
+
+    .status-pill.is-trend-up {
+      background: #edf8f1;
+      border-color: #c7e7d3;
+      color: #2f8f63;
+    }
+
+    .status-pill.is-trend-down {
+      background: #fff1f0;
+      border-color: #f3c4bf;
+      color: #c24132;
     }
 
     .task-progress-bar {
       width: 100%;
-      height: 4px;
+      height: 8px;
       border-radius: 999px;
-      background: #e6ebf1;
+      background:
+        linear-gradient(
+          to right,
+          #2f8f63 0 var(--task-progress-done, 0%),
+          #f59e0b var(--task-progress-done, 0%) calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)),
+          #e6ebf1 calc(var(--task-progress-done, 0%) + var(--task-progress-blocked, 0%)) 100%
+        );
       overflow: hidden;
-    }
-
-    #task-progress-fill {
-      width: 0%;
-      height: 100%;
-      border-radius: inherit;
-      background: #73b88f;
-      transition: width 0.2s ease;
+      transition: background 0.2s ease;
     }
 
     .input-row label {
@@ -597,9 +670,7 @@
     }
 
     #burndown-collapsed-summary {
-      color: #4f5d75;
       font-size: 0.9rem;
-      line-height: 1.45;
     }
 
     #burndown-panel[hidden] {
@@ -611,16 +682,11 @@
     }
 
     #burndown-summary-headline {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: #111827;
-      line-height: 1.2;
+      font-size: 0.875rem;
     }
 
     #burndown-summary-detail {
-      margin-top: 0.2rem;
-      color: #667085;
-      font-size: 0.95rem;
+      display: none;
     }
 
     .burndown-legend {
@@ -1342,7 +1408,7 @@
       }
 
       #burndown-summary-headline {
-        font-size: 1.125rem;
+        font-size: 0.875rem;
       }
 
       #burndown-summary-detail,
@@ -1475,10 +1541,8 @@
         </div>
 
         <div id="task-progress" aria-label="Task progress">
-          <p id="task-progress-summary">0 of 0 done (0%)</p>
-          <div class="task-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="task-progress-summary">
-            <div id="task-progress-fill"></div>
-          </div>
+          <p id="task-progress-summary" class="status-metric-line">0 actionable · 0 blocked · 0 done</p>
+          <div class="task-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="task-progress-summary"></div>
         </div>
 
         <p id="empty-state" role="status">No todos yet. Add one above!</p>
@@ -1514,18 +1578,18 @@
             <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
           </div>
 
-          <p id="burndown-collapsed-summary" role="status">0 done · 0 remaining · First sample today</p>
+          <p id="burndown-collapsed-summary" class="status-metric-line" role="status">0 actionable · 0 blocked · 0 done · trend: →</p>
 
           <div id="burndown-panel" hidden>
             <div class="burndown-summary">
-              <p id="burndown-summary-headline">0 of 0 done (0%)</p>
-              <p id="burndown-summary-detail">0 remaining</p>
+              <p id="burndown-summary-headline" class="status-metric-line">0 total · 0 actionable · 0 blocked · 0 done</p>
+              <p id="burndown-summary-detail"></p>
             </div>
 
             <div class="burndown-legend" aria-hidden="true">
               <span class="burndown-legend-item">
                 <span class="burndown-legend-swatch is-completed"></span>
-                Completed
+                Done
               </span>
               <span class="burndown-legend-item">
                 <span class="burndown-legend-swatch is-total"></span>
