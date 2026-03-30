@@ -1,14 +1,12 @@
 import './styles.css';
 import { createAppStore } from './app/store.js';
 import {
-  selectBurndownViewModel,
   selectDagViewModel,
   selectHasFinishedTodos,
   selectProgress,
   selectShowReadyEmptyState,
   selectVisibleTodos,
 } from './app/selectors.js';
-import { createBurndownView } from './burndown/view.js';
 import { createDagView } from './dag/view.js';
 import {
   ACTIONABLE_TODO_STATUSES,
@@ -80,18 +78,6 @@ if (typeof document !== 'undefined') {
     const emptyState = document.getElementById('empty-state');
     const reorderTip = document.getElementById('reorder-tip');
     const reorderTipDismiss = document.getElementById('reorder-tip-dismiss');
-    const burndownToggle = document.getElementById('burndown-toggle');
-    const burndownCollapsedSummary = document.getElementById(
-      'burndown-collapsed-summary',
-    );
-    const burndownPanel = document.getElementById('burndown-panel');
-    const burndownSummaryHeadline = document.getElementById(
-      'burndown-summary-headline',
-    );
-    const burndownEmptyState = document.getElementById('burndown-empty-state');
-    const burndownChart = document.getElementById('burndown-chart');
-    const burndownChartSvg = document.getElementById('burndown-chart-svg');
-    const burndownTooltip = document.getElementById('burndown-tooltip');
     const clearFinishedBtn = document.getElementById('clear-finished-btn');
     const dagSection = document.getElementById('dependency-graph-section');
     const dagContainer = document.getElementById('dependency-graph');
@@ -110,9 +96,6 @@ if (typeof document !== 'undefined') {
     );
     const blockedCompletionDismiss = document.getElementById(
       'blocked-completion-dismiss',
-    );
-    const readyFilterToggleIcon = document.getElementById(
-      'ready-filter-toggle-icon',
     );
 
     const store = createAppStore({ isMobileViewport: isMobileViewport() });
@@ -182,22 +165,6 @@ if (typeof document !== 'undefined') {
       },
       onClearHighlight: (id) => {
         notificationController.clearHighlight(id);
-      },
-    });
-
-    let burndownView;
-    burndownView = createBurndownView({
-      toggleEl: burndownToggle,
-      collapsedSummaryEl: burndownCollapsedSummary,
-      panelEl: burndownPanel,
-      summaryHeadlineEl: burndownSummaryHeadline,
-      emptyStateEl: burndownEmptyState,
-      chartEl: burndownChart,
-      svgEl: burndownChartSvg,
-      tooltipEl: burndownTooltip,
-      isMobileViewport,
-      onToggle: () => {
-        store.toggleBurndownExpanded();
       },
     });
 
@@ -369,8 +336,7 @@ if (typeof document !== 'undefined') {
       const hasFinished = selectHasFinishedTodos(store.getState());
       clearFinishedBtn.disabled = !hasFinished;
       readyFilterToggle.classList.toggle('is-active', filterActive);
-      readyFilterToggle.setAttribute('aria-pressed', String(filterActive));
-      readyFilterToggleIcon.textContent = filterActive ? '✓' : '';
+      readyFilterToggle.setAttribute('aria-checked', String(filterActive));
       readySummary.textContent = filterActive
         ? `${progress.actionable} actionable tasks visible (${ACTIONABLE_TODO_STATUS_SUMMARY_LABEL})`
         : `Showing all ${progress.total} tasks`;
@@ -445,7 +411,6 @@ if (typeof document !== 'undefined') {
         selectedTaskId,
         editingId,
       });
-      burndownView.update(selectBurndownViewModel(storeState));
       syncDagState();
       applyNotificationState();
       reorderController.reset();
@@ -599,7 +564,6 @@ if (typeof document !== 'undefined') {
         dismissUnblockedNotification({ clearHighlights: true });
         keyboardController.detach();
         reorderController.detach();
-        burndownView.destroy();
         modals.destroy();
         listView.destroy();
         dagView.destroy();
@@ -644,6 +608,5 @@ if (typeof document !== 'undefined') {
     });
 
     renderApp();
-    store.ensureBurndownSample();
   })();
 }

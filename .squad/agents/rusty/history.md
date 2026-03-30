@@ -10,6 +10,16 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Burndown Removal + Header Metrics
+
+**What I changed:**
+- Removed the burndown panel, chart wiring, persistence, and helper code so the top-level UI no longer carries a second progress system that users were ignoring.
+- Promoted the status pills into the main toolbar row and rebuilt the **Hide Blocked** control as a real switch with `role="switch"` and `aria-checked`, so the filter state reads clearly without icon-placeholder hacks.
+
+**UI rules to preserve:**
+- If summary pills are important for scanning, keep them in the same horizontal band as the primary list controls instead of burying them in a secondary panel.
+- Toggle state should be communicated by the control shape itself (track + thumb or segmented state), not by an empty icon slot that only fills after interaction.
+
 ### 2026-03-30: Toolbar Controls vs Metric Pills
 
 **What I changed:**

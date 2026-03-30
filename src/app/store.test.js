@@ -21,10 +21,8 @@ function createStorage(seed = {}) {
 function createState(overrides = {}) {
   return {
     todos: [],
-    burndownData: [],
     selectedTaskId: null,
     filterActive: false,
-    burndownExpanded: false,
     dagExpanded: false,
     dagToggleTouched: false,
     editingId: null,
@@ -137,25 +135,4 @@ describe('createAppStore', () => {
     );
   });
 
-  it('samples burndown data through a named action', () => {
-    const storage = createStorage();
-    const store = createAppStore({
-      storage,
-      initialState: createState({
-        todos: [{ id: 'a', text: 'Todo', status: TODO_STATUS.TODO }],
-      }),
-    });
-
-    const event = store.ensureBurndownSample();
-
-    expect(event.changed).toBe(true);
-    expect(store.getState().burndownData).toHaveLength(1);
-    expect(store.getState().burndownData[0]).toMatchObject({
-      todo: 1,
-      total: 1,
-    });
-    expect(
-      JSON.parse(storage.data.get(APP_STORAGE_KEYS.BURNDOWN)),
-    ).toHaveLength(1);
-  });
 });

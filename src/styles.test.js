@@ -43,7 +43,7 @@ describe('styles', () => {
       /\.control-button:hover:not\(:disabled\)\s*\{[\s\S]*background:\s*var\(--color-surface-hover\);[\s\S]*box-shadow:\s*var\(--shadow-md\);/,
     );
     expect(stylesheet).toMatch(
-      /\.control-button-toggle\.is-active,\s*[\s\S]*\.control-button-toggle\[aria-pressed='true'\],\s*[\s\S]*\.control-button-toggle\[aria-expanded='true'\]\s*\{[\s\S]*background:\s*var\(--color-accent-surface\);/,
+      /\.control-button-toggle\.is-active,\s*[\s\S]*\.control-button-toggle\[aria-pressed='true'\],\s*[\s\S]*\.control-button-toggle\[aria-checked='true'\],\s*[\s\S]*\.control-button-toggle\[aria-expanded='true'\]\s*\{[\s\S]*background:\s*var\(--color-accent-surface\);/,
     );
   });
 });
