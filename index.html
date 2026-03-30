@@ -1550,14 +1550,14 @@
         </div>
 
         <div class="list-toolbar">
-          <button type="button" id="actionable-filter-toggle" aria-pressed="false">Actionable</button>
+          <button type="button" id="actionable-filter-toggle" aria-pressed="false">To Do</button>
           <div class="list-toolbar-copy">
-            <p id="actionable-summary" role="status">0 of 0 tasks are actionable</p>
+            <p id="actionable-summary" role="status">0 of 0 tasks are in To Do</p>
           </div>
         </div>
 
         <div id="task-progress" aria-label="Task progress">
-          <p id="task-progress-summary" class="status-metric-line">0 actionable · 0 blocked · 0 done</p>
+          <p id="task-progress-summary" class="status-metric-line">0 To Do · 0 blocked · 0 done</p>
           <div class="task-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="task-progress-summary"></div>
         </div>
 
@@ -1594,11 +1594,11 @@
             <button type="button" id="burndown-toggle" aria-expanded="false" aria-controls="burndown-panel">Progress</button>
           </div>
 
-          <p id="burndown-collapsed-summary" class="status-metric-line" role="status">0 actionable · 0 blocked · 0 done · trend: →</p>
+          <p id="burndown-collapsed-summary" class="status-metric-line" role="status">0 To Do · 0 blocked · 0 done · trend: →</p>
 
           <div id="burndown-panel" hidden>
             <div class="burndown-summary">
-              <p id="burndown-summary-headline" class="status-metric-line">0 total · 0 actionable · 0 blocked · 0 done</p>
+              <p id="burndown-summary-headline" class="status-metric-line">0 total · 0 To Do · 0 blocked · 0 done</p>
               <p id="burndown-summary-detail"></p>
             </div>
 
@@ -1687,7 +1687,7 @@
             <td>
               <span class="shortcut-key"><kbd>Enter</kbd></span>
             </td>
-            <td>Toggle the selected todo between active and done.</td>
+            <td>Toggle the selected todo between To Do and done.</td>
           </tr>
           <tr>
             <td>

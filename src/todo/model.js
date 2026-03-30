@@ -54,15 +54,17 @@ function normalizeBurndownEntry(entry) {
 
   const done = Number.isFinite(entry.done) ? Math.max(0, Math.floor(entry.done)) : 0;
   const cancelled = Number.isFinite(entry.cancelled) ? Math.max(0, Math.floor(entry.cancelled)) : 0;
-  const active = Number.isFinite(entry.active) ? Math.max(0, Math.floor(entry.active)) : 0;
-  const fallbackTotal = done + cancelled + active;
+  const todo = Number.isFinite(entry.todo)
+    ? Math.max(0, Math.floor(entry.todo))
+    : (Number.isFinite(entry.active) ? Math.max(0, Math.floor(entry.active)) : 0);
+  const fallbackTotal = done + cancelled + todo;
   const total = Number.isFinite(entry.total) ? Math.max(0, Math.floor(entry.total)) : fallbackTotal;
 
   return {
     date: getLocalDateKey(parsedDate),
     done,
     cancelled,
-    active,
+    todo,
     total
   };
 }
@@ -107,17 +109,20 @@ function normalizeBlockedTodo(todo) {
   }
 
   const { blockedBy, ...rest } = todo;
-  return { ...rest, status: 'active' };
+  return { ...rest, status: 'todo' };
 }
 
 export function migrateTodos(list) {
   return list.map(t => {
     if ('done' in t && !('status' in t)) {
       const { done, ...rest } = t;
-      return { ...rest, status: done ? 'done' : 'active' };
+      return { ...rest, status: done ? 'done' : 'todo' };
     }
     if (!('status' in t)) {
-      return { ...t, status: 'active' };
+      return { ...t, status: 'todo' };
+    }
+    if (t.status === 'active') {
+      return { ...t, status: 'todo' };
     }
     if (t.status === 'blocked') {
       const blockedTodo = {
@@ -131,11 +136,19 @@ export function migrateTodos(list) {
   });
 }
 
+const VALID_STATUSES = new Set(['todo', 'done', 'cancelled', 'blocked']);
+
 export function loadTodos(storage = defaultStorage, storageKey = 'todos') {
   try {
     const data = storage.getItem(storageKey);
     const parsed = data ? JSON.parse(data) : [];
-    return migrateTodos(parsed);
+    const migrated = migrateTodos(parsed);
+
+    if (JSON.stringify(migrated) !== JSON.stringify(parsed)) {
+      saveTodos(migrated, storage, storageKey);
+    }
+
+    return migrated;
   } catch {
     return [];
   }
@@ -158,14 +171,15 @@ export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 't
 export function takeBurndownSample(todos, now = new Date()) {
   const done = todos.filter(todo => todo.status === 'done').length;
   const cancelled = todos.filter(todo => todo.status === 'cancelled').length;
-  const active = todos.filter(todo => todo.status === 'active' || todo.status === 'blocked').length;
+  const todo = todos.filter(todo => todo.status === 'todo').length;
+  const blocked = todos.filter(todo => todo.status === 'blocked').length;
 
   return {
     date: getLocalDateKey(now),
     done,
     cancelled,
-    active,
-    total: done + cancelled + active
+    todo,
+    total: done + cancelled + todo + blocked
   };
 }
 
@@ -193,10 +207,14 @@ export function shouldSampleToday(data, now = new Date()) {
 export function addTodo(todos, text) {
   const trimmed = text.trim();
   if (!trimmed) return todos;
-  return [...todos, { id: generateId(), text: trimmed, status: 'active' }];
+  return [...todos, { id: generateId(), text: trimmed, status: 'todo' }];
 }
 
 export function setStatus(todos, id, newStatus) {
+  if (!VALID_STATUSES.has(newStatus)) {
+    return todos;
+  }
+
   return todos.map(todo => {
     if (todo.id !== id) return todo;
 
@@ -216,12 +234,12 @@ export function cycleStatus(todos, id) {
   return todos.map(todo => {
     if (todo.id !== id) return todo;
 
-    if (todo.status === 'active') {
+    if (todo.status === 'todo') {
       return { ...todo, status: 'done' };
     }
 
     if (todo.status === 'done' || todo.status === 'cancelled') {
-      return { ...todo, status: 'active' };
+      return { ...todo, status: 'todo' };
     }
 
     if (todo.status === 'blocked' && Array.isArray(todo.blockedBy) && todo.blockedBy.length > 0) {
@@ -230,7 +248,7 @@ export function cycleStatus(todos, id) {
 
     if (todo.status === 'blocked') {
       const { blockedBy, ...rest } = todo;
-      return { ...rest, status: 'active' };
+      return { ...rest, status: 'todo' };
     }
 
     return todo;
@@ -284,7 +302,7 @@ export function toggleBlocker(todos, todoId, blockerId) {
     if (idx >= 0) {
       blockedBy.splice(idx, 1);
       if (blockedBy.length === 0) {
-        return { ...todo, status: 'active', blockedBy: undefined };
+        return { ...todo, status: 'todo', blockedBy: undefined };
       }
       return { ...todo, blockedBy };
     }
@@ -305,7 +323,7 @@ export function cleanupBlockedBy(todos, removedId) {
 
     if (filteredBlockers.length === 0) {
       const { blockedBy, ...rest } = t;
-      return { ...rest, status: 'active' };
+      return { ...rest, status: 'todo' };
     }
 
     return { ...t, blockedBy: filteredBlockers };
@@ -316,7 +334,7 @@ export function detectUnblockedTodos(todosBefore, todosAfter) {
   const beforeById = new Map(todosBefore.map(todo => [todo.id, todo]));
 
   return todosAfter
-    .filter(todo => beforeById.get(todo.id)?.status === 'blocked' && todo.status === 'active')
+    .filter(todo => beforeById.get(todo.id)?.status === 'blocked' && todo.status === 'todo')
     .map(todo => todo.id);
 }
 
@@ -360,7 +378,7 @@ export function hasActiveBlockers(todos, todoId) {
       return false;
     }
 
-    if (blocker.status === 'active') {
+    if (blocker.status === 'todo') {
       return true;
     }
 
@@ -403,7 +421,7 @@ export function getActiveBlockerCount(todos, todoId) {
       return count;
     }
 
-    if (blocker.status === 'active' || blocker.status === 'blocked') {
+    if (blocker.status === 'todo' || blocker.status === 'blocked') {
       return count + 1;
     }
 
@@ -434,13 +452,13 @@ export function finalizeBlockedStatus(todos, id) {
 
 export function getActionableCount(todos) {
   return {
-    actionable: todos.filter(todo => todo.status === 'active' || (todo.status === 'blocked' && !hasBlockers(todo))).length,
+    actionable: todos.filter(todo => todo.status === 'todo').length,
     total: todos.length
   };
 }
 
 export function getActionableTodos(todos) {
-  return todos.filter(todo => todo.status === 'active' || (todo.status === 'blocked' && !hasBlockers(todo)));
+  return todos.filter(todo => todo.status === 'todo');
 }
 
 export function updateTodoText(todos, id, newText) {
