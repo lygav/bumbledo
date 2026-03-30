@@ -25,7 +25,13 @@
               placeholder="What's buzzing?"
               autocomplete="off"
             />
-            <button type="submit" id="add-btn">Add</button>
+            <button
+              type="submit"
+              id="add-btn"
+              class="control-button control-button-primary"
+            >
+              Add
+            </button>
           </form>
 
           <div
@@ -41,7 +47,7 @@
             <button
               type="button"
               id="shortcuts-tip-dismiss"
-              class="discovery-tip-dismiss"
+              class="discovery-tip-dismiss control-button control-button-icon control-button-quiet"
               aria-label="Dismiss keyboard shortcuts tip"
             >
               ×
@@ -65,7 +71,7 @@
             <button
               type="button"
               id="unblocked-notification-dismiss"
-              class="todo-notification-dismiss"
+              class="todo-notification-dismiss control-button control-button-icon control-button-quiet"
               aria-label="Dismiss task alert"
             >
               ×
@@ -77,7 +83,7 @@
               <button
                 type="button"
                 id="ready-filter-toggle"
-                class="toolbar-button"
+                class="toolbar-button control-button control-button-toggle"
                 aria-pressed="false"
               >
                 <span
@@ -91,7 +97,7 @@
               <button
                 type="button"
                 id="burndown-toggle"
-                class="toolbar-button toolbar-disclosure-button"
+                class="toolbar-button toolbar-disclosure-button control-button control-button-toggle"
                 aria-expanded="false"
                 aria-controls="burndown-panel"
               >
@@ -142,7 +148,7 @@
             <button
               type="button"
               id="reorder-tip-dismiss"
-              class="discovery-tip-dismiss"
+              class="discovery-tip-dismiss control-button control-button-icon control-button-quiet"
               aria-label="Dismiss reorder tip"
             >
               ×
@@ -199,12 +205,18 @@
 
           <footer>
             <div class="footer-actions">
-              <button type="button" id="clear-finished-btn" disabled>
+              <button
+                type="button"
+                id="clear-finished-btn"
+                class="control-button control-button-secondary"
+                disabled
+              >
                 Clear finished
               </button>
               <button
                 type="button"
                 id="shortcuts-help-btn"
+                class="control-button control-button-secondary"
                 aria-haspopup="dialog"
                 aria-controls="shortcuts-help-modal"
               >
@@ -224,7 +236,12 @@
             <h2 id="dependency-graph-title">Dependencies</h2>
             <p class="dependency-graph-helper">How tasks block each other</p>
           </div>
-          <button type="button" id="dag-toggle" aria-expanded="false">
+          <button
+            type="button"
+            id="dag-toggle"
+            class="control-button control-button-toggle"
+            aria-expanded="false"
+          >
             Show graph
           </button>
         </div>
@@ -254,7 +271,7 @@
           </div>
           <button
             type="button"
-            class="shortcut-help-close"
+            class="shortcut-help-close control-button control-button-icon control-button-secondary"
             id="shortcuts-help-close"
             aria-label="Close keyboard shortcuts"
           >
@@ -334,7 +351,7 @@
         <div class="blocked-completion-actions">
           <button
             type="button"
-            class="blocked-completion-dismiss"
+            class="blocked-completion-dismiss control-button control-button-primary"
             id="blocked-completion-dismiss"
           >
             OK

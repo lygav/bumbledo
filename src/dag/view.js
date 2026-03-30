@@ -101,7 +101,8 @@ export function createDagView({ container, onSelectTask }) {
 
   const resetButton = document.createElement('button');
   resetButton.type = 'button';
-  resetButton.className = 'dag-reset-button';
+  resetButton.className =
+    'dag-reset-button control-button control-button-secondary';
   resetButton.textContent = 'Reset view';
 
   const tooltip = document.createElement('div');
