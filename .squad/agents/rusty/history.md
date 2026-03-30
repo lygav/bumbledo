@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Delegated Todo List Interactions
+
+**What I changed:**
+- Moved todo row interaction wiring in `src/todo/list-view.js` from per-row listeners to stable container listeners for click, change, dblclick, focus, and edit-key handling.
+- Kept blocker picker toggles and blocked-status finalization working by delegating through row `data-id` and checkbox `data-blocker-id`, while leaving drag/reorder delegation in `src/todo/reorder.js` unchanged.
+- Preserved mutation boundaries by continuing to route list interactions through the store action layer (`setTaskStatus`, `deleteTask`, `toggleBlocker`, `enterEditMode`, `saveEditedTask`, `cancelEdit`, `finalizeBlockedStatus`).
+
+**Interaction rules to preserve:**
+- List controls that survive full re-renders should be identified from the stable list container with `event.target.closest(...)`, not rebound per `<li>`.
+- Blocker picker clicks must not fall through to generic row-click selection logic, but focus-driven selection and keyboard edit behavior should still keep working after re-render or reorder.
+
 ### 2026-03-30: Active Label Copy + Inline Progress Summary
 
 **What I changed:**

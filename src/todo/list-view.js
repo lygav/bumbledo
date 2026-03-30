@@ -32,9 +32,29 @@ export function createTodoListView({
   let currentSelectedTaskId = null;
   let currentEditingId = null;
   let flashTimeoutId = null;
+  const cycleClearTimeoutIds = new Set();
 
   function findTaskElement(id) {
     return [...container.querySelectorAll('li[data-id]')].find((item) => item.dataset.id === id) ?? null;
+  }
+
+  function findTodo(id) {
+    return currentTodos.find((todo) => todo.id === id) ?? null;
+  }
+
+  function getTodoIdFromTarget(target) {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+
+    return target.closest('li[data-id]')?.dataset.id ?? null;
+  }
+
+  function clearCycleClearTimeouts() {
+    cycleClearTimeoutIds.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    cycleClearTimeoutIds.clear();
   }
 
   function focusList() {
@@ -125,12 +145,9 @@ export function createTodoListView({
     return subtitle;
   }
 
-  function createBlockerPicker(todo, row) {
+  function createBlockerPicker(todo) {
     const picker = document.createElement('div');
     picker.className = 'blocker-picker';
-    picker.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
 
     const pickerTitle = document.createElement('div');
     pickerTitle.className = 'blocker-picker-title';
@@ -151,33 +168,12 @@ export function createTodoListView({
         const label = document.createElement('label');
         const checkboxId = `blocker-${todo.id}-${item.id}`;
         const checkbox = document.createElement('input');
-        let clearCycleMessageTimeoutId = null;
 
         label.htmlFor = checkboxId;
         checkbox.id = checkboxId;
         checkbox.type = 'checkbox';
+        checkbox.dataset.blockerId = item.id;
         checkbox.checked = Array.isArray(todo.blockedBy) && todo.blockedBy.includes(item.id);
-        checkbox.addEventListener('change', () => {
-          checkbox.setCustomValidity('');
-
-          if (checkbox.checked && wouldCreateCycle(currentTodos, todo.id, item.id)) {
-            checkbox.checked = false;
-            checkbox.setCustomValidity(CYCLE_TOOLTIP_MESSAGE);
-            checkbox.reportValidity();
-
-            if (clearCycleMessageTimeoutId !== null) {
-              window.clearTimeout(clearCycleMessageTimeoutId);
-            }
-
-            clearCycleMessageTimeoutId = window.setTimeout(() => {
-              checkbox.setCustomValidity('');
-              clearCycleMessageTimeoutId = null;
-            }, CYCLE_TOOLTIP_CLEAR_MS);
-            return;
-          }
-
-          onToggleBlocker(todo.id, item.id);
-        });
 
         const labelText = document.createElement('span');
         labelText.textContent = truncateText(item.text, 40);
@@ -186,16 +182,6 @@ export function createTodoListView({
         picker.appendChild(label);
       });
     }
-
-    row.addEventListener('focusout', () => {
-      queueMicrotask(() => {
-        if (row.contains(document.activeElement)) {
-          return;
-        }
-
-        onFinalizeBlockedStatus(todo.id);
-      });
-    });
 
     return picker;
   }
@@ -236,18 +222,12 @@ export function createTodoListView({
       statusSelect.appendChild(option);
     });
     statusSelect.style.color = '#1a1a1a';
-    statusSelect.addEventListener('change', () => {
-      onStatusChange(todo.id, statusSelect.value, { returnFocusEl: statusSelect });
-    });
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'delete-btn';
     deleteButton.setAttribute('aria-label', `Delete "${todo.text}"`);
     deleteButton.textContent = '×';
-    deleteButton.addEventListener('click', () => {
-      onDeleteTask(todo.id);
-    });
 
     if (currentEditingId === todo.id) {
       const input = document.createElement('input');
@@ -255,30 +235,11 @@ export function createTodoListView({
       input.className = 'edit-input';
       input.value = todo.text;
       input.setAttribute('aria-label', `Edit "${todo.text}"`);
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          onSaveEdit(input.value);
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          onCancelEdit();
-        }
-      });
-      input.addEventListener('blur', () => {
-        if (currentEditingId === todo.id) {
-          onSaveEdit(input.value);
-        }
-      });
       row.append(handle, statusSelect, input, deleteButton);
     } else {
       const text = document.createElement('span');
       text.className = 'todo-text';
       text.textContent = todo.text;
-      text.addEventListener('dblclick', () => {
-        if (canEditTodoStatus(todo.status)) {
-          onEnterEditMode(todo.id);
-        }
-      });
       row.append(handle, statusSelect, text, deleteButton);
     }
 
@@ -288,22 +249,155 @@ export function createTodoListView({
         row.appendChild(blockedSubtitle);
       }
 
-      row.appendChild(createBlockerPicker(todo, row));
+      row.appendChild(createBlockerPicker(todo));
     }
-
-    row.addEventListener('click', () => {
-      if (remainingMs !== null && remainingMs > 0) {
-        onClearHighlight(todo.id);
-      }
-      onSelectTask(todo.id);
-    });
-
-    row.addEventListener('focusin', () => {
-      onSelectTask(todo.id);
-    });
 
     return row;
   }
+
+  function handleContainerClick(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const todoId = getTodoIdFromTarget(event.target);
+    if (!todoId) {
+      return;
+    }
+
+    if (event.target.closest('.blocker-picker')) {
+      return;
+    }
+
+    if (event.target.closest('.delete-btn')) {
+      onDeleteTask(todoId);
+      return;
+    }
+
+    if (event.target.closest('.edit-input')) {
+      return;
+    }
+
+    const remainingMs = getHighlightRemainingMs(todoId);
+    if (remainingMs !== null && remainingMs > 0) {
+      onClearHighlight(todoId);
+    }
+    onSelectTask(todoId);
+  }
+
+  function handleContainerChange(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const todoId = getTodoIdFromTarget(event.target);
+    if (!todoId) {
+      return;
+    }
+
+    if (event.target instanceof HTMLSelectElement && event.target.classList.contains('todo-status')) {
+      onStatusChange(todoId, event.target.value, { returnFocusEl: event.target });
+      return;
+    }
+
+    if (
+      event.target instanceof HTMLInputElement
+      && event.target.type === 'checkbox'
+      && event.target.closest('.blocker-picker')
+    ) {
+      const blockerId = event.target.dataset.blockerId;
+      if (!blockerId) {
+        return;
+      }
+
+      event.target.setCustomValidity('');
+      if (event.target.checked && wouldCreateCycle(currentTodos, todoId, blockerId)) {
+        event.target.checked = false;
+        event.target.setCustomValidity(CYCLE_TOOLTIP_MESSAGE);
+        event.target.reportValidity();
+
+        const timeoutId = window.setTimeout(() => {
+          cycleClearTimeoutIds.delete(timeoutId);
+          event.target.setCustomValidity('');
+        }, CYCLE_TOOLTIP_CLEAR_MS);
+        cycleClearTimeoutIds.add(timeoutId);
+        return;
+      }
+
+      onToggleBlocker(todoId, blockerId);
+    }
+  }
+
+  function handleContainerDblClick(event) {
+    if (!(event.target instanceof Element) || !event.target.closest('.todo-text')) {
+      return;
+    }
+
+    const todoId = getTodoIdFromTarget(event.target);
+    const todo = todoId ? findTodo(todoId) : null;
+    if (todo && canEditTodoStatus(todo.status)) {
+      onEnterEditMode(todo.id);
+    }
+  }
+
+  function handleContainerFocusIn(event) {
+    const todoId = getTodoIdFromTarget(event.target);
+    if (todoId) {
+      onSelectTask(todoId);
+    }
+  }
+
+  function handleContainerFocusOut(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const row = event.target.closest('li[data-id]');
+    const todoId = row?.dataset.id ?? null;
+    if (!row || !todoId) {
+      return;
+    }
+
+    if (event.target instanceof HTMLInputElement && event.target.classList.contains('edit-input')) {
+      if (currentEditingId === todoId) {
+        onSaveEdit(event.target.value);
+      }
+      return;
+    }
+
+    if (event.relatedTarget instanceof Node && row.contains(event.relatedTarget)) {
+      return;
+    }
+
+    const todo = findTodo(todoId);
+    if (todo?.status === TODO_STATUS.BLOCKED && currentEditingId !== todoId) {
+      onFinalizeBlockedStatus(todoId);
+    }
+  }
+
+  function handleContainerKeyDown(event) {
+    if (!(event.target instanceof HTMLInputElement) || !event.target.classList.contains('edit-input')) {
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onSaveEdit(event.target.value);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onCancelEdit();
+    }
+  }
+
+  container.addEventListener('click', handleContainerClick);
+  container.addEventListener('change', handleContainerChange);
+  container.addEventListener('dblclick', handleContainerDblClick);
+  container.addEventListener('focusin', handleContainerFocusIn);
+  container.addEventListener('focusout', handleContainerFocusOut);
+  container.addEventListener('keydown', handleContainerKeyDown);
 
   function update({ todos, visibleTodos, selectedTaskId, editingId }) {
     currentTodos = todos;
@@ -330,6 +424,13 @@ export function createTodoListView({
   return {
     destroy() {
       window.clearTimeout(flashTimeoutId);
+      clearCycleClearTimeouts();
+      container.removeEventListener('click', handleContainerClick);
+      container.removeEventListener('change', handleContainerChange);
+      container.removeEventListener('dblclick', handleContainerDblClick);
+      container.removeEventListener('focusin', handleContainerFocusIn);
+      container.removeEventListener('focusout', handleContainerFocusOut);
+      container.removeEventListener('keydown', handleContainerKeyDown);
       container.innerHTML = '';
     },
     focusList,
