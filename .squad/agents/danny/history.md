@@ -10,12 +10,38 @@
 
 <!-- Append learnings below -->
 
-### 2026-03-30: Tooling Guardrails for Post-refactor Stability
+### 2026-03-30: Tooling Guardrails for Post-refactor Stability (Task #65)
 
-**What I learned:**
-- This codebase is now mature enough for lightweight guardrails: ESLint flat config plus Prettier gives consistency without pulling in framework-specific or style-heavy tooling.
-- Scoping formatter targets matters. A broad `prettier .` sweep reached operational files outside the app surface, so the durable choice is to format the app, root config/docs, and CI workflow explicitly while excluding `.squad/`, `.worktrees/`, and `.copilot/`.
-- Fresh refactors can still hide useful lint signals. The only code fixes required were true-unused state locals in `src/main.js` and repeated blocked-field stripping in `src/todo/model.js`, which is exactly the kind of low-noise feedback this level of tooling should provide.
+**What I delivered:**
+- Installed ESLint flat config (`eslint.config.js`) using `@eslint/js` recommended rules
+- Configured Prettier (`.prettierrc`) with single quotes, trailing commas, 2-space indentation
+- Created GitHub Actions CI workflow (`.github/workflows/ci.yml`) with single `verify` job:
+  - `npm ci` → `npm run lint` → `npm run format:check` → `npm test` → `npm run build`
+- Added npm scripts: `lint`, `format:check`, `format` to `package.json`
+- Excluded `.squad/`, `.worktrees/`, `.copilot/`, `dist/`, `node_modules/` from linting/formatting
+
+**Design rationale:**
+- **Boring standards, not policy-heavy enforcement** — ESLint recommended rules catch real defects, Prettier removes style debate
+- **Flat config** — explicit and avoids legacy `.eslintrc` path as ESLint 9+ standard
+- **Single CI job** — sufficient for this repo's scale, understandable for contributors
+- **Appropriate tooling level** — no exotic configuration, no matrix parallelism
+
+**Why this matters for the refactor:**
+- Validates all 6 prior PRs (#66–#71) and ensures future work maintains code quality
+- Enforces consistent formatting across modular architecture
+- Prevents drift in store actions, selectors, and controller APIs
+- Establishes baseline for onboarding new contributors
+
+**Code findings:**
+- Only lint fixes were unused locals in `src/main.js` and repeated blocked-field stripping in `src/todo/model.js` — exactly the low-noise feedback this tooling should provide
+- Fresh refactors can hide useful lint signals; setting up guardrails early prevents technical debt
+
+**PR #72 merged**
+
+**Cross-refs:**
+- Validates Tasks #59–#64 (constants, CSS, main.js split, store, persistence, delegation)
+- Feeds into Saul's store API (Task #62): enforces action/selector naming consistency
+- Feeds into Rusty's event delegation (Task #64): ensures handler code quality
 
 ### 2026-03-29: PR #11 Smart Blocked Alerts Review
 

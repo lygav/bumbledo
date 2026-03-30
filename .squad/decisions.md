@@ -1955,3 +1955,241 @@ This sequencing staggers the work across team members while keeping blockers min
 - Dependencies are explicit enough to stage refactor safely without a framework freeze
 - Future architecture decisions can reference concrete issue numbers
 - Work begins with Rusty on #59 (constants extraction)
+---
+
+## ADR-005: Shared Constants Module Design
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Created `src/app/constants.js` as the neutral source for cross-cutting frontend constants instead of embedding them in `main.js` or feature modules.
+
+### Decision
+
+Establish `src/app/constants.js` as a centralized constants module exporting:
+- `TODO_STATUS` object (raw enum values)
+- Grouped collections: `TODO_STATUS_VALUES`, `ACTIONABLE_TODO_STATUSES`, `TERMINAL_TODO_STATUSES`, `TODO_STATUS_OPTIONS`
+- `APP_STORAGE_KEYS` (all localStorage key names)
+
+All feature modules and controllers import from this single source instead of defining their own copies.
+
+### Rationale
+
+- **Prevents duplication:** Without central constants, each module invents its own status vocabulary or palette tokens, leading to inconsistencies
+- **Enables refactoring:** Upcoming controller extraction and store architecture depend on one stable import surface for status values
+- **Organizes vocabulary:** Grouped collections (e.g., `ACTIONABLE_TODO_STATUSES` vs `TERMINAL_TODO_STATUSES`) clarify intent without multiplying constants
+- **Simplifies persistence:** `APP_STORAGE_KEYS` is a single place to audit and manage localStorage usage
+
+### Consequences
+
+- Single point of truth for frontend vocabulary
+- Feature modules and `main.js` import from `constants.js` instead of defining their own
+- Future constants (palette tokens, animation timings, breakpoints) integrate into the same module
+- Minimal migration: existing localStorage keys preserved
+
+---
+
+## ADR-006: Feature Controller Extraction from main.js
+
+**Status:** Accepted  
+**Author:** Saul  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Refactored monolithic `src/main.js` (1821 lines) into modular feature controllers while keeping `main.js` as the composition root (836 lines).
+
+### Decision
+
+Extract the following feature controllers, each with a factory function and stable API:
+- `src/todo/list-view.js` — todo row rendering, inline edit DOM, blocked-by UI, per-row event handlers
+- `src/todo/reorder.js` — drag/drop and touch-reorder lifecycle
+- `src/ui/modals.js` — help modal, blocked-completion modal, focus return, Tab trapping
+- `src/ui/keyboard.js` — global shortcut routing (focus-input, help, Escape, navigation, Enter, delete)
+- `src/burndown/view.js` — burndown toggle, chart rendering, tooltip behavior, series/trend derivation
+- `src/ui/status-metrics.js` — shared helper for status-pill metric rendering
+
+Keep `src/main.js` as the composition root orchestrating:
+- Canonical app state and cross-feature mutation logic
+- Todo persistence and selection state
+- Ready filter preference
+- Burndown and DAG visibility state
+- Notification/controller wiring
+- Confetti side effects
+
+### Rationale
+
+- **Separation of concerns:** Feature logic is isolated, reducing cognitive load
+- **Testability:** Controllers can be tested independently with mock state
+- **Maintainability:** Changes to todo row rendering don't affect keyboard shortcuts
+- **Composition root:** `main.js` remains the single place to understand cross-feature orchestration
+- **Callback-based wiring:** Controllers don't depend on shared state; `main.js` pushes updates
+
+### Consequences
+
+- `main.js` is reduced from 1821 to 836 lines (54% reduction)
+- All feature modules export factory functions with consistent API
+- Controllers communicate with `main.js` only through callbacks
+- Easier onboarding for new contributors (feature = one or two modules)
+- No additional frameworks; vanilla JS event delegation and state passing
+
+---
+
+## ADR-007: Lightweight App Store with Named Actions
+
+**Status:** Accepted  
+**Author:** Saul  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Introduce a lightweight vanilla JS store (`src/app/store.js`) with named actions and pure selectors (`src/app/selectors.js`) to formalize state mutations and derived data.
+
+### Decision
+
+Create `src/app/store.js` with:
+- Canonical state shape: `todos`, `burndownData`, `selectedTaskId`, `filterActive`, `editingId`, `burndownExpanded`, `dagExpanded`, `dagToggleTouched`, `isMobileViewport`
+- Named actions for all meaningful mutations (20+ actions covering task CRUD, selection, filtering, UI toggles, etc.)
+- `subscribe(listener)` API for state notifications
+- `dispatch(action)` returning action with metadata
+
+Create `src/app/selectors.js` with pure selector functions:
+- Progress counts and percentages
+- Visible todos under the ready filter
+- Selected todo visible reconciliation
+- Blocked-completion guard information
+- Keyboard toggle target
+- Burndown view model
+- DAG section state and effective expansion
+
+### Rationale
+
+- **Explicit mutations:** Named actions replace ad-hoc state mutations scattered across `main.js`
+- **Centralized persistence:** Actions emit metadata so post-action effects (persistence, notifications) are discoverable
+- **Derived data:** Selectors prevent `main.js` from computing complex view state
+- **No framework:** Plain JS objects and functions—no Redux, Vuex, or MobX dependencies
+- **Testability:** Actions are pure (deterministic), selectors are pure (testable without side effects)
+- **Team readability:** Action names are self-documenting; the store becomes the API surface
+
+### Consequences
+
+- Controllers no longer directly mutate state; they dispatch named actions
+- `main.js` subscribes to store updates and rerenders components
+- Side effects (persistence, notifications) hook into action metadata
+- Store is the single source of truth for what operations are possible
+- Test coverage increases: 211 → 213 tests (all store actions and selectors)
+
+---
+
+## ADR-008: Persistence via Store Post-Action Effects
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Route all app-level persistence (todos, burndown data, ready filter preference) through `src/app/store.js` post-action effects instead of allowing `main.js` or controllers to write storage directly.
+
+### Decision
+
+Centralize persistence in store post-action effects:
+- `saveTodos()` triggered when `todos` state changes
+- `saveBurndownData()` triggered when `burndownData` state changes
+- Ready-filter preference write triggered when `filterActive` state changes
+
+Controllers dispatch store actions; they never call `localStorage` directly. All persistence logic lives in one place.
+
+### Rationale
+
+- **Discoverability:** All persistence rules are in one module; auditing storage usage is straightforward
+- **Consistency:** No ad-hoc saves from different parts of the UI; all changes go through the same pipeline
+- **Testability:** Persistence logic can be mocked or tested independently of UI wiring
+- **Controller purity:** Feature modules are strictly dispatch-only; no side effects
+- **Minimal migration:** Existing localStorage keys are preserved; no user data migration
+
+### Consequences
+
+- All controllers dispatch store actions (no direct `localStorage` access)
+- `src/app/store.js` owns all persistence logic
+- Future persistence (preferences, undo/redo state) integrates into the same post-action effect system
+- One place to document and audit what gets persisted and when
+
+---
+
+## ADR-009: Event Delegation in Todo List View
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Use container-level event delegation in `src/todo/list-view.js` instead of per-row listener attachment.
+
+### Decision
+
+Attach one set of stable listeners to the `.todo-list` container. Resolve row and action intent using `event.target.closest()` with row data attributes. All handlers dispatch store actions.
+
+### Rationale
+
+- **Performance:** List is fully re-rendered after store updates; per-row listener wiring is wasted work and a maintenance trap
+- **Durability:** Container listeners survive render cycles; per-row binding breaks after re-render
+- **Simplicity:** One listener set vs. 20+ re-attached listeners per render
+- **Store boundary:** All actions still dispatch through the store; no loss of control
+
+### Consequences
+
+- Edit, status toggle, delete, and blocker flows remain stable across render cycles
+- `src/todo/list-view.js` is simpler and more performant
+- No regression risk from stale per-row listeners
+- Easier testing: can simulate clicks on container with row data attributes
+
+---
+
+## ADR-010: Code Quality Guardrails (ESLint, Prettier, CI)
+
+**Status:** Accepted  
+**Author:** Danny  
+**Date:** 2026-03-30T09:51:00Z
+
+### Summary
+
+Adopt ESLint flat config, Prettier formatter, and a simple GitHub Actions CI workflow to enforce code quality standards.
+
+### Decision
+
+**Linting:** `eslint.config.js` (flat config) using `@eslint/js` recommended rules. Browser globals for app code; Node globals only for config files (`vite.config.js`, `eslint.config.js`).
+
+**Formatting:** Prettier with single quotes, trailing commas, 2-space indentation.
+
+**CI:** One `.github/workflows/ci.yml` job:
+1. `npm ci` (clean install)
+2. `npm run lint` (ESLint)
+3. `npm run format:check` (Prettier check)
+4. `npm test` (Vitest)
+5. `npm run build` (Vite)
+
+**Exclusions:** `.squad/`, `.worktrees/`, `.copilot/`, `dist/`, `node_modules/` from linting/formatting.
+
+**npm scripts:** Add `lint`, `format:check`, `format` to `package.json`.
+
+### Rationale
+
+- **Prevents defects:** ESLint recommended rules catch real bugs (unused variables, type errors, etc.)
+- **Removes style debate:** Prettier normalizes formatting; developers don't argue about tabs vs. spaces
+- **Boring and maintainable:** Flat config, standard rules, simple CI — no exotic configuration
+- **Appropriate scale:** This codebase doesn't need matrix builds or parallelized jobs; one verification job is sufficient
+- **Developer experience:** `npm run lint && npm run format` is fast and transparent
+
+### Consequences
+
+- All code changes must pass linting and formatting before merge
+- CI provides immediate feedback on every push
+- Team can focus on logic and architecture instead of style
+- Onboarding new contributors: "run `npm run format` before committing"
+
+- Work begins with Rusty on #59 (constants extraction)

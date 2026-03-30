@@ -8,7 +8,7 @@
 
 ## Learnings
 
-### 2026-03-30: Shared constants module contract tests
+### 2026-03-30: Shared Constants Module Contract Tests
 
 **What I delivered:**
 - Added `src/app/constants.test.js` as a proactive TDD suite for Rusty's shared constants extraction in `src/app/constants.js`
@@ -25,6 +25,10 @@
 - Baseline before changes: full Vitest suite was green (`193` tests passing)
 - After adding and refining the new contract suite against the landed constants module: full Vitest suite stayed green (`200` tests passing)
 - This locks issue `#59` behind a reproducible contract without forcing source edits from the test side
+
+**Cross-refs:**
+- Validates Rusty's constants module (Task #59) — enables Tasks #61 (Saul's split), #62 (Saul's store), #63 (Rusty's persistence)
+- Proactive TDD ensures store selectors and action validators can safely consume constants
 
 ### 2026-03-30: Touch drag reorder model coverage
 
