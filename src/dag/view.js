@@ -1,6 +1,7 @@
 import dagre from 'dagre';
 import {
   APP_PALETTE,
+  DESIGN_RADII,
   getTodoStatusLabel,
   getTodoStatusPalette,
 } from '../app/constants.js';
@@ -128,7 +129,7 @@ export function createDagView({ container, onSelectTask }) {
       <path d="M 0 0 L 10 5 L 0 10 z" fill="${APP_PALETTE.DAG_ARROW_CYCLE}"></path>
     </marker>
     <clipPath id="dag-node-clip">
-      <rect x="0" y="0" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="8" ry="8" />
+      <rect x="0" y="0" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="${DESIGN_RADII.SURFACE}" ry="${DESIGN_RADII.SURFACE}" />
     </clipPath>
   `;
 
@@ -349,8 +350,8 @@ export function createDagView({ container, onSelectTask }) {
         y: -2,
         width: node.width + 4,
         height: node.height + 4,
-        rx: 10,
-        ry: 10,
+        rx: DESIGN_RADII.SURFACE,
+        ry: DESIGN_RADII.SURFACE,
       });
       const body = createSvgElement('rect', {
         class: 'dag-node-body',
@@ -358,8 +359,8 @@ export function createDagView({ container, onSelectTask }) {
         y: 0,
         width: node.width,
         height: node.height,
-        rx: 8,
-        ry: 8,
+        rx: DESIGN_RADII.SURFACE,
+        ry: DESIGN_RADII.SURFACE,
         fill: palette.fill,
         stroke: palette.border,
       });
@@ -373,8 +374,8 @@ export function createDagView({ container, onSelectTask }) {
           y: 0,
           width: 6,
           height: node.height,
-          rx: 8,
-          ry: 8,
+          rx: DESIGN_RADII.SURFACE,
+          ry: DESIGN_RADII.SURFACE,
           fill: palette.accent,
         });
         group.appendChild(accent);

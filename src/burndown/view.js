@@ -215,7 +215,7 @@ export function createBurndownView({
           y1: y,
           x2: width - margin.right,
           y2: y,
-          stroke: '#e3e8ef',
+          stroke: APP_PALETTE.BURNDOWN_GRID,
           'stroke-width': 1,
         }),
       );
@@ -224,7 +224,7 @@ export function createBurndownView({
         x: margin.left - 8,
         y: y + 4,
         'text-anchor': 'end',
-        fill: '#7c8798',
+        fill: APP_PALETTE.BURNDOWN_AXIS,
         'font-size': mobile ? 10 : 11,
       });
       tickLabel.textContent = String(tick);
@@ -269,7 +269,7 @@ export function createBurndownView({
           cx: point.x,
           cy: point.y,
           r: 3.5,
-          fill: '#fff',
+          fill: APP_PALETTE.BURNDOWN_POINT_FILL,
           stroke: APP_PALETTE.BURNDOWN_TOTAL,
           'stroke-width': 2,
         }),
@@ -280,7 +280,7 @@ export function createBurndownView({
           cx: completedPoint.x,
           cy: completedPoint.y,
           r: 3.5,
-          fill: '#fff',
+          fill: APP_PALETTE.BURNDOWN_POINT_FILL,
           stroke: APP_PALETTE.BURNDOWN_COMPLETED,
           'stroke-width': 2,
         }),
@@ -291,7 +291,7 @@ export function createBurndownView({
           x: point.x,
           y: height - 10,
           'text-anchor': 'middle',
-          fill: '#7c8798',
+          fill: APP_PALETTE.BURNDOWN_AXIS,
           'font-size': mobile ? 10 : 11,
         });
         xAxisLabel.textContent = formatBurndownDate(

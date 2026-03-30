@@ -13,6 +13,8 @@ import { createDagView } from './dag/view.js';
 import {
   ACTIONABLE_TODO_STATUSES,
   ACTIONABLE_TODO_STATUS_SUMMARY_LABEL,
+  applyRootDesignTokens,
+  CONFETTI_COLORS,
   EDITABLE_TODO_STATUSES,
   TODO_STATUS,
   TODO_STATUS_META,
@@ -28,16 +30,6 @@ import { createNotificationController } from './todo/notification.js';
 import { createTodoReorderController } from './todo/reorder.js';
 import { reorderTodos, wouldCreateCycle } from './todo/model.js';
 
-const CONFETTI_COLORS = [
-  '#4a90d9',
-  '#2f8f63',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#14b8a6',
-  '#f97316',
-  '#ec4899',
-];
 const CONFETTI_COUNT = 52;
 const CONFETTI_MIN_DURATION_MS = 2000;
 const CONFETTI_MAX_DURATION_MS = 3000;
@@ -57,6 +49,8 @@ function isMobileViewport() {
 }
 
 if (typeof document !== 'undefined') {
+  applyRootDesignTokens(document.documentElement);
+
   (function init() {
     const todoList = document.getElementById('todo-list');
     const todoInput = document.getElementById('todo-input');
