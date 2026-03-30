@@ -137,3 +137,21 @@ The project has implicitly chosen **scalable single-page app** over **zero-setup
 - Cross-agent history updated
 
 **Status:** ✅ Complete. Ready for feature development and deployment.
+
+### 2026-03-30: Architecture Review of Current Codebase
+
+**Verdict:** Refactor warranted, but as an evolutionary boundary cleanup — not a framework rewrite.
+
+**What I learned:**
+- This is a vanilla JS + Vite SPA, not a React app; the architecture already leans on controller/factory patterns rather than component trees.
+- The healthiest modules are `src/todo/model.js`, `src/todo/notification.js`, and `src/dag/graph.js`, which keep logic pure or tightly scoped.
+- The main scaling risks are concentrated in `src/main.js` (1820 lines of orchestration, rendering, keyboard, drag/drop, charting, and modal logic) and `index.html` (1770 lines with all styling inline).
+- The right next move is to keep the current stack, extract feature controllers/renderers, introduce a lightweight action/store layer, and move CSS into imported stylesheets.
+- Key files for future work: `src/main.js`, `index.html`, `src/todo/model.js`, `src/todo/notification.js`, `src/dag/graph.js`, `src/dag/view.js`, `package.json`, `vite.config.js`.
+
+### 2026-03-30: Refactor Issue Decomposition
+
+**What I learned:**
+- I decomposed the architecture review into seven delivery issues: #59 shared constants, #60 CSS extraction, #61 `main.js` controller breakup, #62 app store/action layer, #63 persistence consolidation, #64 delegated list events, and #65 ESLint/formatter/CI guardrails.
+- The cleanest breakdown was to separate boundary-establishing work from behavior-preserving cleanup: constants and CSS first, then controller/store seams, then persistence and DOM optimization, then tooling guardrails.
+- Assignment rationale matters as much as sequencing: Rusty got focused frontend cleanup and DOM optimization, Saul got the two highest-leverage architectural refactors (`main.js` decomposition and store/actions), and I kept tooling/CI because it sets repo-wide standards and trade-offs.

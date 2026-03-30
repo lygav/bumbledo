@@ -1903,3 +1903,55 @@ The quality issue is not framework choice; it's missing boundaries. The code alr
 ## Decision
 
 Refactor now using evolutionary approach. Preserve vanilla JS + Vite, strengthen module boundaries, remove the two oversized hotspots before more features land.
+
+---
+
+## ADR-004: Seven-Issue Refactor Breakdown
+
+**Status:** Accepted  
+**Author:** Danny  
+**Date:** 2026-03-30T09:22:00Z
+
+### Summary
+
+Decomposed the architecture refactor recommendations (from 2026-03-30 architecture review) into seven implementation-ready GitHub issues with explicit dependencies, sequencing, and team assignments. Avoids framework rewrite; preserves vanilla JS + Vite.
+
+### Decision
+
+**Break refactoring work into seven dependency-ordered issues rather than one monolithic task.**
+
+| Issue | Title | Assignee | Dependencies |
+|-------|-------|----------|--------------|
+| #59 | Create shared app constants module for status, palette, and storage keys | Rusty | — |
+| #60 | Extract inline app styles from `index.html` into `src/styles.css` | Rusty | #59 |
+| #61 | Split `src/main.js` into feature controllers with `main.js` as composition root | Saul | #59 |
+| #62 | Introduce a lightweight app store and named action layer | Saul | #61 |
+| #63 | Route todo and burndown persistence through post-action effects | Rusty | #62 |
+| #64 | Use delegated list events instead of per-row listener wiring | Rusty | #61 |
+| #65 | Add ESLint, formatter, and GitHub Actions CI guardrails | Danny | #59–#64 |
+
+### Rationale
+
+A single large issue hides critical dependency edges and makes parallel execution unsafe. Seven issues create explicit seams:
+
+1. **Establish vocabulary and boundaries first** (#59, #60): Create constants module and move styles out of HTML
+2. **Extract feature modules and state orchestration** (#61, #62): Break up `main.js`, introduce store/actions
+3. **Tighten persistence and DOM event wiring** (#63, #64): Route effects through actions, use event delegation
+4. **Lock it down** (#65): Add tooling guardrails to prevent future drift
+
+This sequencing staggers the work across team members while keeping blockers minimal and dependencies clear.
+
+**Trade-off:** More up-front project management overhead. Justified because the architecture risk is concentrated in shared boundaries (`main.js`, `index.html`). Unclear sequencing would create rework across contributors.
+
+### Assignments
+
+- **Rusty:** #59, #60, #63, #64 (constants, styles, persistence, events)
+- **Saul:** #61, #62 (controllers, store)
+- **Danny:** #65 (tooling)
+
+### Consequences
+
+- Team now has implementation-ready work with explicit ownership and acceptance criteria
+- Dependencies are explicit enough to stage refactor safely without a framework freeze
+- Future architecture decisions can reference concrete issue numbers
+- Work begins with Rusty on #59 (constants extraction)
