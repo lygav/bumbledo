@@ -1,14 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as constants from './constants.js';
-import {
-  cycleStatus,
-  loadBurndownData,
-  loadTodos,
-  saveBurndownData,
-  saveTodos,
-  setStatus,
-  takeBurndownSample,
-} from '../todo/model.js';
+import { cycleStatus, loadTodos, saveTodos, setStatus } from '../todo/model.js';
 
 const EXPECTED_STATUS_VALUES = [
   'todo',
@@ -73,7 +65,6 @@ const EXPECTED_STORAGE_KEYS = {
   TODOS: 'todos',
   READY_FILTER: 'bumbledo_filter_ready',
   LEGACY_ACTIONABLE_FILTER: 'bumbledo_filter_actionable',
-  BURNDOWN: 'todos_burndown',
   SHORTCUTS_TIP_DISMISSED: 'bumbledo_tip_shortcuts_dismissed',
   REORDER_TIP_DISMISSED: 'bumbledo_tip_reorder_dismissed',
 };
@@ -175,7 +166,7 @@ describe('app constants contract', () => {
   });
 
   describe('status consistency with model.js', () => {
-    it('uses the exported status vocabulary for model transitions and sampling', () => {
+    it('uses the exported status vocabulary for model transitions', () => {
       const [
         todoStatus,
         inProgressStatus,
@@ -239,25 +230,6 @@ describe('app constants contract', () => {
         )[0].status,
       ).toBe(blockedStatus);
 
-      const sample = takeBurndownSample([
-        { id: 'todo', text: 'Todo task', status: todoStatus },
-        { id: 'doing', text: 'In progress task', status: inProgressStatus },
-        { id: 'done', text: 'Done task', status: doneStatus },
-        { id: 'cancelled', text: 'Cancelled task', status: cancelledStatus },
-        {
-          id: 'blocked',
-          text: 'Blocked task',
-          status: blockedStatus,
-          blockedBy: ['todo'],
-        },
-      ]);
-
-      expect(sample).toMatchObject({
-        done: 1,
-        cancelled: 1,
-        todo: 2,
-        total: 5,
-      });
     });
   });
 
@@ -310,18 +282,11 @@ describe('app constants contract', () => {
         storage,
         storageKeys.TODOS,
       );
-      loadBurndownData(storage, storageKeys.BURNDOWN);
-      saveBurndownData([], storage, storageKeys.BURNDOWN);
 
       expect(storage.getItem).toHaveBeenCalledWith(storageKeys.TODOS);
-      expect(storage.getItem).toHaveBeenCalledWith(storageKeys.BURNDOWN);
       expect(storage.setItem).toHaveBeenCalledWith(
         storageKeys.TODOS,
         JSON.stringify([{ id: 'task-1', text: 'Persist me', status: 'todo' }]),
-      );
-      expect(storage.setItem).toHaveBeenCalledWith(
-        storageKeys.BURNDOWN,
-        JSON.stringify([]),
       );
     });
   });

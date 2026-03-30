@@ -136,12 +136,6 @@ export const TODO_STATUS_PALETTE = Object.freeze({
 });
 
 export const APP_PALETTE = Object.freeze({
-  BURNDOWN_TOTAL: '#4a90d9',
-  BURNDOWN_COMPLETED: '#2f8f63',
-  BURNDOWN_GAP: 'rgba(74, 144, 217, 0.12)',
-  BURNDOWN_GRID: '#e3e8ef',
-  BURNDOWN_AXIS: '#7c8798',
-  BURNDOWN_POINT_FILL: '#ffffff',
   DAG_ARROW_DEFAULT: '#9aa1aa',
   DAG_ARROW_HIGHLIGHT: '#4a90d9',
   DAG_ARROW_CYCLE: '#d64541',
@@ -157,8 +151,8 @@ export const DESIGN_RADII = Object.freeze({
 });
 
 export const CONFETTI_COLORS = Object.freeze([
-  APP_PALETTE.BURNDOWN_TOTAL,
-  APP_PALETTE.BURNDOWN_COMPLETED,
+  APP_PALETTE.DAG_ARROW_HIGHLIGHT,
+  TODO_STATUS_PALETTE[TODO_STATUS.DONE].accent,
   '#f59e0b',
   TODO_STATUS_PALETTE[TODO_STATUS.CANCELLED].accent,
   '#8b5cf6',
@@ -197,7 +191,6 @@ export function applyRootDesignTokens(root) {
 
 export const APP_STORAGE_KEYS = Object.freeze({
   TODOS: 'todos',
-  BURNDOWN: 'todos_burndown',
   READY_FILTER: 'bumbledo_filter_ready',
   LEGACY_ACTIONABLE_FILTER: 'bumbledo_filter_actionable',
   SHORTCUTS_TIP_DISMISSED: 'bumbledo_tip_shortcuts_dismissed',

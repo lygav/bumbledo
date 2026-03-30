@@ -12,10 +12,8 @@ import {
 function createState(overrides = {}) {
   return {
     todos: [],
-    burndownData: [],
     selectedTaskId: null,
     filterActive: false,
-    burndownExpanded: false,
     dagExpanded: false,
     dagToggleTouched: false,
     editingId: null,

@@ -12,13 +12,9 @@ import {
   detectUnblockedTodos,
   finalizeBlockedStatus,
   hasDependencies,
-  loadBurndownData,
   loadTodos,
-  saveBurndownData,
   saveTodos,
   setStatus,
-  shouldSampleToday,
-  takeBurndownSample,
   toggleBlocker,
   updateTodoText,
 } from '../todo/model.js';
@@ -106,13 +102,11 @@ function reconcileSelection(state) {
 function buildInitialState({
   storage = defaultStorage,
   isMobileViewport = false,
-} = {}) {
+  } = {}) {
   return {
     todos: loadTodos(storage),
-    burndownData: loadBurndownData(storage),
     selectedTaskId: null,
     filterActive: loadReadyFilterPreference(storage),
-    burndownExpanded: false,
     dagExpanded: !isMobileViewport,
     dagToggleTouched: false,
     editingId: null,
@@ -144,16 +138,6 @@ export function createAppStore(options = {}) {
         previousState.todos !== nextState.todos,
       run: (_previousState, nextState) =>
         saveTodos(nextState.todos, storage, APP_STORAGE_KEYS.TODOS),
-    },
-    {
-      shouldRun: (previousState, nextState) =>
-        previousState.burndownData !== nextState.burndownData,
-      run: (_previousState, nextState) =>
-        saveBurndownData(
-          nextState.burndownData,
-          storage,
-          APP_STORAGE_KEYS.BURNDOWN,
-        ),
     },
     {
       shouldRun: (previousState, nextState) =>
@@ -275,19 +259,6 @@ export function createAppStore(options = {}) {
       }
 
       return { ...currentState, shortcutsTipDismissed: true };
-    },
-    ensureBurndownSample(currentState) {
-      if (!shouldSampleToday(currentState.burndownData)) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        burndownData: [
-          ...currentState.burndownData,
-          takeBurndownSample(currentState.todos),
-        ],
-      };
     },
     enterEditMode(currentState, payload = {}) {
       const todo = currentState.todos.find((item) => item.id === payload.id);
@@ -452,12 +423,6 @@ export function createAppStore(options = {}) {
       }
 
       return reconcileSelection({ ...currentState, todos: nextTodos });
-    },
-    toggleBurndownExpanded(currentState) {
-      return {
-        ...currentState,
-        burndownExpanded: !currentState.burndownExpanded,
-      };
     },
     toggleDagExpanded(currentState) {
       if (!hasDependencies(currentState.todos)) {

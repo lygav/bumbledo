@@ -10,7 +10,6 @@ import {
   getActionableTodos,
   getActiveBlockerCount,
   hasActiveBlockers,
-  takeBurndownSample,
 } from '../todo/model.js';
 
 const TERMINAL_STATUS_SET = new Set(TERMINAL_TODO_STATUSES);
@@ -27,8 +26,10 @@ export function selectProgress(state) {
   const blocked = state.todos.filter(
     (item) => item.status === TODO_STATUS.BLOCKED,
   ).length;
-  const sample = takeBurndownSample(state.todos);
-  const done = sample.done + sample.cancelled;
+  const done = state.todos.filter(
+    (item) =>
+      item.status === TODO_STATUS.DONE || item.status === TODO_STATUS.CANCELLED,
+  ).length;
   const actionable = todo + inProgress;
   const completionPercent = total > 0 ? (done / total) * 100 : 0;
   const blockedPercent = total > 0 ? (blocked / total) * 100 : 0;
@@ -80,14 +81,6 @@ export function selectShowReadyEmptyState(
 
 export function selectHasFinishedTodos(state) {
   return state.todos.some((todo) => TERMINAL_STATUS_SET.has(todo.status));
-}
-
-export function selectBurndownViewModel(state) {
-  return {
-    burndownData: state.burndownData,
-    progress: selectProgress(state),
-    expanded: state.burndownExpanded,
-  };
 }
 
 export function selectDagViewModel(state) {
