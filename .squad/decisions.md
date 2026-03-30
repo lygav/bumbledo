@@ -2508,3 +2508,30 @@ Concurrently: Tailwind CSS adoption analyzed and deferred.
 - ADR-009: Design token system formalization (PR #75)
 - No Tailwind adoption; monitor for component refactoring opportunities in future
 
+
+---
+
+## ADR-011: In-Progress Blocker Picker Refinement
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30
+
+### Summary
+
+Blocked-task picker should allow blocker candidates with status `todo`, `inprogress`, or `blocked`.
+
+### Rationale
+
+Users can legitimately wait on work that is already underway, so dependency selection should include active in-flight tasks, not just untouched todos. This reflects real-world workflow where tasks become blocked waiting on work that's actively in progress.
+
+### Guardrails
+
+- Keep `done` and `cancelled` tasks out of blocker selection
+- Preserve existing unblock cleanup when a blocker transitions into a terminal state (done/cancelled)
+
+### Related Changes
+
+- Affects blockedBy picker UI component
+- Maintains circular dependency prevention (ADR-001)
+- Maintains auto-cleanup logic on blocker status change
