@@ -10,6 +10,17 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Active Label Copy + Inline Progress Summary
+
+**What I changed:**
+- Renamed the status dropdown’s active option from “— None —” to “Active” and removed the muted placeholder-style text color so the control reads like a real state selector.
+- Added a persistent lightweight progress summary directly under the actionable filter, using the existing burndown sample counts to show completed-or-cancelled work as “X of Y done (Z%)” plus a thin inline bar.
+
+**UI rules to preserve:**
+- If a status value is a real selectable state, style it with the same readable text color as the other options instead of placeholder grey.
+- Keep the inline progress summary always visible near the list controls so users can glance at current completion without opening the sidebar burndown view.
+
+
 ### 2026-03-30: Full-Viewport Confetti Tuning
 
 **What I changed:**

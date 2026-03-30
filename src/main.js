@@ -195,6 +195,9 @@ if (typeof document !== 'undefined') {
     const unblockedNotificationDismiss = document.getElementById('unblocked-notification-dismiss');
     const actionableFilterToggle = document.getElementById('actionable-filter-toggle');
     const actionableSummary = document.getElementById('actionable-summary');
+    const taskProgressSummary = document.getElementById('task-progress-summary');
+    const taskProgressBar = document.querySelector('.task-progress-bar');
+    const taskProgressFill = document.getElementById('task-progress-fill');
     const emptyState = document.getElementById('empty-state');
     const burndownToggle = document.getElementById('burndown-toggle');
     const burndownCollapsedSummary = document.getElementById('burndown-collapsed-summary');
@@ -1025,8 +1028,13 @@ if (typeof document !== 'undefined') {
       }
 
       const { actionable, total } = getActionableCount(todos);
+      const { done, cancelled, total: progressTotal } = takeBurndownSample(todos);
       const visibleTodos = getVisibleTodos();
       const showActionableEmptyState = filterActive && total > 0 && actionable === 0;
+      const completedCount = done + cancelled;
+      const completionPercent = progressTotal > 0
+        ? Math.round((completedCount / progressTotal) * 100)
+        : 0;
 
       if (!visibleTodos.some(todo => todo.id === selectedTaskId)) {
         selectedTaskId = null;
@@ -1039,6 +1047,9 @@ if (typeof document !== 'undefined') {
       actionableFilterToggle.classList.toggle('is-active', filterActive);
       actionableFilterToggle.setAttribute('aria-pressed', String(filterActive));
       actionableSummary.textContent = `${actionable} of ${total} tasks are actionable`;
+      taskProgressSummary.textContent = `${completedCount} of ${progressTotal} done (${completionPercent}%)`;
+      taskProgressBar.setAttribute('aria-valuenow', String(completionPercent));
+      taskProgressFill.style.width = `${completionPercent}%`;
       emptyState.hidden = total > 0 ? !showActionableEmptyState : false;
       emptyState.textContent = total === 0
         ? 'No todos yet. Add one above!'
@@ -1068,7 +1079,7 @@ if (typeof document !== 'undefined') {
         select.className = 'todo-status';
         select.setAttribute('aria-label', `Status for "${todo.text}"`);
         const statusOptions = [
-          { value: 'active', label: '— None —' },
+          { value: 'active', label: 'Active' },
           { value: 'done', label: 'Done' },
           { value: 'cancelled', label: 'Cancelled' },
           { value: 'blocked', label: 'Blocked' }
@@ -1080,7 +1091,7 @@ if (typeof document !== 'undefined') {
           if (s.value === todo.status) opt.selected = true;
           select.appendChild(opt);
         });
-        select.style.color = todo.status === 'active' ? '#999' : '#1a1a1a';
+        select.style.color = '#1a1a1a';
         select.addEventListener('change', () => {
           const nextStatus = select.value;
           const currentTodo = todos.find(item => item.id === todo.id);
