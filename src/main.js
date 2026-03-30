@@ -13,7 +13,6 @@ import { createDagView } from './dag/view.js';
 import {
   ACTIONABLE_TODO_STATUSES,
   ACTIONABLE_TODO_STATUS_SUMMARY_LABEL,
-  APP_STORAGE_KEYS,
   EDITABLE_TODO_STATUSES,
   TODO_STATUS,
   TODO_STATUS_META,
@@ -46,22 +45,6 @@ function canEditTodoStatus(status) {
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 479px)').matches;
-}
-
-function loadTipDismissed(storageKey) {
-  try {
-    return localStorage.getItem(storageKey) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function dismissTip(storageKey) {
-  try {
-    localStorage.setItem(storageKey, 'true');
-  } catch {
-    // Ignore storage write failures so the UI stays usable.
-  }
 }
 
 if (typeof document !== 'undefined') {
@@ -112,14 +95,24 @@ if (typeof document !== 'undefined') {
     let burndownExpanded = false;
     let dagExpanded = false;
     let editingId = null;
-    let shortcutsTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED);
-    let reorderTipDismissed = loadTipDismissed(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED);
+    let shortcutsTipDismissed = false;
+    let reorderTipDismissed = false;
     let shortcutsTipShownThisSession = false;
     let reorderTipShownThisSession = false;
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const syncStoreState = (nextState) => {
-      ({ todos, burndownData, selectedTaskId, filterActive, burndownExpanded, dagExpanded, editingId } = nextState);
+      ({
+        todos,
+        burndownData,
+        selectedTaskId,
+        filterActive,
+        burndownExpanded,
+        dagExpanded,
+        editingId,
+        shortcutsTipDismissed,
+        reorderTipDismissed
+      } = nextState);
     };
     syncStoreState(store.getState());
 
@@ -285,27 +278,11 @@ if (typeof document !== 'undefined') {
     }
 
     function dismissShortcutsTip() {
-      if (shortcutsTipDismissed) {
-        return;
-      }
-
-      shortcutsTipDismissed = true;
-      dismissTip(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED);
-      if (shortcutsTip) {
-        shortcutsTip.hidden = true;
-      }
+      store.dismissShortcutsTip();
     }
 
     function dismissReorderTip() {
-      if (reorderTipDismissed) {
-        return;
-      }
-
-      reorderTipDismissed = true;
-      dismissTip(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED);
-      if (reorderTip) {
-        reorderTip.hidden = true;
-      }
+      store.dismissReorderTip();
     }
 
     function syncDiscoverabilityTips() {

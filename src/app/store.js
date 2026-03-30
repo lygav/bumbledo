@@ -34,6 +34,14 @@ const defaultStorage = {
   removeItem: (key) => localStorage.removeItem(key)
 };
 
+function loadBooleanPreference(storageKey, storage = defaultStorage) {
+  try {
+    return storage.getItem(storageKey) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function loadReadyFilterPreference(storage = defaultStorage) {
   try {
     const storedPreference = storage.getItem(APP_STORAGE_KEYS.READY_FILTER);
@@ -57,9 +65,9 @@ function loadReadyFilterPreference(storage = defaultStorage) {
   }
 }
 
-function saveReadyFilterPreference(isActive, storage = defaultStorage) {
+function saveBooleanPreference(storageKey, value, storage = defaultStorage) {
   try {
-    storage.setItem(APP_STORAGE_KEYS.READY_FILTER, String(isActive));
+    storage.setItem(storageKey, String(value));
   } catch {
     // Ignore storage write failures so the UI stays usable.
   }
@@ -99,7 +107,9 @@ function buildInitialState({ storage = defaultStorage, isMobileViewport = false 
     dagExpanded: !isMobileViewport,
     dagToggleTouched: false,
     editingId: null,
-    isMobileViewport
+    isMobileViewport,
+    shortcutsTipDismissed: loadBooleanPreference(APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED, storage),
+    reorderTipDismissed: loadBooleanPreference(APP_STORAGE_KEYS.REORDER_TIP_DISMISSED, storage)
   };
 }
 
@@ -111,18 +121,43 @@ export function createAppStore(options = {}) {
     isMobileViewport: options.isMobileViewport ?? false
   });
 
-  function persistState(previousState, nextState) {
-    if (previousState.todos !== nextState.todos) {
-      saveTodos(nextState.todos, storage, APP_STORAGE_KEYS.TODOS);
+  const postActionEffects = [
+    {
+      shouldRun: (previousState, nextState) => previousState.todos !== nextState.todos,
+      run: (_previousState, nextState) => saveTodos(nextState.todos, storage, APP_STORAGE_KEYS.TODOS)
+    },
+    {
+      shouldRun: (previousState, nextState) => previousState.burndownData !== nextState.burndownData,
+      run: (_previousState, nextState) => saveBurndownData(nextState.burndownData, storage, APP_STORAGE_KEYS.BURNDOWN)
+    },
+    {
+      shouldRun: (previousState, nextState) => previousState.filterActive !== nextState.filterActive,
+      run: (_previousState, nextState) => saveBooleanPreference(APP_STORAGE_KEYS.READY_FILTER, nextState.filterActive, storage)
+    },
+    {
+      shouldRun: (previousState, nextState) => previousState.shortcutsTipDismissed !== nextState.shortcutsTipDismissed,
+      run: (_previousState, nextState) => saveBooleanPreference(
+        APP_STORAGE_KEYS.SHORTCUTS_TIP_DISMISSED,
+        nextState.shortcutsTipDismissed,
+        storage
+      )
+    },
+    {
+      shouldRun: (previousState, nextState) => previousState.reorderTipDismissed !== nextState.reorderTipDismissed,
+      run: (_previousState, nextState) => saveBooleanPreference(
+        APP_STORAGE_KEYS.REORDER_TIP_DISMISSED,
+        nextState.reorderTipDismissed,
+        storage
+      )
     }
+  ];
 
-    if (previousState.burndownData !== nextState.burndownData) {
-      saveBurndownData(nextState.burndownData, storage, APP_STORAGE_KEYS.BURNDOWN);
-    }
-
-    if (previousState.filterActive !== nextState.filterActive) {
-      saveReadyFilterPreference(nextState.filterActive, storage);
-    }
+  function runPostActionEffects(previousState, nextState) {
+    postActionEffects.forEach((effect) => {
+      if (effect.shouldRun(previousState, nextState)) {
+        effect.run(previousState, nextState);
+      }
+    });
   }
 
   const actionHandlers = {
@@ -181,6 +216,20 @@ export function createAppStore(options = {}) {
         focusList: deletingSelectedTask && nextState.selectedTaskId === null,
         scrollSelection: deletingSelectedTask && nextState.selectedTaskId !== null
       });
+    },
+    dismissReorderTip(currentState) {
+      if (currentState.reorderTipDismissed) {
+        return currentState;
+      }
+
+      return { ...currentState, reorderTipDismissed: true };
+    },
+    dismissShortcutsTip(currentState) {
+      if (currentState.shortcutsTipDismissed) {
+        return currentState;
+      }
+
+      return { ...currentState, shortcutsTipDismissed: true };
     },
     ensureBurndownSample(currentState) {
       if (!shouldSampleToday(currentState.burndownData)) {
@@ -407,7 +456,7 @@ export function createAppStore(options = {}) {
     state = nextState;
 
     if (changed) {
-      persistState(previousState, nextState);
+      runPostActionEffects(previousState, nextState);
     }
 
     const event = {
