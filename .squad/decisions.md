@@ -2266,3 +2266,72 @@ Any reusable class that sets `display` should ship with a matching `[hidden]` ru
 - Regression tests cover critical visibility scenarios
 - Burndown and other metric UIs now render consistently across show/hide cycles
 
+
+---
+
+## ADR-013: Split Control Language — Toolbar Buttons vs Metric Badges
+
+**Status:** Accepted  
+**Author:** Rusty  
+**Date:** 2026-03-30T11:14:00Z
+
+### Summary
+
+Separate interactive toolbar controls (filters, disclosures) from passive metric badges using distinct styling, positioning, and interaction affordances.
+
+### Problem
+
+The toolbar mixed clickable filters and toggles (Ready, Progress) with read-only status pills (completed, total, percentage) using identical fully-rounded chip styling. Users could not visually distinguish which elements were actionable.
+
+### Decision
+
+**Action Controls (Toolbar Section)**
+- Styled as squared toggle buttons with visible hover/focus affordance
+- Positioned in the main toolbar alongside the form
+- Include active state indicators (checkmark for filter, chevron for disclosure)
+- Copy paired with icons to communicate state (e.g., "Show progress" ↔ "Hide progress")
+
+**Status Metrics (Below Toolbar)**
+- Styled as fully rounded, non-interactive pill badges
+- Positioned below the action controls
+- Passive display only; no hover states or affordance
+- Used for read-only counts (completed, total, percentage)
+
+### Implementation
+
+**Hide Blocked Toggle**
+- Renamed from "Ready" filter for clearer intent
+- Displays as a squared button with checkmark when active
+- Paired with burndown disclosure in unified toolbar
+
+**Show/Hide Progress Toggle**
+- Moved from separate location into main toolbar
+- Styled as squared disclosure control with chevron
+- Copy reads "Show progress" / "Hide progress" based on state
+- Chevron rotates to indicate open/closed
+
+**Metric Pills**
+- Fully rounded, non-interactive styling
+- Combined with the active/done/total counts
+- No click handlers or hover effects
+
+### Rationale
+
+- **Clarity:** Squared buttons with focus affordance clearly distinguish actions from status display
+- **Discoverability:** Active states (checkmark, chevron) signal current filter/disclosure state
+- **Consistency:** All toolbar actions follow the same pattern; metric pills reserved for passive data
+- **Scalability:** Future toolbar controls can follow the established button vs pill pattern
+
+### Consequences
+
+- All toolbar actions must follow squared-button styling pattern
+- All disclosure controls must pair copy + icon (both indicate state)
+- Metric display must never include interactive affordances (hover, cursor:pointer)
+- CSS regression tests required: `[hidden]` attributes must work with `display: flex` metric lines
+- Blocker picker label activation must route through proper event handlers (not bubbling into row clicks)
+
+### Related Changes
+
+- PR #75: Full implementation of button/badge differentiation, blocker label fixes, disclosure chevron, confetti tuning, active status label clarity
+- Files: `src/styles.css`, `src/main.js`, `src/todo/list-view.js`, `src/styles.test.js`
+

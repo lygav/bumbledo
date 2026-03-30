@@ -9,6 +9,7 @@
 ## Learnings
 
 <!-- Append learnings below -->
+- 2026-03-30: The current toolbar mixes interactive pills (`Ready`, `Progress`) with informational status badges because both use rounded chip styling; the recommended direction is a split control language with segmented/toggle buttons for actions and softer stat pills for read-only counts, renaming the ready filter to “Show ready tasks” / “Actionable” and the burndown toggle to an explicit “Show progress” disclosure.
 - 2026-03-30: Discoverability hints work best as lightweight, dismissible inline tips tied to clear milestones (third task added, first mobile reorder), with localStorage ensuring each hint appears once without becoming ambient clutter.
 - 2026-03-30: Touch reordering works best when the ⠿ handle owns a short long-press timer and global touchmove/touchend listeners manage the drag, so taps and scroll gestures still behave normally while active drags can prevent page scroll and track drop targets with elementFromPoint().
 - 2026-03-29: Recommended the embedded DAG as a collapsible, full-width section placed directly below the "Clear finished" footer control, with mobile-first collapse behavior and SVG-based interaction patterns that keep the task list as the primary surface.
