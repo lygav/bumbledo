@@ -10,6 +10,16 @@
 
 <!-- Append learnings below -->
 
+### 2026-03-30: Burndown Duplicate Badge Regression
+
+**What I fixed:**
+- Restored correct hide/show behavior for burndown metric rows by adding `.status-metric-line[hidden] { display: none; }` in `src/styles.css`.
+- Added `src/styles.test.js` so the shared metric-line styling stays compatible with the HTML `hidden` attribute.
+
+**Root cause to remember:**
+- The burndown toggle renders both the collapsed summary and the expanded headline on each update, then relies on `hidden` to show only one.
+- After the shared status-pill refactor, `.status-metric-line` forced `display: flex` without a matching `[hidden]` override, so the collapsed summary stayed visible when the burndown panel opened and duplicated the badges.
+
 ### 2026-03-30: Delegated Todo List Interactions
 
 **What I changed:**
