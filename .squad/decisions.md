@@ -1821,3 +1821,85 @@ New: `{ date, done, cancelled, active, total }` (full state snapshot)
 - Danny: Chart rendering changes (two lines, summary text, tooltip updates)
 - No breaking changes to existing localStorage (new key, additive)
 
+
+
+# Decision: Evolutionary Architecture Refactor Recommended
+
+**Author:** Danny  
+**Date:** 2026-03-30  
+**Status:** Recommended  
+**Affects:** src/main.js, index.html, project structure, state management
+
+---
+
+## Summary
+
+Complete architecture review of codebase completed. Verdict: refactor warranted, but this is a boundary cleanup, not a framework rewrite. Keep vanilla JS + Vite stack and strengthen module boundaries before the next feature wave.
+
+## Current State Assessment
+
+**Strengths:**
+- Sensible module split around three concerns: todo model, graph, notification
+- Pure domain modules (`src/todo/model.js`, `src/dag/graph.js`) are solid and testable
+- Consistent controller/factory pattern proven in DAG and notification features
+- Minimal dependencies (only `dagre` at runtime)
+- Strong test coverage (193 tests passing)
+- Production build succeeds
+
+**Critical Hotspots:**
+- `src/main.js`: 1820 lines — orchestrates domain flow, DOM rendering, keyboard behavior, drag/drop, charting, persistence, modal management, and selection
+- `index.html`: 1770 lines — mixes markup, all styles, and app bootstrap in one file
+- Status vocabulary and display mapping duplicated across `model.js`, `main.js`, and `dag/view.js`
+- Full list re-renders on each update; per-row listeners wired on every render cycle
+
+**Trend:**
+Code is trending toward brittle — two files now carry most change risk. Feature velocity and consistency will degrade without boundary work.
+
+## Recommended Refactoring (Priority Order)
+
+### Do First (Critical Path)
+1. **Break up `src/main.js` into feature controllers/renderers**
+   - Extract `src/todo/list-view.js` or `src/todo/list-controller.js`
+   - Extract `src/burndown/view.js`
+   - Extract `src/ui/modals.js`
+   - Extract `src/ui/keyboard.js`
+   - Extract `src/todo/reorder.js`
+   - Keep `src/main.js` as composition root
+
+2. **Move CSS out of `index.html`**
+   - Create `src/styles.css` imported from `src/main.js`
+   - Later: split into feature styles (`base.css`, `todo.css`, `burndown.css`, `dag.css`, `modal.css`)
+
+3. **Create shared constants module**
+   - Centralize status vocabulary, labels, palette, storage keys
+   - Replace duplicated mappings across modules
+
+4. **Introduce lightweight app store/action layer**
+   - Formalize mutations as named commands: `addTask`, `setTaskStatus`, `deleteTask`, `toggleBlocker`, `reorderTasks`, `toggleReadyFilter`
+   - Derive computed values with selectors instead of ad hoc recalculation
+   - Centralize persistence as post-action effect
+
+### Do Next (Infrastructure)
+5. Consolidate persistence side effects behind action layer
+6. Reduce full-list re-renders; prefer event delegation where possible
+7. Add ESLint, formatter, and CI guardrails
+
+### Can Wait (Growth Phases)
+8. Further split `src/dag/view.js` if graph behavior expands
+9. Any framework migration discussion
+
+## Why Not a Framework Migration?
+
+The quality issue is not framework choice; it's missing boundaries. The code already proved that local controller boundaries work well (DAG, notifications). Reusing that pattern is lower-risk than introducing React or another framework. The dependency profile is already healthier than the internal boundary profile.
+
+## Consequences
+
+- Feature work now has a clear refactoring path that preserves current stack
+- New features should target the extracted feature modules, not `main.js`
+- App-level behavior changes must go through the action layer
+- Styling changes should land in feature-specific CSS files
+- Build and test infrastructure should be strengthened (ESLint, CI)
+
+## Decision
+
+Refactor now using evolutionary approach. Preserve vanilla JS + Vite, strengthen module boundaries, remove the two oversized hotspots before more features land.
