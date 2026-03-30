@@ -11,6 +11,15 @@
   --accent-light: #fbbf24;
   --accent-bg: #fffbeb;
   --accent-text: #92400e;
+  --control-radius: 6px;
+  --control-border: #cbd5e1;
+  --control-border-hover: #94a3b8;
+  --control-bg: rgba(255, 255, 255, 0.95);
+  --control-bg-hover: #fff;
+  --control-text: #475467;
+  --control-focus: #4a90d9;
+  --control-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --control-shadow-hover: 0 6px 14px rgba(15, 23, 42, 0.08);
 }
 
 body {
@@ -97,6 +106,109 @@ header h1 .brand-name {
   border: 0;
 }
 
+.control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--control-shadow);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.control-button:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  border-color: var(--control-border-hover);
+  box-shadow: var(--control-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.control-button:focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
+}
+
+.control-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.control-button-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 1px 2px rgba(146, 64, 14, 0.1);
+}
+
+.control-button-primary:hover:not(:disabled) {
+  background: var(--accent-light);
+  border-color: var(--accent-light);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.22);
+}
+
+.control-button-toggle.is-active,
+.control-button-toggle[aria-pressed='true'],
+.control-button-toggle[aria-expanded='true'] {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.12),
+    0 6px 14px rgba(245, 158, 11, 0.12);
+}
+
+.control-button-icon {
+  padding: 0.5rem;
+}
+
+.control-button-quiet {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.control-button-quiet:hover:not(:disabled) {
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.control-button-secondary {
+  color: var(--control-text);
+}
+
+.control-button-danger {
+  background: transparent;
+  border-color: transparent;
+  color: #98a2b3;
+  box-shadow: none;
+}
+
+.control-button-danger:hover:not(:disabled) {
+  border-color: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+  box-shadow: none;
+}
+
 .todo-notification {
   display: flex;
   align-items: flex-start;
@@ -122,26 +234,19 @@ header h1 .brand-name {
 }
 
 .todo-notification-dismiss {
-  background: transparent;
-  border: none;
   color: inherit;
   font-size: 1.25rem;
   line-height: 1;
-  cursor: pointer;
-  min-width: 32px;
-  min-height: 32px;
-  border-radius: 4px;
-  font-family: inherit;
   flex-shrink: 0;
 }
 
 .todo-notification-dismiss:hover {
   background: rgba(107, 77, 0, 0.08);
+  border-color: transparent;
 }
 
 .todo-notification-dismiss:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: transparent;
 }
 
 .list-toolbar {
@@ -161,41 +266,7 @@ header h1 .brand-name {
 }
 
 .toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 0.45rem;
-  padding: 0.5rem 0.9rem;
-  min-height: 40px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #475467;
-  font-size: 0.875rem;
-  font-family: inherit;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-}
-
-.toolbar-button:hover {
-  border-color: #94a3b8;
-  background: #fff;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
-}
-
-.toolbar-button:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
 }
 
 .toolbar-button-icon {
@@ -224,9 +295,6 @@ header h1 .brand-name {
 }
 
 #ready-filter-toggle.is-active {
-  background: var(--accent-bg);
-  border-color: var(--accent);
-  color: var(--accent-text);
   box-shadow:
     inset 0 0 0 1px rgba(245, 158, 11, 0.12),
     0 6px 14px rgba(245, 158, 11, 0.12);
@@ -388,31 +456,8 @@ header h1 .brand-name {
 }
 
 #add-btn {
-  padding: 0.625rem 1.25rem;
+  min-width: 5rem;
   font-size: 1rem;
-  font-family: inherit;
-  font-weight: 600;
-  background: var(--accent);
-  color: var(--accent-text);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
-  transition:
-    background 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
-}
-
-#add-btn:hover {
-  background: var(--accent-light);
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
-}
-
-#add-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .discovery-tip {
@@ -439,26 +484,19 @@ header h1 .brand-name {
 }
 
 .discovery-tip-dismiss {
-  background: transparent;
-  border: none;
   color: inherit;
   font-size: 1rem;
   line-height: 1;
-  cursor: pointer;
-  min-width: 28px;
-  min-height: 28px;
-  border-radius: 4px;
-  font-family: inherit;
   flex-shrink: 0;
 }
 
 .discovery-tip-dismiss:hover {
   background: rgba(102, 112, 133, 0.08);
+  border-color: transparent;
 }
 
 .discovery-tip-dismiss:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: transparent;
 }
 
 /* Todo list */
@@ -686,32 +724,21 @@ header h1 .brand-name {
 
 /* Delete button */
 .delete-btn {
-  background: none;
-  border: none;
-  color: #ccc;
   font-size: 1.25rem;
-  cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  border-radius: 4px;
   transition:
     color 0.15s,
     background 0.15s;
-  font-family: inherit;
 }
 
 .delete-btn:hover {
   color: #e74c3c;
   background: rgba(231, 76, 60, 0.08);
+  border-color: rgba(231, 76, 60, 0.18);
+  transform: none;
 }
 
 .delete-btn:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
   color: #e74c3c;
 }
 
@@ -891,23 +918,7 @@ footer {
 }
 
 #clear-finished-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  font-weight: 600;
-  background: #fff;
-  color: #555;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  cursor: pointer;
-  min-height: 44px;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  padding-inline: 1.25rem;
 }
 
 #clear-finished-btn:hover:not(:disabled) {
@@ -917,44 +928,21 @@ footer {
 }
 
 #clear-finished-btn:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
-}
-
-#clear-finished-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 #shortcuts-help-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  font-weight: 600;
-  color: var(--accent-text);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  cursor: pointer;
-  min-height: 44px;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+  padding-inline: 0.9rem;
 }
 
 #shortcuts-help-btn:hover {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--accent-bg);
   border-color: rgba(245, 158, 11, 0.22);
   color: var(--accent-text);
 }
 
 #shortcuts-help-btn:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: rgba(245, 158, 11, 0.22);
 }
 
 /* Drag-and-drop states */
@@ -1074,21 +1062,9 @@ body.is-dragging * {
 }
 
 #dag-toggle {
-  padding: 0.5rem 0.85rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  font-weight: 600;
+  padding-inline: 0.9rem;
   color: var(--accent-text);
-  background: #fff;
   border: 1px solid rgba(245, 158, 11, 0.28);
-  border-radius: 999px;
-  cursor: pointer;
-  min-height: 40px;
-  white-space: nowrap;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
 }
 
 #dag-toggle:hover:not(:disabled) {
@@ -1097,13 +1073,7 @@ body.is-dragging * {
 }
 
 #dag-toggle:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
-}
-
-#dag-toggle:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  border-color: var(--accent-light);
 }
 
 #dependency-graph {
@@ -1168,20 +1138,17 @@ body.is-dragging * {
   top: 0.75rem;
   right: 0.75rem;
   z-index: 4;
-  padding: 0.35rem 0.6rem;
+  min-height: 36px;
+  min-width: auto;
+  padding: 0.35rem 0.7rem;
   font-size: 0.75rem;
-  font-family: inherit;
-  font-weight: 600;
   color: var(--accent-text);
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(245, 158, 11, 0.28);
-  border-radius: 999px;
-  cursor: pointer;
 }
 
 .dag-reset-button:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: var(--accent-light);
 }
 
 .dag-svg {
@@ -1349,23 +1316,23 @@ body.is-dragging * {
 .shortcut-help-close {
   width: 40px;
   height: 40px;
-  border: none;
-  border-radius: 999px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0.5rem;
   background: #f3f4f6;
   color: #374151;
   font-size: 1.5rem;
   line-height: 1;
-  cursor: pointer;
   flex-shrink: 0;
 }
 
 .shortcut-help-close:hover {
   background: var(--accent-bg);
+  border-color: rgba(245, 158, 11, 0.22);
 }
 
 .shortcut-help-close:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: rgba(245, 158, 11, 0.22);
 }
 
 .blocked-completion-actions {
@@ -1375,16 +1342,7 @@ body.is-dragging * {
 }
 
 .blocked-completion-dismiss {
-  padding: 0.625rem 1rem;
-  border: none;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
   min-width: 88px;
-  min-height: 44px;
 }
 
 .blocked-completion-dismiss:hover {
@@ -1392,8 +1350,7 @@ body.is-dragging * {
 }
 
 .blocked-completion-dismiss:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 2px;
+  border-color: var(--accent-light);
 }
 
 .shortcut-help-tip {

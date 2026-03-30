@@ -23,10 +23,13 @@ describe('styles', () => {
       /\.status-pill\s*\{[\s\S]*border-radius:\s*999px;[\s\S]*cursor:\s*default;/,
     );
     expect(stylesheet).toMatch(
-      /\.toolbar-button\s*\{[\s\S]*border-radius:\s*10px;[\s\S]*cursor:\s*pointer;/,
+      /\.control-button\s*\{[\s\S]*border-radius:\s*var\(--control-radius\);[\s\S]*cursor:\s*pointer;/,
     );
     expect(stylesheet).toMatch(
-      /\.toolbar-button:hover\s*\{[\s\S]*box-shadow:\s*0 6px 14px rgba\(15, 23, 42, 0\.08\);/,
+      /\.control-button:hover:not\(:disabled\)\s*\{[\s\S]*box-shadow:\s*var\(--control-shadow-hover\);/,
+    );
+    expect(stylesheet).toMatch(
+      /\.control-button-toggle\.is-active,\s*[\s\S]*\.control-button-toggle\[aria-pressed='true'\],\s*[\s\S]*\.control-button-toggle\[aria-expanded='true'\]\s*\{[\s\S]*background:\s*var\(--accent-bg\);/,
     );
   });
 });

@@ -279,3 +279,14 @@
 
 **State flow rule to preserve:**
 - Browser event handlers should dispatch store actions and let post-action effects own persistence; `main.js` can react to state changes, but it should not write durable UI or todo state directly.
+
+### 2026-03-30: Unified Button Control Language
+
+**What I changed:**
+- Introduced a shared `.control-button` foundation in `src/styles.css` and applied it across add, footer, DAG, modal, toolbar, dismiss, and row delete buttons so action/toggle controls now share the same 6px radius, padding language, hover lift, and focus outline.
+- Kept passive `.status-pill` metrics fully rounded and non-interactive, while letting toggle controls keep their active state through the shared accent treatment instead of pill styling.
+- Wired the new control classes into `index.html`, `src/todo/list-view.js`, and `src/dag/view.js` without changing button behavior.
+
+**UI rule to preserve:**
+- Interactive controls should read as controls first: tighter corners, hover/focus affordance, and consistent button chrome across toolbars, forms, modals, and side panels.
+- Passive metrics should stay pill-shaped with `cursor: default` and no hover affordance so they never compete visually with actionable controls.

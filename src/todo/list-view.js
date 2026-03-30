@@ -237,7 +237,8 @@ export function createTodoListView({
 
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
-    deleteButton.className = 'delete-btn';
+    deleteButton.className =
+      'delete-btn control-button control-button-icon control-button-danger';
     deleteButton.setAttribute('aria-label', `Delete "${todo.text}"`);
     deleteButton.textContent = '×';
 
