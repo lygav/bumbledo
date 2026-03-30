@@ -247,6 +247,52 @@
       outline-offset: 2px;
     }
 
+    .discovery-tip {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin: -0.75rem 0 1rem;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #e4e7ec;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #667085;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+    }
+
+    .discovery-tip[hidden] {
+      display: none;
+    }
+
+    .discovery-tip-copy {
+      flex: 1;
+    }
+
+    .discovery-tip-dismiss {
+      background: transparent;
+      border: none;
+      color: inherit;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 4px;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+
+    .discovery-tip-dismiss:hover {
+      background: rgba(102, 112, 133, 0.08);
+    }
+
+    .discovery-tip-dismiss:focus-visible {
+      outline: 2px solid #4a90d9;
+      outline-offset: 2px;
+    }
+
     /* Todo list */
     #todo-list {
       list-style: none;
@@ -365,8 +411,35 @@
     /* Todo text */
     .todo-text {
       flex: 1;
+      position: relative;
       font-size: 1rem;
       word-break: break-word;
+      min-width: 0;
+      padding-right: 1.25rem;
+    }
+
+    .todo-text:hover {
+      cursor: text;
+    }
+
+    .todo-text::after {
+      content: '✎';
+      position: absolute;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%) translateX(0.15rem);
+      color: #98a2b3;
+      font-size: 0.8125rem;
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: none;
+    }
+
+    #todo-list li:hover .todo-text::after,
+    #todo-list li:focus-within .todo-text::after,
+    .todo-text:hover::after {
+      opacity: 0.8;
+      transform: translateY(-50%);
     }
 
     /* Edit input */
@@ -1356,6 +1429,24 @@
         </form>
 
         <div
+          id="shortcuts-tip"
+          class="discovery-tip"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="discovery-tip-copy">💡 Tip: Press ? for keyboard shortcuts</span>
+          <button
+            type="button"
+            id="shortcuts-tip-dismiss"
+            class="discovery-tip-dismiss"
+            aria-label="Dismiss keyboard shortcuts tip"
+          >
+            ×
+          </button>
+        </div>
+
+        <div
           id="unblocked-notification"
           class="todo-notification"
           role="status"
@@ -1391,6 +1482,24 @@
         </div>
 
         <p id="empty-state" role="status">No todos yet. Add one above!</p>
+
+        <div
+          id="reorder-tip"
+          class="discovery-tip"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="discovery-tip-copy">Hold ⠿ to reorder</span>
+          <button
+            type="button"
+            id="reorder-tip-dismiss"
+            class="discovery-tip-dismiss"
+            aria-label="Dismiss reorder tip"
+          >
+            ×
+          </button>
+        </div>
 
         <ul id="todo-list" aria-label="Todo list" tabindex="-1"></ul>
       </main>

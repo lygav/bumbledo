@@ -32,6 +32,8 @@ import {
 
 const ACTIONABLE_FILTER_STORAGE_KEY = 'bumbledo_filter_actionable';
 const BURNDOWN_STORAGE_KEY = 'todos_burndown';
+const SHORTCUTS_TIP_STORAGE_KEY = 'bumbledo_tip_shortcuts_dismissed';
+const REORDER_TIP_STORAGE_KEY = 'bumbledo_tip_reorder_dismissed';
 const BURNDOWN_TOTAL_COLOR = '#4a90d9';
 const BURNDOWN_COMPLETED_COLOR = '#2f8f63';
 const BURNDOWN_GAP_COLOR = 'rgba(74, 144, 217, 0.12)';
@@ -149,6 +151,22 @@ function saveActionableFilterPreference(isActive) {
   }
 }
 
+function loadTipDismissed(storageKey) {
+  try {
+    return localStorage.getItem(storageKey) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function dismissTip(storageKey) {
+  try {
+    localStorage.setItem(storageKey, 'true');
+  } catch {
+    // Ignore storage write failures so the UI stays usable.
+  }
+}
+
 function isMacPlatform() {
   if (typeof navigator === 'undefined') return false;
   return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
@@ -189,6 +207,8 @@ if (typeof document !== 'undefined') {
     const todoList = document.getElementById('todo-list');
     const todoInput = document.getElementById('todo-input');
     const addForm = document.getElementById('add-form');
+    const shortcutsTip = document.getElementById('shortcuts-tip');
+    const shortcutsTipDismiss = document.getElementById('shortcuts-tip-dismiss');
     const unblockedNotification = document.getElementById('unblocked-notification');
     const unblockedNotificationMessage = document.getElementById('unblocked-notification-message');
     const unblockedNotificationDetail = document.getElementById('unblocked-notification-detail');
@@ -199,6 +219,8 @@ if (typeof document !== 'undefined') {
     const taskProgressBar = document.querySelector('.task-progress-bar');
     const taskProgressFill = document.getElementById('task-progress-fill');
     const emptyState = document.getElementById('empty-state');
+    const reorderTip = document.getElementById('reorder-tip');
+    const reorderTipDismiss = document.getElementById('reorder-tip-dismiss');
     const burndownToggle = document.getElementById('burndown-toggle');
     const burndownCollapsedSummary = document.getElementById('burndown-collapsed-summary');
     const burndownPanel = document.getElementById('burndown-panel');
@@ -235,8 +257,13 @@ if (typeof document !== 'undefined') {
     let helpModalReturnFocusEl = null;
     let blockedCompletionModalOpen = false;
     let blockedCompletionReturnFocusEl = null;
+    let shortcutsTipDismissed = loadTipDismissed(SHORTCUTS_TIP_STORAGE_KEY);
+    let reorderTipDismissed = loadTipDismissed(REORDER_TIP_STORAGE_KEY);
+    let shortcutsTipShownThisSession = false;
+    let reorderTipShownThisSession = false;
 
     const prefersMacKeys = isMacPlatform();
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     if (shouldSampleToday(burndownData)) {
       burndownData = saveBurndownData([...burndownData, takeBurndownSample(todos)], undefined, BURNDOWN_STORAGE_KEY);
@@ -294,6 +321,45 @@ if (typeof document !== 'undefined') {
 
     function dismissUnblockedNotification({ clearHighlights = false } = {}) {
       notificationController.dismiss({ clearHighlights });
+    }
+
+    function dismissShortcutsTip() {
+      if (shortcutsTipDismissed) return;
+      shortcutsTipDismissed = true;
+      dismissTip(SHORTCUTS_TIP_STORAGE_KEY);
+      if (shortcutsTip) {
+        shortcutsTip.hidden = true;
+      }
+    }
+
+    function dismissReorderTip() {
+      if (reorderTipDismissed) return;
+      reorderTipDismissed = true;
+      dismissTip(REORDER_TIP_STORAGE_KEY);
+      if (reorderTip) {
+        reorderTip.hidden = true;
+      }
+    }
+
+    function syncDiscoverabilityTips() {
+      if (shortcutsTip) {
+        const shouldShowShortcutsTip = !shortcutsTipDismissed && todos.length >= 3;
+        shortcutsTip.hidden = !shouldShowShortcutsTip;
+        if (shouldShowShortcutsTip) {
+          shortcutsTipShownThisSession = true;
+        }
+      }
+
+      if (reorderTip) {
+        const shouldShowReorderTip = !reorderTipDismissed
+          && isTouchDevice
+          && isMobileViewport()
+          && todos.length > 0;
+        reorderTip.hidden = !shouldShowReorderTip;
+        if (shouldShowReorderTip) {
+          reorderTipShownThisSession = true;
+        }
+      }
     }
 
     function getBlockedCompletionMessage(activeBlockerCount) {
@@ -1054,6 +1120,7 @@ if (typeof document !== 'undefined') {
       emptyState.textContent = total === 0
         ? 'No todos yet. Add one above!'
         : 'Nothing actionable right now. All your tasks are either done or waiting on something.';
+      syncDiscoverabilityTips();
 
       visibleTodos.forEach(todo => {
         const li = document.createElement('li');
@@ -1071,7 +1138,9 @@ if (typeof document !== 'undefined') {
 
         const handle = document.createElement('span');
         handle.className = 'drag-handle';
-        handle.setAttribute('aria-hidden', 'true');
+        handle.title = 'Drag to reorder';
+        handle.setAttribute('aria-label', 'Drag to reorder');
+        handle.setAttribute('role', 'button');
         handle.textContent = '⠿';
         handle.addEventListener('touchstart', onHandleTouchStart, { passive: true });
 
@@ -1329,6 +1398,7 @@ if (typeof document !== 'undefined') {
         dagExpanded = hasDependencies(todos) && !isMobileViewport();
       }
       syncDagState();
+      syncDiscoverabilityTips();
     });
 
     burndownChartSvg.addEventListener('mouseleave', hideBurndownTooltip);
@@ -1359,6 +1429,14 @@ if (typeof document !== 'undefined') {
       if (event.target === blockedCompletionModal) {
         closeBlockedCompletionModal();
       }
+    });
+
+    shortcutsTipDismiss?.addEventListener('click', () => {
+      dismissShortcutsTip();
+    });
+
+    reorderTipDismiss?.addEventListener('click', () => {
+      dismissReorderTip();
     });
 
     document.addEventListener('keydown', (event) => {
@@ -1570,7 +1648,10 @@ if (typeof document !== 'undefined') {
       event.preventDefault();
       if (!wasActive) return;
       if (!dragTarget) return;
-      commitReorder(activeDraggedId, dragTarget.targetId, dragTarget.insertAfter);
+      const reordered = commitReorder(activeDraggedId, dragTarget.targetId, dragTarget.insertAfter);
+      if (reordered) {
+        dismissReorderTip();
+      }
     }, { passive: false });
 
     document.addEventListener('touchcancel', event => {
