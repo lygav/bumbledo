@@ -18,6 +18,9 @@ function truncateLabel(text, limit = LABEL_LIMIT) {
 }
 
 function titleCaseStatus(status) {
+  if (status === 'inprogress') {
+    return 'In Progress';
+  }
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -93,6 +96,17 @@ function getStatusPalette(status) {
       text: '#5f6f62',
       opacity: '1',
       strike: 'rgba(95, 111, 98, 0.7)'
+    };
+  }
+
+  if (status === 'inprogress') {
+    return {
+      fill: 'rgba(33, 150, 243, 0.08)',
+      border: '#90caf9',
+      accent: '#2196f3',
+      text: '#1a1a1a',
+      opacity: '1',
+      strike: null
     };
   }
 

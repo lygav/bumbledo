@@ -340,6 +340,12 @@ describe('setStatus', () => {
     expect(result[0].status).toBe('cancelled');
   });
 
+  it('changes status to inprogress', () => {
+    const todos = [{ id: '1', text: 'task', status: 'todo' }];
+    const result = setStatus(todos, '1', 'inprogress');
+    expect(result[0].status).toBe('inprogress');
+  });
+
   it('changes status to blocked', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
     const result = setStatus(todos, '1', 'blocked');
@@ -413,6 +419,15 @@ describe('hasActiveBlockers', () => {
     expect(hasActiveBlockers(todos, '1')).toBe(true);
   });
 
+  it('returns true when a blocker is already in progress', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'upstream task', status: 'inprogress' }
+    ];
+
+    expect(hasActiveBlockers(todos, '1')).toBe(true);
+  });
+
   it('returns false when the only blocker is the todo itself', () => {
     const todos = [
       { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
@@ -452,14 +467,15 @@ describe('hasActiveBlockers', () => {
 describe('getActiveBlockerCount', () => {
   it('counts todo and blocked direct blockers', () => {
     const todos = [
-      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3', '4'] },
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3', '4', '6'] },
       { id: '2', text: 'todo blocker', status: 'todo' },
       { id: '3', text: 'blocked blocker', status: 'blocked', blockedBy: ['5'] },
       { id: '4', text: 'done blocker', status: 'done' },
-      { id: '5', text: 'nested blocker', status: 'todo' }
+      { id: '5', text: 'nested blocker', status: 'todo' },
+      { id: '6', text: 'working blocker', status: 'inprogress' }
     ];
 
-    expect(getActiveBlockerCount(todos, '1')).toBe(2);
+    expect(getActiveBlockerCount(todos, '1')).toBe(3);
   });
 
   it('ignores self references, missing blockers, and finished blockers', () => {
@@ -474,8 +490,14 @@ describe('getActiveBlockerCount', () => {
 });
 
 describe('cycleStatus', () => {
-  it('cycles todo todos to done', () => {
+  it('cycles todo todos to inprogress', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result[0].status).toBe('inprogress');
+  });
+
+  it('cycles inprogress todos to done', () => {
+    const todos = [{ id: '1', text: 'task', status: 'inprogress' }];
     const result = model.cycleStatus(todos, '1');
     expect(result[0].status).toBe('done');
   });
@@ -1064,18 +1086,22 @@ describe('clearFinished', () => {
 });
 
 describe('getActionableTodos', () => {
-  it('returns only todo tasks', () => {
+  it('returns todo and inprogress tasks', () => {
     const todos = [
       { id: '1', text: 'todo task', status: 'todo' },
-      { id: '2', text: 'done task', status: 'done' },
-      { id: '3', text: 'cancelled task', status: 'cancelled' },
-      { id: '4', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '2', text: 'working task', status: 'inprogress' },
+      { id: '3', text: 'done task', status: 'done' },
+      { id: '4', text: 'cancelled task', status: 'cancelled' },
+      { id: '5', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
     ];
     const result = getActionableTodos(todos);
-    expect(result).toEqual([{ id: '1', text: 'todo task', status: 'todo' }]);
+    expect(result).toEqual([
+      { id: '1', text: 'todo task', status: 'todo' },
+      { id: '2', text: 'working task', status: 'inprogress' }
+    ]);
   });
 
-  it('returns empty array when no todo tasks exist', () => {
+  it('returns empty array when no ready tasks exist', () => {
     const todos = [
       { id: '1', text: 'done task', status: 'done' },
       { id: '2', text: 'cancelled task', status: 'cancelled' },
@@ -1085,28 +1111,30 @@ describe('getActionableTodos', () => {
     expect(result).toEqual([]);
   });
 
-  it('returns all tasks when all are todo', () => {
+  it('returns all tasks when all are ready', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'todo' },
+      { id: '2', text: 'task2', status: 'inprogress' },
       { id: '3', text: 'task3', status: 'todo' }
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual(todos);
   });
 
-  it('returns the two todo tasks from a mixed-status list', () => {
+  it('returns the ready tasks from a mixed-status list', () => {
     const todos = [
       { id: '1', text: 'todo one', status: 'todo' },
       { id: '2', text: 'done task', status: 'done' },
       { id: '3', text: 'todo two', status: 'todo' },
-      { id: '4', text: 'cancelled task', status: 'cancelled' },
-      { id: '5', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
+      { id: '4', text: 'working task', status: 'inprogress' },
+      { id: '5', text: 'cancelled task', status: 'cancelled' },
+      { id: '6', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
     ];
     const result = getActionableTodos(todos);
     expect(result).toEqual([
       { id: '1', text: 'todo one', status: 'todo' },
-      { id: '3', text: 'todo two', status: 'todo' }
+      { id: '3', text: 'todo two', status: 'todo' },
+      { id: '4', text: 'working task', status: 'inprogress' }
     ]);
   });
 
@@ -1156,25 +1184,25 @@ describe('getActionableCount', () => {
   it('returns correct actionable and total counts for a mixed list', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'done' },
-      { id: '3', text: 'task3', status: 'todo' },
-      { id: '4', text: 'task4', status: 'cancelled' },
-      { id: '5', text: 'task5', status: 'todo' }
+      { id: '2', text: 'task2', status: 'inprogress' },
+      { id: '3', text: 'task3', status: 'done' },
+      { id: '4', text: 'task4', status: 'todo' },
+      { id: '5', text: 'task5', status: 'cancelled' }
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 3, total: 5 });
   });
 
-  it('returns matching actionable and total counts when all tasks are todo', () => {
+  it('returns matching actionable and total counts when all tasks are ready', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'todo' }
+      { id: '2', text: 'task2', status: 'inprogress' }
     ];
     const result = getActionableCount(todos);
     expect(result).toEqual({ actionable: 2, total: 2 });
   });
 
-  it('returns zero actionable when no tasks are todo', () => {
+  it('returns zero actionable when no tasks are ready', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'done' },
       { id: '2', text: 'task2', status: 'cancelled' },
@@ -1184,13 +1212,14 @@ describe('getActionableCount', () => {
     expect(result).toEqual({ actionable: 0, total: 3 });
   });
 
-  it('counts only todo statuses as actionable while the picker is open', () => {
+  it('counts todo and inprogress statuses as actionable while the picker is open', () => {
     const todos = [
       { id: '1', text: 'task1', status: 'todo' },
-      { id: '2', text: 'task2', status: 'blocked', blockedBy: [] }
+      { id: '2', text: 'task2', status: 'inprogress' },
+      { id: '3', text: 'task3', status: 'blocked', blockedBy: [] }
     ];
 
-    expect(getActionableCount(todos)).toEqual({ actionable: 1, total: 2 });
+    expect(getActionableCount(todos)).toEqual({ actionable: 2, total: 3 });
   });
 
   it('returns zero counts for an empty list', () => {
@@ -1334,14 +1363,14 @@ describe('takeBurndownSample', () => {
     vi.useRealTimers();
   });
 
-  it('returns counts for mixed statuses while keeping blocked separate from todo', () => {
+  it('returns counts for mixed statuses while keeping blocked separate from ready work', () => {
     const todos = [
       { id: '1', text: 'done one', status: 'done' },
       { id: '2', text: 'done two', status: 'done' },
       { id: '3', text: 'cancelled task', status: 'cancelled' },
       { id: '4', text: 'todo one', status: 'todo' },
-      { id: '5', text: 'todo two', status: 'todo' },
-      { id: '6', text: 'todo three', status: 'todo' },
+      { id: '5', text: 'working task', status: 'inprogress' },
+      { id: '6', text: 'todo two', status: 'todo' },
       { id: '7', text: 'blocked task', status: 'blocked', blockedBy: ['1'] }
     ];
 

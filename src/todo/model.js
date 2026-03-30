@@ -136,7 +136,8 @@ export function migrateTodos(list) {
   });
 }
 
-const VALID_STATUSES = new Set(['todo', 'done', 'cancelled', 'blocked']);
+const VALID_STATUSES = new Set(['todo', 'inprogress', 'done', 'cancelled', 'blocked']);
+const ACTIONABLE_STATUSES = new Set(['todo', 'inprogress']);
 
 export function loadTodos(storage = defaultStorage, storageKey = 'todos') {
   try {
@@ -171,7 +172,7 @@ export function saveTodos(todosToSave, storage = defaultStorage, storageKey = 't
 export function takeBurndownSample(todos, now = new Date()) {
   const done = todos.filter(todo => todo.status === 'done').length;
   const cancelled = todos.filter(todo => todo.status === 'cancelled').length;
-  const todo = todos.filter(todo => todo.status === 'todo').length;
+  const todo = todos.filter(todo => ACTIONABLE_STATUSES.has(todo.status)).length;
   const blocked = todos.filter(todo => todo.status === 'blocked').length;
 
   return {
@@ -235,6 +236,10 @@ export function cycleStatus(todos, id) {
     if (todo.id !== id) return todo;
 
     if (todo.status === 'todo') {
+      return { ...todo, status: 'inprogress' };
+    }
+
+    if (todo.status === 'inprogress') {
       return { ...todo, status: 'done' };
     }
 
@@ -378,7 +383,7 @@ export function hasActiveBlockers(todos, todoId) {
       return false;
     }
 
-    if (blocker.status === 'todo') {
+    if (blocker.status === 'todo' || blocker.status === 'inprogress') {
       return true;
     }
 
@@ -421,7 +426,7 @@ export function getActiveBlockerCount(todos, todoId) {
       return count;
     }
 
-    if (blocker.status === 'todo' || blocker.status === 'blocked') {
+    if (blocker.status === 'todo' || blocker.status === 'inprogress' || blocker.status === 'blocked') {
       return count + 1;
     }
 
@@ -452,13 +457,13 @@ export function finalizeBlockedStatus(todos, id) {
 
 export function getActionableCount(todos) {
   return {
-    actionable: todos.filter(todo => todo.status === 'todo').length,
+    actionable: todos.filter(todo => ACTIONABLE_STATUSES.has(todo.status)).length,
     total: todos.length
   };
 }
 
 export function getActionableTodos(todos) {
-  return todos.filter(todo => todo.status === 'todo');
+  return todos.filter(todo => ACTIONABLE_STATUSES.has(todo.status));
 }
 
 export function updateTodoText(todos, id, newText) {
