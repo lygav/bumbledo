@@ -224,8 +224,14 @@ describe('app constants contract', () => {
             },
           ],
           'cancelled',
-        )[0].status,
-      ).toBe(todoStatus);
+        ),
+      ).toEqual([
+        {
+          id: 'cancelled',
+          text: 'Cancelled task',
+          status: cancelledStatus,
+        },
+      ]);
       expect(
         cycleStatus(
           [

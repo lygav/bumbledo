@@ -122,7 +122,37 @@ describe('selectors', () => {
     expect(
       selectBlockedStatusChange(state, 'b', TODO_STATUS.DONE),
     ).toMatchObject({
+      blockedStatusTransitionDenied: true,
       blockedCompletionAttempt: true,
+      activeBlockerCount: 1,
+    });
+  });
+
+  it('denies blocked tasks with active blockers from moving back to todo or in progress', () => {
+    const state = createState({
+      todos: [
+        { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+      ],
+    });
+
+    expect(
+      selectBlockedStatusChange(state, 'b', TODO_STATUS.TODO),
+    ).toMatchObject({
+      blockedStatusTransitionDenied: true,
+      blockedCompletionAttempt: false,
+      activeBlockerCount: 1,
+    });
+    expect(
+      selectBlockedStatusChange(state, 'b', TODO_STATUS.IN_PROGRESS),
+    ).toMatchObject({
+      blockedStatusTransitionDenied: true,
+      blockedCompletionAttempt: false,
       activeBlockerCount: 1,
     });
   });
@@ -143,6 +173,7 @@ describe('selectors', () => {
     expect(
       selectBlockedStatusChange(state, 'b', TODO_STATUS.CANCELLED),
     ).toMatchObject({
+      blockedStatusTransitionDenied: false,
       blockedCompletionAttempt: false,
       activeBlockerCount: 0,
     });

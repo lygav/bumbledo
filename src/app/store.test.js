@@ -34,6 +34,15 @@ function createState(overrides = {}) {
   };
 }
 
+function createTodo(id, status, overrides = {}) {
+  return {
+    id,
+    text: `Task ${id}`,
+    status,
+    ...overrides,
+  };
+}
+
 describe('createAppStore', () => {
   it('persists todos after addTask', () => {
     const storage = createStorage();
@@ -69,10 +78,66 @@ describe('createAppStore', () => {
 
     expect(event.changed).toBe(false);
     expect(event.meta).toMatchObject({
+      blockedStatusTransitionDenied: true,
       blockedCompletionAttempt: true,
       activeBlockerCount: 1,
     });
     expect(store.getState()).toEqual(initialState);
+  });
+
+  it('rejects blocked-task transitions back to todo or in progress while active blockers exist', () => {
+    const blockedTransitions = [TODO_STATUS.TODO, TODO_STATUS.IN_PROGRESS];
+
+    for (const nextStatus of blockedTransitions) {
+      const initialState = createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+        ],
+      });
+      const store = createAppStore({ storage: createStorage(), initialState });
+
+        const event = store.setTaskStatus({ id: 'b', nextStatus });
+
+        expect(event.changed).toBe(false);
+        expect(event.meta).toMatchObject({
+          blockedStatusTransitionDenied: true,
+          blockedCompletionAttempt: false,
+          activeBlockerCount: 1,
+        });
+        expect(store.getState()).toEqual(initialState);
+      }
+  });
+
+  it('allows every listed non-blocked transition from the PRD table', () => {
+    const cases = [
+      [TODO_STATUS.TODO, TODO_STATUS.IN_PROGRESS],
+      [TODO_STATUS.TODO, TODO_STATUS.DONE],
+      [TODO_STATUS.TODO, TODO_STATUS.CANCELLED],
+      [TODO_STATUS.IN_PROGRESS, TODO_STATUS.TODO],
+      [TODO_STATUS.IN_PROGRESS, TODO_STATUS.DONE],
+      [TODO_STATUS.IN_PROGRESS, TODO_STATUS.CANCELLED],
+      [TODO_STATUS.DONE, TODO_STATUS.TODO],
+      [TODO_STATUS.DONE, TODO_STATUS.IN_PROGRESS],
+      [TODO_STATUS.DONE, TODO_STATUS.CANCELLED],
+      [TODO_STATUS.CANCELLED, TODO_STATUS.TODO],
+      [TODO_STATUS.CANCELLED, TODO_STATUS.IN_PROGRESS],
+      [TODO_STATUS.CANCELLED, TODO_STATUS.DONE],
+    ];
+
+    for (const [from, to] of cases) {
+      const store = createAppStore({
+        storage: createStorage(),
+        initialState: createState({
+          todos: [createTodo('a', from)],
+        }),
+      });
+
+      const event = store.setTaskStatus({ id: 'a', nextStatus: to });
+
+      expect(event.changed).toBe(true);
+      expect(store.getState().todos).toEqual([createTodo('a', to)]);
+    }
   });
 
   it('cancels blocked tasks with active blockers and releases their dependents', () => {
@@ -177,6 +242,186 @@ describe('createAppStore', () => {
       { id: 'a', text: 'Working blocker', status: TODO_STATUS.DONE },
       { id: 'b', text: 'Blocked task', status: TODO_STATUS.TODO },
     ]);
+  });
+
+  it('unblocks dependents when a blocker is deleted', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+        ],
+      }),
+    });
+
+    const event = store.deleteTask({ id: 'a' });
+
+    expect(event.changed).toBe(true);
+    expect(event.meta).toMatchObject({ unblockedIds: ['b'] });
+    expect(store.getState().todos).toEqual([createTodo('b', TODO_STATUS.TODO)]);
+  });
+
+  it('waits until all blockers resolve before auto-transitioning back to todo', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a', 'c'] }),
+          createTodo('c', TODO_STATUS.IN_PROGRESS),
+        ],
+      }),
+    });
+
+    const completedA = store.setTaskStatus({
+      id: 'a',
+      nextStatus: TODO_STATUS.DONE,
+    });
+
+    expect(completedA.meta).toMatchObject({ unblockedIds: [] });
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.DONE),
+      createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['c'] }),
+      createTodo('c', TODO_STATUS.IN_PROGRESS),
+    ]);
+
+    const cancelledC = store.setTaskStatus({
+      id: 'c',
+      nextStatus: TODO_STATUS.CANCELLED,
+    });
+
+    expect(cancelledC.meta).toMatchObject({ unblockedIds: ['b'] });
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.DONE),
+      createTodo('b', TODO_STATUS.TODO),
+      createTodo('c', TODO_STATUS.CANCELLED),
+    ]);
+  });
+
+  it('does not re-block dependents when a completed blocker is reopened', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+        ],
+      }),
+    });
+
+    store.setTaskStatus({ id: 'a', nextStatus: TODO_STATUS.DONE });
+    store.setTaskStatus({ id: 'a', nextStatus: TODO_STATUS.TODO });
+
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.TODO),
+      createTodo('b', TODO_STATUS.TODO),
+    ]);
+  });
+
+  it('does not re-block dependents when a cancelled blocker is reopened', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+        ],
+      }),
+    });
+
+    store.setTaskStatus({ id: 'a', nextStatus: TODO_STATUS.CANCELLED });
+    store.setTaskStatus({ id: 'a', nextStatus: TODO_STATUS.TODO });
+
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.TODO),
+      createTodo('b', TODO_STATUS.TODO),
+    ]);
+  });
+
+  it('auto-reverts blocked tasks with no selected blockers back to todo on finalization', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [createTodo('a', TODO_STATUS.TODO)],
+      }),
+    });
+
+    store.setTaskStatus({ id: 'a', nextStatus: TODO_STATUS.BLOCKED });
+    const event = store.finalizeBlockedStatus({ todoId: 'a' });
+
+    expect(event.changed).toBe(true);
+    expect(store.getState().todos).toEqual([createTodo('a', TODO_STATUS.TODO)]);
+  });
+
+  it('auto-reverts blocked tasks to todo when the last blocker is manually removed', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          createTodo('a', TODO_STATUS.TODO),
+          createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+        ],
+      }),
+    });
+
+    const event = store.toggleBlocker({ todoId: 'b', blockerId: 'a' });
+
+    expect(event.changed).toBe(true);
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.TODO),
+      createTodo('b', TODO_STATUS.TODO),
+    ]);
+  });
+
+  it('treats keyboard cycling on blocked tasks as a no-op', () => {
+    const initialState = createState({
+      selectedTaskId: 'b',
+      todos: [
+        createTodo('a', TODO_STATUS.TODO),
+        createTodo('b', TODO_STATUS.BLOCKED, { blockedBy: ['a'] }),
+      ],
+    });
+    const store = createAppStore({ storage: createStorage(), initialState });
+
+    const event = store.toggleSelectedTaskStatus();
+
+    expect(event.changed).toBe(false);
+    expect(store.getState()).toEqual(initialState);
+  });
+
+  it('keeps cancelled tasks outside keyboard cycling', () => {
+    const initialState = createState({
+      selectedTaskId: 'a',
+      todos: [createTodo('a', TODO_STATUS.CANCELLED)],
+    });
+    const store = createAppStore({ storage: createStorage(), initialState });
+
+    const event = store.toggleSelectedTaskStatus();
+
+    expect(event.changed).toBe(false);
+    expect(store.getState()).toEqual(initialState);
+  });
+
+  it('cycles selected task statuses through todo, in progress, done, and back to todo', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        selectedTaskId: 'a',
+        todos: [createTodo('a', TODO_STATUS.TODO)],
+      }),
+    });
+
+    store.toggleSelectedTaskStatus();
+    expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.IN_PROGRESS),
+    ]);
+
+    store.toggleSelectedTaskStatus();
+    expect(store.getState().todos).toEqual([createTodo('a', TODO_STATUS.DONE)]);
+
+    store.toggleSelectedTaskStatus();
+    expect(store.getState().todos).toEqual([createTodo('a', TODO_STATUS.TODO)]);
   });
 
   it('loads tip dismissal preferences into store state', () => {
