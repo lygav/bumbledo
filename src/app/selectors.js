@@ -116,6 +116,16 @@ export function selectBlockedStatusChange(state, todoId, nextStatus) {
   };
 }
 
+export function selectDependentCount(state, taskId) {
+  return state.todos.reduce((count, todo) => {
+    if (!Array.isArray(todo.blockedBy) || !todo.blockedBy.includes(taskId)) {
+      return count;
+    }
+
+    return count + 1;
+  }, 0);
+}
+
 export function selectToggleStatusTarget(state) {
   const todo = selectSelectedTodo(state);
   if (!todo || !TOGGLEABLE_STATUS_SET.has(todo.status)) {

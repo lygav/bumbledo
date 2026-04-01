@@ -3,6 +3,7 @@ import { createAppStore } from './app/store.js';
 import {
   selectBlockedStatusChange,
   selectDagViewModel,
+  selectDependentCount,
   selectHasFinishedTodos,
   selectProgress,
   selectShowReadyEmptyState,
@@ -25,6 +26,7 @@ import {
   renderStatusMetricLine,
 } from './ui/status-metrics.js';
 import { createTodoListView } from './todo/list-view.js';
+import { confirmBlockerImpact } from './todo/blocker-warning.js';
 import { createNotificationController } from './todo/notification.js';
 import { createTodoReorderController } from './todo/reorder.js';
 import { reorderTodos, wouldCreateCycle } from './todo/model.js';
@@ -137,6 +139,36 @@ if (typeof document !== 'undefined') {
     });
 
     let notificationController;
+
+    function confirmDeleteTask(id) {
+      const dependentCount = selectDependentCount(store.getState(), id);
+      return confirmBlockerImpact({ action: 'delete', dependentCount });
+    }
+
+    function revertStatusControl(id, returnFocusEl) {
+      const todo = store.getState().todos.find((item) => item.id === id);
+      if (!(returnFocusEl instanceof HTMLSelectElement) || !todo) {
+        return;
+      }
+
+      returnFocusEl.value = todo.status;
+      returnFocusEl.focus();
+    }
+
+    function confirmCancelledStatusChange(id, returnFocusEl = null) {
+      const dependentCount = selectDependentCount(store.getState(), id);
+      const confirmed = confirmBlockerImpact({
+        action: 'cancel',
+        dependentCount,
+      });
+
+      if (!confirmed) {
+        revertStatusControl(id, returnFocusEl);
+      }
+
+      return confirmed;
+    }
+
     const listView = createTodoListView({
       container: todoList,
       getHighlightRemainingMs: (id) =>
@@ -160,9 +192,18 @@ if (typeof document !== 'undefined') {
         store.cancelEdit();
       },
       onDeleteTask: (id) => {
+        if (!confirmDeleteTask(id)) {
+          return;
+        }
         store.deleteTask({ id });
       },
       onStatusChange: (id, nextStatus, { returnFocusEl = null } = {}) => {
+        if (
+          nextStatus === TODO_STATUS.CANCELLED &&
+          !confirmCancelledStatusChange(id, returnFocusEl)
+        ) {
+          return;
+        }
         store.setTaskStatus({ id, nextStatus, returnFocusEl });
       },
       onToggleBlocker: (todoId, blockerId) => {
@@ -222,7 +263,7 @@ if (typeof document !== 'undefined') {
           modals.closeHelp();
         },
         deleteSelectedTodo: () => {
-          if (selectedTaskId) {
+          if (selectedTaskId && confirmDeleteTask(selectedTaskId)) {
             store.deleteTask({ id: selectedTaskId });
           }
         },

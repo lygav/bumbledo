@@ -3,6 +3,7 @@ import { TODO_STATUS } from './constants.js';
 import {
   selectBlockedStatusChange,
   selectDagViewModel,
+  selectDependentCount,
   selectProgress,
   selectShowReadyEmptyState,
   selectToggleStatusTarget,
@@ -177,6 +178,30 @@ describe('selectors', () => {
       blockedCompletionAttempt: false,
       activeBlockerCount: 0,
     });
+  });
+
+  it('counts downstream dependents for blocker warnings', () => {
+    const state = createState({
+      todos: [
+        { id: 'a', text: 'Blocker', status: TODO_STATUS.IN_PROGRESS },
+        {
+          id: 'b',
+          text: 'Blocked task',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+        {
+          id: 'c',
+          text: 'Another blocked task',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['z', 'a'],
+        },
+        { id: 'd', text: 'Done task', status: TODO_STATUS.DONE },
+      ],
+    });
+
+    expect(selectDependentCount(state, 'a')).toBe(2);
+    expect(selectDependentCount(state, 'd')).toBe(0);
   });
 
   it('returns selected toggle target details when selection is actionable', () => {
