@@ -103,7 +103,7 @@ export function selectBlockedStatusChange(state, todoId, nextStatus) {
   const blockedCompletionAttempt = Boolean(
     todo &&
     todo.status === TODO_STATUS.BLOCKED &&
-    TERMINAL_STATUS_SET.has(nextStatus) &&
+    nextStatus === TODO_STATUS.DONE &&
     Array.isArray(todo.blockedBy) &&
     todo.blockedBy.length > 0 &&
     hasActiveBlockers(state.todos, todo.id),
