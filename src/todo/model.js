@@ -1,6 +1,7 @@
 import {
   ACTIONABLE_TODO_STATUSES,
   APP_STORAGE_KEYS,
+  TOGGLEABLE_TODO_STATUSES,
   TERMINAL_TODO_STATUSES,
   TODO_STATUS,
   TODO_STATUS_CYCLE,
@@ -19,7 +20,11 @@ const defaultStorage = {
 
 const VALID_STATUSES = new Set(TODO_STATUS_VALUES);
 const ACTIONABLE_STATUSES = new Set(ACTIONABLE_TODO_STATUSES);
+const TOGGLEABLE_STATUSES = new Set(TOGGLEABLE_TODO_STATUSES);
 const TERMINAL_STATUSES = new Set(TERMINAL_TODO_STATUSES);
+// PRD §4.1: while a task is structurally blocked by active blockers,
+// manual status changes are limited to blocked → cancelled.
+const STRICT_BLOCKED_MANUAL_STATUSES = new Set([TODO_STATUS.CANCELLED]);
 
 // Pure logic functions - exported for testing
 
@@ -124,6 +129,11 @@ export function setStatus(todos, id, newStatus) {
     return todos;
   }
 
+  const transitionGuard = getManualStatusTransitionGuard(todos, id, newStatus);
+  if (transitionGuard.isDenied) {
+    return todos;
+  }
+
   return todos.map((todo) => {
     if (todo.id !== id) return todo;
 
@@ -143,30 +153,8 @@ export function cycleStatus(todos, id) {
   return todos.map((todo) => {
     if (todo.id !== id) return todo;
 
-    if (
-      todo.status === TODO_STATUS.TODO ||
-      todo.status === TODO_STATUS.IN_PROGRESS
-    ) {
+    if (TOGGLEABLE_STATUSES.has(todo.status)) {
       return { ...todo, status: TODO_STATUS_CYCLE[todo.status] };
-    }
-
-    if (TERMINAL_STATUSES.has(todo.status)) {
-      return {
-        ...todo,
-        status: TODO_STATUS_CYCLE[todo.status] ?? TODO_STATUS.TODO,
-      };
-    }
-
-    if (
-      todo.status === TODO_STATUS.BLOCKED &&
-      Array.isArray(todo.blockedBy) &&
-      todo.blockedBy.length > 0
-    ) {
-      return todo;
-    }
-
-    if (todo.status === TODO_STATUS.BLOCKED) {
-      return { ...stripBlockedBy(todo), status: TODO_STATUS.TODO };
     }
 
     return todo;
@@ -396,6 +384,25 @@ export function getActiveBlockerCount(todos, todoId) {
 
     return count;
   }, 0);
+}
+
+export function getManualStatusTransitionGuard(todos, todoId, nextStatus) {
+  const todo = todos.find((item) => item.id === todoId) ?? null;
+  const hasStrictBlockedRule =
+    todo?.status === TODO_STATUS.BLOCKED && hasActiveBlockers(todos, todoId);
+  const isAllowed =
+    !hasStrictBlockedRule || STRICT_BLOCKED_MANUAL_STATUSES.has(nextStatus);
+
+  return {
+    todo,
+    hasStrictBlockedRule,
+    isAllowed,
+    isDenied: Boolean(todo && hasStrictBlockedRule && !isAllowed),
+    activeBlockerCount:
+      hasStrictBlockedRule && todo
+        ? getActiveBlockerCount(todos, todoId)
+        : 0,
+  };
 }
 
 export function hasDependencies(todos) {

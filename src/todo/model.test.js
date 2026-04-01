@@ -17,6 +17,7 @@ import {
   getActionableCount,
   getActionableTodos,
   getActiveBlockerCount,
+  getManualStatusTransitionGuard,
   hasActiveBlockers,
   updateTodoText,
 } from './model.js';
@@ -265,6 +266,38 @@ describe('addTodo', () => {
 });
 
 describe('setStatus', () => {
+  it('supports every allowed non-blocked transition from the PRD table', () => {
+    const cases = [
+      ['todo', 'inprogress'],
+      ['todo', 'done'],
+      ['todo', 'cancelled'],
+      ['todo', 'blocked'],
+      ['inprogress', 'todo'],
+      ['inprogress', 'done'],
+      ['inprogress', 'cancelled'],
+      ['inprogress', 'blocked'],
+      ['done', 'todo'],
+      ['done', 'inprogress'],
+      ['done', 'cancelled'],
+      ['done', 'blocked'],
+      ['cancelled', 'todo'],
+      ['cancelled', 'inprogress'],
+      ['cancelled', 'done'],
+      ['cancelled', 'blocked'],
+    ];
+
+    for (const [from, to] of cases) {
+      const result = setStatus([{ id: '1', text: 'task', status: from }], '1', to);
+
+      expect(result[0].status).toBe(to);
+      if (to === 'blocked') {
+        expect(result[0].blockedBy).toEqual([]);
+      } else {
+        expect(result[0]).not.toHaveProperty('blockedBy');
+      }
+    }
+  });
+
   it('changes status to done', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
     const result = setStatus(todos, '1', 'done');
@@ -298,6 +331,7 @@ describe('setStatus', () => {
   it('removes blockedBy when changing from blocked to todo', () => {
     const todos = [
       { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'blocker', status: 'done' },
     ];
     const result = setStatus(todos, '1', 'todo');
     expect(result[0]).not.toHaveProperty('blockedBy');
@@ -307,9 +341,18 @@ describe('setStatus', () => {
   it('removes blockedBy when changing from blocked to done', () => {
     const todos = [
       { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'blocker', status: 'done' },
     ];
     const result = setStatus(todos, '1', 'done');
     expect(result[0]).not.toHaveProperty('blockedBy');
+  });
+
+  it('removes blockedBy when changing from blocked to cancelled', () => {
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+    ];
+    const result = setStatus(todos, '1', 'cancelled');
+    expect(result[0]).toEqual({ id: '1', text: 'task', status: 'cancelled' });
   });
 
   it('returns NEW array (immutability)', () => {
@@ -339,6 +382,16 @@ describe('setStatus', () => {
     ];
     const result = setStatus(todos, '1', 'blocked');
     expect(result[0].blockedBy).toEqual(['2']);
+  });
+
+  it('rejects blocked transitions back to todo or in progress while blockers stay active', () => {
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'blocker', status: 'todo' },
+    ];
+
+    expect(setStatus(todos, '1', 'todo')).toEqual(todos);
+    expect(setStatus(todos, '1', 'inprogress')).toEqual(todos);
   });
 });
 
@@ -459,7 +512,48 @@ describe('getActiveBlockerCount', () => {
   });
 });
 
+describe('getManualStatusTransitionGuard', () => {
+  it('only allows blocked tasks with active blockers to be cancelled manually', () => {
+    const todos = [
+      { id: '1', text: 'task', status: 'blocked', blockedBy: ['2'] },
+      { id: '2', text: 'blocker', status: 'todo' },
+    ];
+
+    expect(getManualStatusTransitionGuard(todos, '1', 'todo')).toMatchObject({
+      isDenied: true,
+      hasStrictBlockedRule: true,
+      activeBlockerCount: 1,
+    });
+    expect(
+      getManualStatusTransitionGuard(todos, '1', 'inprogress'),
+    ).toMatchObject({
+      isDenied: true,
+      hasStrictBlockedRule: true,
+      activeBlockerCount: 1,
+    });
+    expect(
+      getManualStatusTransitionGuard(todos, '1', 'cancelled'),
+    ).toMatchObject({
+      isAllowed: true,
+      isDenied: false,
+      hasStrictBlockedRule: true,
+      activeBlockerCount: 1,
+    });
+  });
+});
+
 describe('cycleStatus', () => {
+  it('cycles through todo → inprogress → done → todo', () => {
+    const todo = [{ id: '1', text: 'task', status: 'todo' }];
+    const inProgress = model.cycleStatus(todo, '1');
+    const done = model.cycleStatus(inProgress, '1');
+    const reopened = model.cycleStatus(done, '1');
+
+    expect(inProgress[0].status).toBe('inprogress');
+    expect(done[0].status).toBe('done');
+    expect(reopened[0].status).toBe('todo');
+  });
+
   it('cycles todo todos to inprogress', () => {
     const todos = [{ id: '1', text: 'task', status: 'todo' }];
     const result = model.cycleStatus(todos, '1');
@@ -478,10 +572,10 @@ describe('cycleStatus', () => {
     expect(result[0].status).toBe('todo');
   });
 
-  it('cycles cancelled todos back to todo', () => {
+  it('keeps cancelled todos outside the keyboard cycle', () => {
     const todos = [{ id: '1', text: 'task', status: 'cancelled' }];
     const result = model.cycleStatus(todos, '1');
-    expect(result[0].status).toBe('todo');
+    expect(result).toEqual(todos);
   });
 
   it('does not cycle blocked todos with blockers', () => {
@@ -495,6 +589,12 @@ describe('cycleStatus', () => {
       status: 'blocked',
       blockedBy: ['2'],
     });
+  });
+
+  it('does not cycle blocked todos even when their blocker picker is empty', () => {
+    const todos = [{ id: '1', text: 'task', status: 'blocked', blockedBy: [] }];
+    const result = model.cycleStatus(todos, '1');
+    expect(result).toEqual(todos);
   });
 });
 
@@ -822,6 +922,29 @@ describe('cleanupBlockedBy', () => {
     const result = cleanupBlockedBy(todos, '2');
     expect(result).not.toBe(todos);
   });
+
+  it('keeps a task blocked until all of its blockers are resolved', () => {
+    const todos = [
+      { id: '1', text: 'blocked task', status: 'blocked', blockedBy: ['2', '3'] },
+      { id: '2', text: 'first blocker', status: 'done' },
+      { id: '3', text: 'second blocker', status: 'cancelled' },
+    ];
+
+    const afterFirstCleanup = cleanupBlockedBy(todos, '2');
+    const afterSecondCleanup = cleanupBlockedBy(afterFirstCleanup, '3');
+
+    expect(afterFirstCleanup[0]).toEqual({
+      id: '1',
+      text: 'blocked task',
+      status: 'blocked',
+      blockedBy: ['3'],
+    });
+    expect(afterSecondCleanup[0]).toEqual({
+      id: '1',
+      text: 'blocked task',
+      status: 'todo',
+    });
+  });
 });
 
 describe('finalizeBlockedStatus', () => {
@@ -1085,6 +1208,25 @@ describe('deleteTodo', () => {
     const result = deleteTodo(todos, '1');
     expect(result).not.toBe(todos);
   });
+
+  it('releases every dependent task that loses its final blocker on delete', () => {
+    const todos = [
+      { id: '1', text: 'shared blocker', status: 'todo' },
+      { id: '2', text: 'first dependent', status: 'blocked', blockedBy: ['1'] },
+      { id: '3', text: 'second dependent', status: 'blocked', blockedBy: ['1'] },
+      { id: '4', text: 'still blocked', status: 'blocked', blockedBy: ['1', '5'] },
+      { id: '5', text: 'other blocker', status: 'todo' },
+    ];
+
+    const result = deleteTodo(todos, '1');
+
+    expect(result).toEqual([
+      { id: '2', text: 'first dependent', status: 'todo' },
+      { id: '3', text: 'second dependent', status: 'todo' },
+      { id: '4', text: 'still blocked', status: 'blocked', blockedBy: ['5'] },
+      { id: '5', text: 'other blocker', status: 'todo' },
+    ]);
+  });
 });
 
 describe('clearFinished', () => {
@@ -1206,6 +1348,17 @@ describe('clearFinished', () => {
     const result = clearFinished(todos);
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('4');
+  });
+
+  it('unblocks dependents when cancelled blockers are cleared', () => {
+    const todos = [
+      { id: '1', text: 'cancelled blocker', status: 'cancelled' },
+      { id: '2', text: 'blocked task', status: 'blocked', blockedBy: ['1'] },
+    ];
+
+    const result = clearFinished(todos);
+
+    expect(result).toEqual([{ id: '2', text: 'blocked task', status: 'todo' }]);
   });
 });
 

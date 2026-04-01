@@ -1,6 +1,7 @@
 import './styles.css';
 import { createAppStore } from './app/store.js';
 import {
+  selectBlockedStatusChange,
   selectDagViewModel,
   selectHasFinishedTodos,
   selectProgress,
@@ -141,6 +142,9 @@ if (typeof document !== 'undefined') {
       getHighlightRemainingMs: (id) =>
         notificationController.getHighlightRemainingMs(id),
       canEditTodoStatus,
+      isStatusOptionDisabled: (todo, nextStatus) =>
+        selectBlockedStatusChange(store.getState(), todo.id, nextStatus)
+          .blockedStatusTransitionDenied,
       wouldCreateCycle: (allTodos, todoId, blockerId) =>
         wouldCreateCycle(allTodos, todoId, blockerId),
       onSelectTask: (id) => {
@@ -589,13 +593,13 @@ if (typeof document !== 'undefined') {
     );
 
     store.subscribe((event) => {
-      if (!event.changed && !event.meta.blockedCompletionAttempt) {
+      if (!event.changed && !event.meta.blockedStatusTransitionDenied) {
         return;
       }
 
       syncStoreState(event.state);
 
-      if (event.changed) {
+      if (event.changed || event.meta.blockedStatusTransitionDenied) {
         renderApp();
       }
 

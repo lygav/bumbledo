@@ -7,9 +7,8 @@ import {
 } from './constants.js';
 import { buildDependencyGraph } from '../dag/graph.js';
 import {
+  getManualStatusTransitionGuard,
   getActionableTodos,
-  getActiveBlockerCount,
-  hasActiveBlockers,
 } from '../todo/model.js';
 
 const TERMINAL_STATUS_SET = new Set(TERMINAL_TODO_STATUSES);
@@ -99,21 +98,20 @@ export function selectDagViewModel(state) {
 }
 
 export function selectBlockedStatusChange(state, todoId, nextStatus) {
-  const todo = state.todos.find((item) => item.id === todoId);
-  const blockedCompletionAttempt = Boolean(
-    todo &&
-    todo.status === TODO_STATUS.BLOCKED &&
-    nextStatus === TODO_STATUS.DONE &&
-    Array.isArray(todo.blockedBy) &&
-    todo.blockedBy.length > 0 &&
-    hasActiveBlockers(state.todos, todo.id),
+  const transitionGuard = getManualStatusTransitionGuard(
+    state.todos,
+    todoId,
+    nextStatus,
   );
+  const blockedCompletionAttempt =
+    transitionGuard.isDenied && nextStatus === TODO_STATUS.DONE;
 
   return {
-    todo,
+    todo: transitionGuard.todo,
+    blockedStatusTransitionDenied: transitionGuard.isDenied,
     blockedCompletionAttempt,
-    activeBlockerCount: blockedCompletionAttempt
-      ? getActiveBlockerCount(state.todos, todoId)
+    activeBlockerCount: transitionGuard.isDenied
+      ? transitionGuard.activeBlockerCount
       : 0,
   };
 }

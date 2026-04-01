@@ -16,6 +16,7 @@ export function createTodoListView({
   container,
   getHighlightRemainingMs,
   canEditTodoStatus,
+  isStatusOptionDisabled = () => false,
   wouldCreateCycle,
   onSelectTask,
   onEnterEditMode,
@@ -228,6 +229,7 @@ export function createTodoListView({
       const option = document.createElement('option');
       option.value = statusOption.value;
       option.textContent = statusOption.label;
+      option.disabled = isStatusOptionDisabled(todo, statusOption.value);
       if (statusOption.value === todo.status) {
         option.selected = true;
       }

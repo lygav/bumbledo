@@ -404,15 +404,20 @@ export function createAppStore(options = {}) {
       return { ...currentState, selectedTaskId: payload.id };
     },
     setTaskStatus(currentState, payload = {}) {
-      const { todo, blockedCompletionAttempt, activeBlockerCount } =
-        selectBlockedStatusChange(currentState, payload.id, payload.nextStatus);
+      const {
+        todo,
+        blockedStatusTransitionDenied,
+        blockedCompletionAttempt,
+        activeBlockerCount,
+      } = selectBlockedStatusChange(currentState, payload.id, payload.nextStatus);
       if (!todo) {
         return currentState;
       }
 
-      if (blockedCompletionAttempt) {
+      if (blockedStatusTransitionDenied) {
         return createActionResult(currentState, {
-          blockedCompletionAttempt: true,
+          blockedStatusTransitionDenied: true,
+          blockedCompletionAttempt,
           activeBlockerCount,
           returnFocusEl: payload.returnFocusEl ?? null,
           todoId: todo.id,
