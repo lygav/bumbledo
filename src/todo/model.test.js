@@ -768,7 +768,7 @@ describe('toggleBlocker', () => {
     ];
     const result = toggleBlocker(todos, '1', '2');
     expect(result[0].status).toBe('todo');
-    expect(result[0].blockedBy).toBeUndefined();
+    expect(result[0]).not.toHaveProperty('blockedBy');
   });
 
   it('does nothing if todo is not blocked', () => {
@@ -953,6 +953,7 @@ describe('finalizeBlockedStatus', () => {
     const result = finalizeBlockedStatus(todos, '1');
 
     expect(result[0]).toEqual({ id: '1', text: 'task', status: 'todo' });
+    expect(result[0]).not.toHaveProperty('blockedBy');
   });
 
   it('keeps blocked todos with blockers unchanged', () => {

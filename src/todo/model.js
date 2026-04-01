@@ -208,7 +208,7 @@ export function toggleBlocker(todos, todoId, blockerId) {
     if (idx >= 0) {
       blockedBy.splice(idx, 1);
       if (blockedBy.length === 0) {
-        return { ...todo, status: TODO_STATUS.TODO, blockedBy: undefined };
+        return { ...stripBlockedBy(todo), status: TODO_STATUS.TODO };
       }
       return { ...todo, blockedBy };
     }
