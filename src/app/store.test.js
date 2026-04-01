@@ -340,8 +340,9 @@ describe('createAppStore', () => {
   });
 
   it('auto-reverts blocked tasks with no selected blockers back to todo on finalization', () => {
+    const storage = createStorage();
     const store = createAppStore({
-      storage: createStorage(),
+      storage,
       initialState: createState({
         todos: [createTodo('a', TODO_STATUS.TODO)],
       }),
@@ -352,11 +353,16 @@ describe('createAppStore', () => {
 
     expect(event.changed).toBe(true);
     expect(store.getState().todos).toEqual([createTodo('a', TODO_STATUS.TODO)]);
+    expect(store.getState().todos[0]).not.toHaveProperty('blockedBy');
+    expect(JSON.parse(storage.data.get(APP_STORAGE_KEYS.TODOS))).toEqual([
+      createTodo('a', TODO_STATUS.TODO),
+    ]);
   });
 
   it('auto-reverts blocked tasks to todo when the last blocker is manually removed', () => {
+    const storage = createStorage();
     const store = createAppStore({
-      storage: createStorage(),
+      storage,
       initialState: createState({
         todos: [
           createTodo('a', TODO_STATUS.TODO),
@@ -369,6 +375,11 @@ describe('createAppStore', () => {
 
     expect(event.changed).toBe(true);
     expect(store.getState().todos).toEqual([
+      createTodo('a', TODO_STATUS.TODO),
+      createTodo('b', TODO_STATUS.TODO),
+    ]);
+    expect(store.getState().todos[1]).not.toHaveProperty('blockedBy');
+    expect(JSON.parse(storage.data.get(APP_STORAGE_KEYS.TODOS))).toEqual([
       createTodo('a', TODO_STATUS.TODO),
       createTodo('b', TODO_STATUS.TODO),
     ]);
