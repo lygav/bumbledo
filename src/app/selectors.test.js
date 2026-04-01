@@ -127,6 +127,27 @@ describe('selectors', () => {
     });
   });
 
+  it('allows blocked tasks with active blockers to be cancelled', () => {
+    const state = createState({
+      todos: [
+        { id: 'a', text: 'Todo', status: TODO_STATUS.TODO },
+        {
+          id: 'b',
+          text: 'Blocked',
+          status: TODO_STATUS.BLOCKED,
+          blockedBy: ['a'],
+        },
+      ],
+    });
+
+    expect(
+      selectBlockedStatusChange(state, 'b', TODO_STATUS.CANCELLED),
+    ).toMatchObject({
+      blockedCompletionAttempt: false,
+      activeBlockerCount: 0,
+    });
+  });
+
   it('returns selected toggle target details when selection is actionable', () => {
     const state = createState({
       selectedTaskId: 'a',

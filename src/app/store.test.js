@@ -75,6 +75,46 @@ describe('createAppStore', () => {
     expect(store.getState()).toEqual(initialState);
   });
 
+  it('cancels blocked tasks with active blockers and releases their dependents', () => {
+    const store = createAppStore({
+      storage: createStorage(),
+      initialState: createState({
+        todos: [
+          { id: 'a', text: 'Upstream blocker', status: TODO_STATUS.TODO },
+          {
+            id: 'b',
+            text: 'Blocked task',
+            status: TODO_STATUS.BLOCKED,
+            blockedBy: ['a'],
+          },
+          {
+            id: 'c',
+            text: 'Dependent task',
+            status: TODO_STATUS.BLOCKED,
+            blockedBy: ['b'],
+          },
+        ],
+      }),
+    });
+
+    const event = store.setTaskStatus({
+      id: 'b',
+      nextStatus: TODO_STATUS.CANCELLED,
+    });
+
+    expect(event.changed).toBe(true);
+    expect(event.meta.blockedCompletionAttempt).toBeFalsy();
+    expect(event.meta).toMatchObject({
+      completedTaskId: null,
+      unblockedIds: ['c'],
+    });
+    expect(store.getState().todos).toEqual([
+      { id: 'a', text: 'Upstream blocker', status: TODO_STATUS.TODO },
+      { id: 'b', text: 'Blocked task', status: TODO_STATUS.CANCELLED },
+      { id: 'c', text: 'Dependent task', status: TODO_STATUS.TODO },
+    ]);
+  });
+
   it('keeps selection in sync when toggling a selected task out of the filtered view', () => {
     const store = createAppStore({
       storage: createStorage(),
